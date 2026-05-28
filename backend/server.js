@@ -11,7 +11,22 @@ const auditMw=require('./middleware/audit');
 const app=express();
 app.use(helmet({contentSecurityPolicy:false}));
 const origins=(process.env.CORS_ALLOWED_ORIGINS||process.env.CORS_ORIGIN||'').split(',').map(s=>s.trim());
-app.use(cors({origin:(o,cb)=>(!o||origins.includes(o))?cb(null,true):cb(new Error('CORS')),credentials:true}));
+app.use((req,res,next)=>{
+  const origin=req.headers.origin;
+  const host=req.headers.host;
+  const isSameOrigin=origin&&(origin===`http://${host}`||origin===`https://${host}`);
+  if(!origin||isSameOrigin||origins.includes(origin)){
+    res.setHeader('Access-Control-Allow-Origin',origin||'*');
+    res.setHeader('Access-Control-Allow-Credentials','true');
+    res.setHeader('Access-Control-Allow-Methods','GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers',req.headers['access-control-request-headers']||'Content-Type,Authorization,X-Berisa-Tenant-ID');
+    if(req.method==='OPTIONS') return res.sendStatus(204);
+    next();
+  }else{
+    console.warn(`[CORS] Blocked origin: ${origin} (Host: ${host})`);
+    res.status(403).json({error:'CORS Origin Not Allowed'});
+  }
+});
 app.use('/api/v1/billing/webhook',express.raw({type:'application/json'}),require('./routes/billing-webhook'));
 app.use(express.json({limit:'2mb'}));
 app.use(compression());
