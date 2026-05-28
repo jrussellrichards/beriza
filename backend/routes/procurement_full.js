@@ -184,7 +184,7 @@ async function initSubcontractChecklist(packageId) {
     for(const [dim, items] of Object.entries(dims))
       for(const key of items)
         vals.push(`('${packageId}','${stage}','${dim}','${key}','${key.replace(/_/g,' ')}')`);
-  if(vals.length) await require('../../db/pool').query(
+  if(vals.length) await require('../db/pool').query(
     `INSERT INTO subcontracting_checklist(package_id,stage,dimension,item_key,item_label) VALUES ${vals.join(',')} ON CONFLICT DO NOTHING`
   );
 }

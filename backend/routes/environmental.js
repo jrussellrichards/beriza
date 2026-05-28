@@ -1,7 +1,7 @@
 'use strict';
 /** M-AMB-01: Gestión Ambiental (Ley 19.300 · DS 148 · DS 8/2021 · SMA) */
 const r = require('express').Router();
-const { query } = require('../../db/pool');
+const { query } = require('../db/pool');
 
 // ── RCA Conditions ────────────────────────────────────────────────────
 r.get('/rca', async (req, res, next) => {
