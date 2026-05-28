@@ -46,9 +46,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}   # now Node 24
       - name: Install backend
-        run: cd backend && npm ci
+        run: cd backend && npm install
       - name: Install frontend
-        run: cd frontend && npm ci
+        run: cd frontend && npm install
       - name: Static checks
         run: cd backend && npm run ci:check
       - name: Backend syntax
