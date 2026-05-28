@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Berisa — Panel Administración</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/berisa.css"/>
+<style>
+.adm-page{padding:20px 24px}
+.adm-tabs{display:flex;gap:2px;border-bottom:1px solid var(--bdr);margin-bottom:20px}
+.adm-tab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--t3);padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:var(--tr);cursor:pointer}
+.adm-tab.on{border-bottom-color:var(--gold);color:var(--gold)}
+.adm-tab:hover:not(.on){color:var(--t2)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px;margin-bottom:20px}
+.stat-box{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;border-left:3px solid var(--gold)}
+.stat-n{font-family:'Montserrat',sans-serif;font-size:32px;font-weight:700;color:var(--gold);line-height:1;margin-bottom:2px}
+.stat-l{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--t3)}
+/* Tenant table */
+.tenant-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.tenant-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:14px;transition:var(--tr)}
+.tenant-card:hover{border-color:var(--bdh)}
+.tc-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.tc-name{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700}
+.tc-slug{font-size:10px;color:var(--t3)}
+.tc-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.tc-m{background:var(--bg3);border-radius:4px;padding:6px 8px;font-size:11px}
+.tc-ml{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px}
+.tc-mv{font-weight:600}
+.tc-feats{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.feat-tag{padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;border:1px solid}
+.feat-on{background:rgba(46,173,107,.1);border-color:rgba(46,173,107,.3);color:#2EAD6B}
+.feat-off{background:rgba(91,100,114,.1);border-color:rgba(91,100,114,.2);color:var(--slate)}
+/* Plan badges */
+.plan-starter{background:rgba(91,100,114,.15);border:1px solid rgba(91,100,114,.3);color:var(--slate)}
+.plan-profesional{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:#3B82F6}
+.plan-business{background:rgba(201,151,43,.12);border:1px solid rgba(201,151,43,.3);color:var(--gold)}
+.plan-enterprise{background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);color:#8B5CF6}
+/* User table */
+.user-table-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr)}
+.user-table{width:100%;border-collapse:collapse;font-size:12px}
+.user-table thead tr{background:var(--bg2);border-bottom:2px solid var(--gold)}
+.user-table th{font-family:'IBM Plex Sans',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding:9px 12px;text-align:left;white-space:nowrap}
+.user-table tbody tr{border-bottom:1px solid var(--bdr)}
+.user-table tbody tr:hover{background:var(--bg2)}
+.user-table td{padding:8px 12px;vertical-align:middle}
+/* Limits form */
+.limits-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.limit-item{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.limit-label{font-size:12px;font-weight:500;flex:1}
+.limit-input{width:80px;background:var(--bg3);border:1px solid var(--bdr);color:var(--t1);font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:4px 8px;border-radius:4px;outline:none;text-align:right}
+.limit-input:focus{border-color:var(--gold)}
+.toggle-wrap{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--t2)}
+</style>
+</head>
+<body>
+<header class="hdr" id="hdr-root"><div class="hl"></div><div class="hr"></div></header>
+
+<main class="adm-page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div>
+      <h1 style="font-family:'Montserrat',sans-serif;font-size:24px;font-weight:700;margin-bottom:3px">⚙️ Panel de Administración</h1>
+      <p style="font-size:11px;color:var(--t3)">Gestión de tenants, usuarios, límites y estadísticas de plataforma</p>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openNewTenant()">+ Nuevo tenant</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stat-grid" id="statsGrid">
+    <div class="stat-box"><div class="stat-n" id="st-orgs">—</div><div class="stat-l">Organizaciones</div></div>
+    <div class="stat-box" style="border-left-color:#2EAD6B"><div class="stat-n" style="color:#2EAD6B" id="st-active">—</div><div class="stat-l">Activas</div></div>
+    <div class="stat-box" style="border-left-color:#3B82F6"><div class="stat-n" style="color:#3B82F6" id="st-trials">—</div><div class="stat-l">En prueba</div></div>
+    <div class="stat-box" style="border-left-color:#8B5CF6"><div class="stat-n" style="color:#8B5CF6" id="st-users">—</div><div class="stat-l">Usuarios totales</div></div>
+    <div class="stat-box" style="border-left-color:#EF9F27"><div class="stat-n" style="color:#EF9F27" id="st-projects">—</div><div class="stat-l">Proyectos BD</div></div>
+    <div class="stat-box" style="border-left-color:#97C459"><div class="stat-n" style="color:#97C459" id="st-suppliers">—</div><div class="stat-l">Proveedores</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="adm-tabs">
+    <button class="adm-tab on" onclick="switchTab('tenants')">🏢 Tenants</button>
+    <button class="adm-tab" onclick="switchTab('users')">👥 Usuarios</button>
+    <button class="adm-tab" onclick="switchTab('limits')">⚙️ Límites</button>
+  </div>
+  <div id="tabContent"></div>
+</main>
+
+<!-- New Tenant Modal -->
+<div class="mov" id="tenantModal">
+  <div class="modal" style="width:500px">
+    <div class="mhdr"><div class="mtit">Nuevo Tenant</div><button class="mxbtn" onclick="closeModal('tenantModal')">✕</button></div>
+    <div class="mbody">
+      <div class="form-group"><label class="form-label">Nombre organización *</label><input class="form-input" id="nt_name" placeholder="Empresa XYZ S.A."/></div>
+      <div class="fg2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Plan</label>
+          <select class="form-input form-select" id="nt_plan">
+            <option value="starter">Starter</option><option value="profesional">Profesional</option>
+            <option value="business">Business</option><option value="enterprise">Enterprise</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Email admin *</label><input class="form-input" type="email" id="nt_email" placeholder="admin@empresa.cl"/></div>
+      </div>
+      <div class="fg2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Nombre admin</label><input class="form-input" id="nt_admin_name" placeholder="Nombre Apellido"/></div>
+        <div class="form-group"><label class="form-label">Contraseña *</label><input class="form-input" type="password" id="nt_pass" placeholder="Mínimo 8 caracteres"/></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bdr)">
+        <button class="btn btn-outline" onclick="closeModal('tenantModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveTenant()">Crear tenant</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/berisa-header.js"></script>
+<script src="assets/js/berisa-api.js"></script>
+<script>
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(!tok||!BAuth.restoreSession(tok)){window.location.replace('index.html');return;}
+  const user=JSON.parse(sessionStorage.getItem('berisa_user')||'{}');
+  if(user.role!=='admin'){showToast('Acceso restringido a administradores','error');setTimeout(()=>location.replace('dashboard.html'),2000);return;}
+  BHeader.render({active:'admin',showUsers:true});
+})();
+function doLogout(){BAuth.logout('manual');['berisa_token','berisa_csrf','berisa_user'].forEach(k=>sessionStorage.removeItem(k));window.location.replace('index.html')}
+function toggleTheme(){const c=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',c)}
+
+// ── DEMO DATA ──────────────────────────────────────────────
+const DEMO_TENANTS=[
+  {id:'t1',name:'Constructora del Sur',slug:'constructora-del-sur',plan:'profesional',plan_status:'active',user_count:4,max_users:5,feature_compliance:false,feature_finance:false,feature_api:false,trial_ends_at:null,created_at:'2026-04-01'},
+  {id:'t2',name:'Electro Power S.A.',slug:'electro-power',plan:'business',plan_status:'active',user_count:8,max_users:15,feature_compliance:false,feature_finance:false,feature_api:true,trial_ends_at:null,created_at:'2026-03-15'},
+  {id:'t3',name:'Minera Norte SpA',slug:'minera-norte',plan:'enterprise',plan_status:'active',user_count:12,max_users:999,feature_compliance:true,feature_finance:true,feature_api:true,trial_ends_at:null,created_at:'2026-02-01'},
+  {id:'t4',name:'Consultoría Infraestructura',slug:'consultoria-infra',plan:'starter',plan_status:'trial',user_count:1,max_users:5,feature_compliance:false,feature_finance:false,feature_api:false,trial_ends_at:'2026-06-08',created_at:'2026-05-25'},
+];
+const DEMO_USERS=[
+  {id:'u1',name:'Alejandro Torres',email:'a.torres@constructora.cl',role:'admin',org_name:'Constructora del Sur',plan:'profesional',is_active:true,last_login_at:'2026-05-25'},
+  {id:'u2',name:'Marcela Fuentes',email:'m.fuentes@electropower.cl',role:'manager',org_name:'Electro Power',plan:'business',is_active:true,last_login_at:'2026-05-24'},
+  {id:'u3',name:'Roberto Silva',email:'r.silva@minenanorte.cl',role:'analyst',org_name:'Minera Norte',plan:'enterprise',is_active:true,last_login_at:'2026-05-26'},
+  {id:'u4',name:'Demo User',email:'demo@consultoria.cl',role:'viewer',org_name:'Consultoría Infraestructura',plan:'starter',is_active:false,last_login_at:null},
+];
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+async function loadStats(){
+  const s = await BAPI.getAdminStats().catch(()=>null);
+  const data = s || {total_orgs:4,active_subs:2,trials:1,total_users:25,total_projects:847,total_suppliers:38};
+  document.getElementById('st-orgs').textContent=data.total_orgs||4;
+  document.getElementById('st-active').textContent=data.active_subs||2;
+  document.getElementById('st-trials').textContent=data.trials||1;
+  document.getElementById('st-users').textContent=data.total_users||25;
+  document.getElementById('st-projects').textContent=data.total_projects||847;
+  document.getElementById('st-suppliers').textContent=data.total_suppliers||38;
+}
+
+let curTab='tenants';
+function switchTab(t){
+  curTab=t;
+  document.querySelectorAll('.adm-tab').forEach((b,i)=>{
+    b.classList.toggle('on',['tenants','users','limits'][i]===t);
+  });
+  renderTab();
+}
+
+function renderTab(){
+  const c=document.getElementById('tabContent');
+  if(curTab==='tenants') renderTenants(c);
+  else if(curTab==='users') renderUsers(c);
+  else renderLimits(c);
+}
+
+function renderTenants(c){
+  c.innerHTML=`<div class="tenant-grid">${DEMO_TENANTS.map(t=>{
+    const planCls='plan-'+t.plan;
+    return`<div class="tenant-card">
+      <div class="tc-hdr">
+        <div><div class="tc-name">${esc(t.name)}</div><div class="tc-slug">${esc(t.slug)}</div></div>
+        <span class="${planCls}" style="padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700">${t.plan.toUpperCase()}</span>
+      </div>
+      <div class="tc-meta">
+        <div class="tc-m"><div class="tc-ml">Estado</div><div class="tc-mv" style="color:${t.plan_status==='active'?'var(--success)':t.plan_status==='trial'?'var(--warn)':'var(--danger)'}">${t.plan_status}</div></div>
+        <div class="tc-m"><div class="tc-ml">Usuarios</div><div class="tc-mv">${t.user_count}/${t.max_users===999?'∞':t.max_users}</div></div>
+        <div class="tc-m"><div class="tc-ml">Creación</div><div class="tc-mv">${t.created_at}</div></div>
+      </div>
+      <div class="tc-feats">
+        <span class="feat-tag ${t.feature_compliance?'feat-on':'feat-off'}">Compliance</span>
+        <span class="feat-tag ${t.feature_finance?'feat-on':'feat-off'}">Finance</span>
+        <span class="feat-tag ${t.feature_api?'feat-on':'feat-off'}">API</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="editLimits('${t.id}','${esc(t.name)}')">⚙ Límites</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:rgba(217,64,64,.3)" onclick="showToast('Bloquear tenant — confirmar','warning')">✕ Bloquear</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderUsers(c){
+  c.innerHTML=`<div class="user-table-wrap"><table class="user-table">
+    <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Organización</th><th>Plan</th><th>Estado</th><th>Último acceso</th><th>Acciones</th></tr></thead>
+    <tbody>${DEMO_USERS.map(u=>`<tr>
+      <td style="font-weight:500">${esc(u.name)}</td>
+      <td style="color:var(--t2)">${esc(u.email)}</td>
+      <td><span class="user-role role-${u.role}">${u.role}</span></td>
+      <td style="color:var(--t2)">${esc(u.org_name)}</td>
+      <td><span class="badge badge-gold" style="font-size:9px">${u.plan}</span></td>
+      <td><span style="color:${u.is_active?'var(--success)':'var(--danger)';font-size:10px;font-weight:600}">${u.is_active?'✓ Activo':'✗ Inactivo'}</span></td>
+      <td style="color:var(--t3);font-size:11px">${u.last_login_at?u.last_login_at.slice(0,10):'Nunca'}</td>
+      <td style="display:flex;gap:5px">
+        ${!u.is_active?`<button class="cbtn hc" onclick="approveUser('${u.id}')">✓ Aprobar</button>`:''}
+        <button class="cbtn" style="color:var(--danger)" onclick="blockUser('${u.id}','${esc(u.name)}')">Bloquear</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderLimits(c){
+  c.innerHTML=`<div style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
+    <select class="fsel" id="limitsTenant" onchange="loadLimitsForTenant(this.value)">
+      ${DEMO_TENANTS.map(t=>`<option value="${t.id}">${t.name} (${t.plan})</option>`).join('')}
+    </select>
+    <button class="btn btn-primary btn-sm" onclick="saveLimits()">Guardar límites</button>
+  </div>
+  <div class="limits-grid">
+    ${[
+      {k:'max_users',l:'Máx. usuarios',v:5},
+      {k:'max_alerts',l:'Máx. alertas',v:10},
+      {k:'max_api_calls_day',l:'API calls/día',v:1000},
+      {k:'max_reports_month',l:'Reportes/mes',v:5},
+    ].map(f=>`<div class="limit-item"><div class="limit-label">${f.l}</div><input class="limit-input" id="lim_${f.k}" type="number" value="${f.v}"/></div>`).join('')}
+  </div>
+  <div style="margin-top:14px">
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Funcionalidades habilitadas</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      ${[{k:'feature_bom',l:'BOM Estimador'},{k:'feature_crm',l:'CRM'},{k:'feature_api',l:'API Externa'},{k:'feature_compliance',l:'Compliance'},{k:'feature_finance',l:'Finance Connect'}].map(f=>`
+        <label class="toggle-wrap">
+          <input type="checkbox" id="lim_${f.k}" checked style="accent-color:var(--gold)"> ${f.l}
+        </label>`).join('')}
+    </div>
+  </div>`;
+}
+
+function loadLimitsForTenant(id){ showToast('Límites cargados para: '+DEMO_TENANTS.find(t=>t.id===id)?.name,'info') }
+function saveLimits(){ showToast('Límites actualizados correctamente','success') }
+function approveUser(id){ showToast('Usuario aprobado','success'); const u=DEMO_USERS.find(x=>x.id===id); if(u)u.is_active=true; renderTab(); }
+function blockUser(id,name){ showToast(`Usuario ${name} bloqueado`,'warning'); const u=DEMO_USERS.find(x=>x.id===id); if(u)u.is_active=false; renderTab(); }
+function editLimits(id,name){ curTab='limits'; switchTab('limits'); showToast('Editando límites de: '+name,'info'); }
+function openNewTenant(){ document.getElementById('tenantModal').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
+async function saveTenant(){
+  const name=document.getElementById('nt_name').value.trim();
+  const email=document.getElementById('nt_email').value.trim();
+  const plan=document.getElementById('nt_plan').value;
+  const admin_name=document.getElementById('nt_admin_name').value.trim();
+  const password=document.getElementById('nt_pass').value;
+  if(!name||!email||!password){showToast('Complete los campos obligatorios','warning');return;}
+  const result = await BAPI.createTenant({name,plan,admin_email:email,admin_name,admin_password:password}).catch(()=>null);
+  if(result){ DEMO_TENANTS.unshift({id:'t'+Date.now(),name,slug:name.toLowerCase().replace(/\s+/g,'-'),plan,plan_status:'trial',user_count:1,max_users:5,feature_compliance:false,feature_finance:false,feature_api:false,created_at:new Date().toISOString().split('T')[0]}); }
+  closeModal('tenantModal');
+  showToast(`Tenant "${name}" creado con plan ${plan}`,'success',4000);
+  renderTab();
+}
+function showToast(msg,type='info',dur=3500){
+  const i={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el=document.createElement('div');el.className=`toast toast-${type}`;
+  el.innerHTML=`<span class="toast-icon">${i[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300)},dur);
+}
+document.querySelectorAll('.mov').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mov.open').forEach(m=>closeModal(m.id))});
+loadStats();renderTab();
+</script>
+</body></html>

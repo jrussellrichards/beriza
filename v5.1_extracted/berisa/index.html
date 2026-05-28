@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; connect-src 'self';">
+<meta name="robots" content="noindex,nofollow"/>
+<title>Berisa — Acceso Seguro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Paleta oficial auditada v2.0 ── */
+:root{--navy:#0A1B34;--navy-mid:#0F2444;--gold:#C9972B;--gold-light:#E0B84A;--gold-dim:rgba(201,151,43,.12);--gold-border:rgba(201,151,43,.3);--slate:#5B6472;--bone:#F6F7F9;--bg0:#060D1A;--bg1:#0A1B34;--bg2:#0F2040;--bg3:#152B50;--t1:#F6F7F9;--t2:#9BAABB;--t3:#4A5568;--danger:#D94040;--font-display:'Montserrat','Arial Black',sans-serif;--font-body:'IBM Plex Sans',system-ui,sans-serif;--tr:all .18s cubic-bezier(.4,0,.2,1);--r:6px}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;font-family:var(--font-body);-webkit-font-smoothing:antialiased}
+body{background:var(--bg0);color:var(--t1);display:flex;min-height:100vh;overflow:hidden}
+/* Grid bg */
+.panel-left{flex:1;background:var(--bg0);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;position:relative;z-index:1}
+.panel-left::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 40%,rgba(201,151,43,.05) 0%,transparent 60%),repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(201,151,43,.02) 40px,rgba(201,151,43,.02) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(201,151,43,.02) 40px,rgba(201,151,43,.02) 41px);z-index:-1}
+/* ── COMPASS LOGO ── */
+.login-logo{display:flex;flex-direction:column;align-items:center;margin-bottom:40px}
+.compass-wrap{margin-bottom:18px;filter:drop-shadow(0 0 32px rgba(201,151,43,.4));animation:float 4s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0);filter:drop-shadow(0 0 32px rgba(201,151,43,.4))}50%{transform:translateY(-7px);filter:drop-shadow(0 0 52px rgba(201,151,43,.65))}}
+.login-brand{font-family:var(--font-display);font-size:44px;font-weight:800;letter-spacing:8px;text-transform:uppercase;color:var(--t1);line-height:1;margin-bottom:6px;position:relative;display:inline-block}
+.login-brand .adot{position:relative;display:inline-block}
+.login-brand .dot{position:absolute;top:-5px;right:-5px;width:7px;height:7px;border-radius:50%;background:var(--gold);display:block;box-shadow:0 0 8px var(--gold)}
+.login-tagline{font-family:var(--font-body);font-size:10px;font-weight:500;letter-spacing:3.5px;text-transform:uppercase;color:var(--gold);opacity:.9}
+/* ── FORM CARD ── */
+.login-card{width:100%;max-width:400px;background:var(--bg2);border:1px solid rgba(201,151,43,.22);border-radius:10px;padding:36px;box-shadow:0 24px 64px rgba(0,0,0,.6),0 0 0 1px rgba(201,151,43,.05);position:relative;overflow:hidden}
+.login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.login-card-title{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.login-card-sub{font-size:11px;color:var(--t3);margin-bottom:28px;letter-spacing:.3px}
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:7px}
+.form-input{width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.07);color:var(--t1);font-family:var(--font-body);font-size:13px;padding:10px 14px;border-radius:var(--r);outline:none;transition:var(--tr)}
+.form-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,151,43,.1)}
+.form-input::placeholder{color:var(--t3)}.form-input.error{border-color:var(--danger)}
+.input-wrap{position:relative}.input-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.3;pointer-events:none}
+.pass-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:2px;transition:var(--tr)}.pass-toggle:hover{color:var(--gold)}
+.form-error{margin-top:5px;font-size:10px;color:var(--danger);display:none;gap:4px;align-items:center}.form-error.show{display:flex}
+.btn-login{width:100%;background:var(--gold);color:var(--navy);border:none;padding:12px;border-radius:var(--r);font-family:var(--font-display);font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;transition:var(--tr);cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden}
+.btn-login::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transform:translateX(-100%);transition:transform .5s}
+.btn-login:hover{background:var(--gold-light)}.btn-login:hover::before{transform:translateX(100%)}.btn-login:disabled{opacity:.5;cursor:not-allowed}
+.security-notice{margin-top:24px;padding:10px 13px;background:rgba(46,173,107,.05);border:1px solid rgba(46,173,107,.15);border-radius:var(--r);display:flex;gap:8px;align-items:flex-start}
+.sec-dot{width:6px;height:6px;border-radius:50%;background:#2EAD6B;flex-shrink:0;margin-top:3px;box-shadow:0 0 6px #2EAD6B88;animation:pls 2s infinite}
+@keyframes pls{0%,100%{opacity:1}50%{opacity:.3}}
+.sec-text{font-size:10px;color:var(--t3);line-height:1.5}.sec-text b{color:#2EAD6B}
+.demo-creds{margin-top:20px;padding:12px 13px;background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:var(--r)}
+.demo-title{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.demo-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(201,151,43,.1);font-size:11px}.demo-row:last-child{border-bottom:none}
+.demo-label{color:var(--t3)}.demo-val{color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:10px}
+.demo-link{color:var(--gold);background:none;border:none;font-size:10px;cursor:pointer;text-decoration:underline;transition:var(--tr)}.demo-link:hover{color:var(--gold-light)}
+#loginError{background:rgba(217,64,64,.1);border:1px solid rgba(217,64,64,.3);border-radius:var(--r);padding:10px 13px;font-size:12px;color:#F87171;margin-bottom:18px;display:none;align-items:center;gap:8px}
+#loginError.show{display:flex}
+#sessionMsg{display:none;margin-bottom:16px;padding:10px 13px;background:rgba(201,151,43,.08);border:1px solid rgba(201,151,43,.25);border-radius:6px;font-size:11px;color:var(--gold)}
+.spin{width:16px;height:16px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:sp .7s linear infinite;display:none}
+.btn-login.loading .spin{display:block}.btn-login.loading .btn-text{display:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg2);border:1px solid var(--gold-border);border-radius:var(--r);padding:12px 20px;font-size:12px;color:var(--t1);box-shadow:0 12px 40px rgba(0,0,0,.6);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;z-index:99999}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+/* ── RIGHT PANEL ── */
+.panel-right{width:420px;background:linear-gradient(160deg,var(--navy-mid) 0%,var(--navy) 100%);border-left:1px solid rgba(201,151,43,.1);display:flex;flex-direction:column;justify-content:space-between;padding:48px 40px;position:relative;overflow:hidden}
+.panel-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 80% 20%,rgba(201,151,43,.09) 0%,transparent 60%),radial-gradient(ellipse at 20% 80%,rgba(201,151,43,.05) 0%,transparent 50%);pointer-events:none}
+.panel-right-logo{font-family:var(--font-display);font-size:11px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,.22)}
+.panel-right-logo span{color:var(--gold);opacity:.7}
+.panel-features{flex:1;display:flex;flex-direction:column;justify-content:center;gap:28px;margin:40px 0}
+.feat{display:flex;gap:14px;align-items:flex-start}
+.feat-icon{width:36px;height:36px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.feat-title{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.feat-desc{font-size:11px;color:var(--t3);line-height:1.6}
+.panel-stats{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:28px;border-top:1px solid rgba(201,151,43,.1)}
+.stat-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:var(--r);padding:14px}
+.stat-val{font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--gold);line-height:1;margin-bottom:3px}
+.stat-lbl{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)}
+.login-footer{font-size:10px;color:var(--t3);text-align:center;margin-top:20px}
+.login-footer a{color:var(--t3);text-decoration:none}.login-footer a:hover{color:var(--gold)}
+@media(max-width:900px){.panel-right{display:none}.panel-left{padding:32px 24px}.login-brand{font-size:34px}}
+</style>
+</head>
+<body>
+<div class="panel-left">
+  <div class="login-logo">
+    <div class="compass-wrap">
+      <svg width="88" height="88" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lbg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0A1B34"/><stop offset="100%" stop-color="#0F2444"/></linearGradient>
+          <linearGradient id="lgld" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#E8C060"/><stop offset="100%" stop-color="#C9972B"/></linearGradient>
+          <linearGradient id="lslt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5B6472"/><stop offset="100%" stop-color="#3A4452"/></linearGradient>
+          <filter id="lgw"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <circle cx="32" cy="32" r="30" fill="url(#lbg)" stroke="#C9972B" stroke-width="1.8"/>
+        <circle cx="32" cy="32" r="27" fill="none" stroke="rgba(201,151,43,.25)" stroke-width="1"/>
+        <polygon points="32,4 29.5,28 34.5,28" fill="#F6F7F9" opacity="0.96"/>
+        <polygon points="32,60 29.5,36 34.5,36" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="60,32 36,29.5 36,34.5" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="4,32 28,29.5 28,34.5" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="52,12 35,29 38,31.5" fill="#C9972B" opacity="0.55"/>
+        <polygon points="12,52 29,35 31.5,38" fill="#C9972B" opacity="0.38"/>
+        <polygon points="12,12 29,29 31.5,26" fill="#C9972B" opacity="0.38"/>
+        <polygon points="52,52 35,35 38,32" fill="#C9972B" opacity="0.38"/>
+        <polygon points="32,10 30,32 34,32" fill="url(#lgld)" filter="url(#lgw)"/>
+        <polygon points="32,54 30,32 34,32" fill="url(#lslt)"/>
+        <circle cx="32" cy="32" r="4.5" fill="#C9972B" stroke="#F6F7F9" stroke-width="1.3"/>
+        <circle cx="32" cy="32" r="2" fill="#F6F7F9" opacity="0.9"/>
+        <text x="32" y="20" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="5.5" font-weight="700" fill="#C9972B">N</text>
+      </svg>
+    </div>
+    <div class="login-brand">BERI<span style="position:relative;display:inline-block">S</span><span class="adot">A<span class="dot"></span></span></div>
+    <div class="login-tagline">Inteligencia Comercial · Infraestructura</div>
+  </div>
+
+  <div class="login-card">
+    <div id="sessionMsg"></div>
+    <div id="loginError"><span>⚠️</span><span id="loginErrorText"></span></div>
+    <div class="login-card-title">Iniciar Sesión</div>
+    <div class="login-card-sub">Acceso restringido · Personal autorizado</div>
+    <div class="form-group">
+      <label class="form-label" for="email">Correo electrónico</label>
+      <div class="input-wrap">
+        <input class="form-input" type="email" id="email" placeholder="usuario@berisa.com" autocomplete="email" spellcheck="false" autocapitalize="none"/>
+        <span class="input-icon">✉</span>
+      </div>
+      <div class="form-error" id="errEmail">⚠ Ingrese un correo válido</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="password">Contraseña</label>
+      <div class="input-wrap">
+        <input class="form-input" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+        <button type="button" class="pass-toggle" id="passToggle" aria-label="Mostrar contraseña">👁</button>
+      </div>
+      <div class="form-error" id="errPass">⚠ Ingrese su contraseña</div>
+    </div>
+    <button class="btn-login" id="btnLogin" type="button">
+      <div class="spin"></div>
+      <span class="btn-text">Ingresar a la Plataforma</span>
+    </button>
+    <div class="security-notice">
+      <div class="sec-dot"></div>
+      <div class="sec-text"><b>Conexión segura.</b> Autenticación por tokens, control de acceso por roles y registro de actividad. Máximo 5 intentos antes del bloqueo.</div>
+    </div>
+    <div class="demo-creds" id="demoCreds">
+      <div class="demo-title">⚡ Credenciales de demo</div>
+      <div class="demo-row"><span class="demo-label">Admin</span><span class="demo-val">admin@berisa.com</span><button class="demo-link" onclick="fillDemo('admin@berisa.com','admin2024!')">Usar</button></div>
+      <div class="demo-row"><span class="demo-label">Gerente</span><span class="demo-val">comercial@berisa.com</span><button class="demo-link" onclick="fillDemo('comercial@berisa.com','comercial2024!')">Usar</button></div>
+      <div class="demo-row"><span class="demo-label">Analista</span><span class="demo-val">analista@berisa.com</span><button class="demo-link" onclick="fillDemo('analista@berisa.com','analista2024!')">Usar</button></div>
+      <div class="demo-row"><span class="demo-label">Demo</span><span class="demo-val">demo@berisa.com</span><button class="demo-link" onclick="fillDemo('demo@berisa.com','demo1234!')">Usar</button></div>
+    </div>
+    <div class="login-footer" style="margin-top:20px"><a href="#">¿Problemas de acceso?</a> · info@berisa.com · v2.0</div>
+  </div>
+</div>
+
+<div class="panel-right">
+  <div class="panel-right-logo">BERI<span>SA</span> Platform</div>
+  <div class="panel-features">
+    <div class="feat"><div class="feat-icon">📊</div><div><div class="feat-title">Dashboard Comercial</div><div class="feat-desc">Seguimiento de proyectos de infraestructura, inversiones CAPEX y oportunidades clasificadas por relevancia estratégica.</div></div></div>
+    <div class="feat"><div class="feat-icon">🎯</div><div><div class="feat-title">Pipeline de Negocios</div><div class="feat-desc">CRM Kanban con gestión de oportunidades, contactos clave y proyecciones de cierre por etapa comercial.</div></div></div>
+    <div class="feat"><div class="feat-icon">🔔</div><div><div class="feat-title">Alertas Geolocalizadas</div><div class="feat-desc">Notificaciones en tiempo real de nuevos proyectos por región, sector y umbral de inversión personalizable.</div></div></div>
+    <div class="feat"><div class="feat-icon">🏗️</div><div><div class="feat-title">Estimador BOM</div><div class="feat-desc">Estimación automática de materiales y recursos requeridos por tipología y monto de proyecto.</div></div></div>
+  </div>
+  <div class="panel-stats">
+    <div class="stat-box"><div class="stat-val">+20</div><div class="stat-lbl">Proyectos activos</div></div>
+    <div class="stat-box"><div class="stat-val">$18B</div><div class="stat-lbl">CAPEX total USD</div></div>
+    <div class="stat-box"><div class="stat-val">4</div><div class="stat-lbl">Países cubiertos</div></div>
+    <div class="stat-box"><div class="stat-val">10</div><div class="stat-lbl">Sectores económicos</div></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="assets/js/auth.js"></script>
+<script>
+// Update auth module users to new domain
+(function(){
+  // Patch users to use berisa.com
+  if(window.BAuth && BAuth._patchUsers) BAuth._patchUsers();
+})();
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(tok&&BAuth.restoreSession(tok)){window.location.replace('dashboard.html');return;}
+  const msg=sessionStorage.getItem('berisa_logout_reason');
+  if(msg){sessionStorage.removeItem('berisa_logout_reason');const el=document.getElementById('sessionMsg');el.textContent=msg;el.style.display='block';}
+})();
+function showError(msg){const el=document.getElementById('loginError');document.getElementById('loginErrorText').textContent=msg;el.classList.add('show')}
+function hideError(){document.getElementById('loginError').classList.remove('show')}
+function showFieldError(id,show){document.getElementById(id).classList.toggle('show',show);const inp=id==='errEmail'?document.getElementById('email'):document.getElementById('password');inp.classList.toggle('error',show)}
+function showToast(msg,d=3000){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
+function setLoading(on){const btn=document.getElementById('btnLogin');btn.classList.toggle('loading',on);btn.disabled=on}
+function fillDemo(e,p){document.getElementById('email').value=e;document.getElementById('password').value=p;hideError();showFieldError('errEmail',false);showFieldError('errPass',false);showToast('Credenciales cargadas — presione Ingresar')}
+document.getElementById('passToggle').addEventListener('click',function(){const inp=document.getElementById('password');const t=inp.type==='text';inp.type=t?'password':'text';this.textContent=t?'👁':'🙈'});
+async function doLogin(){
+  const email=document.getElementById('email').value.trim(),password=document.getElementById('password').value;
+  hideError();showFieldError('errEmail',false);showFieldError('errPass',false);
+  let valid=true;
+  if(!email||!BAuth.validateEmail(email)){showFieldError('errEmail',true);valid=false}
+  if(!password){showFieldError('errPass',true);valid=false}
+  if(!valid)return;
+  setLoading(true);
+  await new Promise(r=>setTimeout(r,600+Math.random()*400));
+  const result=BAuth.login(email,password);
+  setLoading(false);
+  if(result.success){sessionStorage.setItem('berisa_token',result.token);sessionStorage.setItem('berisa_csrf',result.csrf);sessionStorage.setItem('berisa_user',JSON.stringify(result.user));showToast('✓ Bienvenido/a, '+result.user.name);setTimeout(()=>window.location.replace('dashboard.html'),700)}
+  else{showError(result.error);document.getElementById('password').value='';document.getElementById('password').focus()}
+}
+document.getElementById('btnLogin').addEventListener('click',doLogin);
+document.getElementById('email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('password').focus()});
+document.getElementById('password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+document.getElementById('email').addEventListener('input',()=>{showFieldError('errEmail',false);hideError()});
+document.getElementById('password').addEventListener('input',()=>{showFieldError('errPass',false);hideError()});
+</script>
+</body>
+</html>

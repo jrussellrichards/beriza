@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Berisa — Pipeline Comercial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800:ital,wght@0,400;0,500;0,600;0,700&family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/berisa.css"/>
+<style>
+/* ── PIPELINE SPECIFIC STYLES ─── */
+.pipe-section{padding:18px 24px;}
+.pipe-section-title{font-family:'Montserrat','Arial Black',sans-serif;font-size:24px;font-weight:600;color:var(--t1);margin-bottom:3px;}
+.pipe-section-sub{font-size:11px;color:var(--t3);margin-bottom:20px;}
+
+/* Summary KPIs */
+.pipe-krow{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:20px;}
+
+/* Stage columns */
+.pipe-board{display:flex;gap:11px;overflow-x:auto;padding-bottom:12px;min-height:520px;align-items:flex-start;}
+.pipe-col{flex:0 0 240px;display:flex;flex-direction:column;gap:0;}
+.pipe-col-hdr{
+  padding:10px 12px;border-radius:var(--r) var(--r) 0 0;
+  display:flex;align-items:center;justify-content:space-between;
+  border:1px solid var(--bdr);border-bottom:none;
+}
+.pipe-col-hdr-left{display:flex;flex-direction:column;gap:2px;}
+.pipe-col-title{font-family:'IBM Plex Sans',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+.pipe-col-count{font-family:'Montserrat','Arial Black',sans-serif;font-size:20px;font-weight:700;line-height:1;}
+.pipe-col-capex{font-size:9px;color:var(--t3);}
+.pipe-col-body{
+  border:1px solid var(--bdr);border-radius:0 0 var(--r) var(--r);
+  background:var(--bg2);padding:8px;display:flex;flex-direction:column;
+  gap:7px;min-height:340px;
+}
+/* Opportunity card */
+.opp-card{
+  background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r-sm);
+  padding:11px;cursor:pointer;transition:var(--tr);position:relative;
+  border-left:3px solid var(--stage-color,var(--gold));
+}
+.opp-card:hover{border-color:var(--bdh);transform:translateY(-1px);box-shadow:var(--sh);}
+.opp-card-name{font-weight:600;font-size:12px;line-height:1.3;color:var(--t1);margin-bottom:3px;}
+.opp-card-company{font-size:10px;color:var(--t3);margin-bottom:8px;}
+.opp-card-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.opp-card-val{font-family:'Montserrat','Arial Black',sans-serif;font-size:14px;font-weight:700;color:var(--gold);}
+.opp-card-prob{font-size:9px;font-weight:700;letter-spacing:.5px;padding:1px 6px;border-radius:10px;}
+.opp-card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:7px;border-top:1px solid var(--bdr);margin-top:4px;}
+.opp-card-contact{font-size:9px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;}
+.opp-card-date{font-size:9px;color:var(--t3);}
+/* Prob bar */
+.prob-bar{height:3px;border-radius:2px;background:var(--bdr);margin-top:6px;overflow:hidden;}
+.prob-fill{height:100%;border-radius:2px;transition:width .4s ease;}
+
+/* Add opportunity button */
+.add-opp-btn{
+  width:100%;background:transparent;border:1px dashed var(--bdr);color:var(--t3);
+  padding:8px;border-radius:var(--r-sm);font-size:11px;transition:var(--tr);
+  font-family:'IBM Plex Sans',sans-serif;cursor:pointer;text-align:center;
+}
+.add-opp-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* Funnel chart */
+.funnel-wrap{display:flex;flex-direction:column;gap:4px;margin-top:12px;}
+.funnel-row{display:flex;align-items:center;gap:10px;}
+.funnel-label{font-size:10px;color:var(--t2);width:100px;text-align:right;flex-shrink:0;}
+.funnel-bar-wrap{flex:1;height:24px;background:var(--bg3);border-radius:3px;overflow:hidden;position:relative;}
+.funnel-bar{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:8px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.funnel-bar-val{font-size:10px;font-weight:700;color:#fff;white-space:nowrap;}
+.funnel-pct{font-size:9px;color:var(--t3);width:36px;text-align:right;flex-shrink:0;}
+
+/* Modal opp detail */
+.opp-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.opp-detail-item label{display:block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:4px;}
+.opp-detail-item .val{font-size:14px;font-weight:600;color:var(--t1);}
+.opp-detail-item .val.gold{font-family:'Montserrat','Arial Black',sans-serif;font-size:20px;color:var(--gold);}
+
+/* Timeline forecast */
+.forecast-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--bdr);}
+.forecast-row:last-child{border-bottom:none;}
+.forecast-month{font-size:10px;font-weight:600;color:var(--t2);width:60px;flex-shrink:0;}
+.forecast-bar-wrap{flex:1;height:18px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+.forecast-bar{height:100%;background:rgba(201,151,43,.5);border-radius:2px;transition:width .5s ease;}
+.forecast-val{font-size:10px;color:var(--t3);width:64px;text-align:right;flex-shrink:0;}
+
+@media(max-width:768px){
+  .pipe-krow{grid-template-columns:repeat(2,1fr);}
+  .pipe-board{flex-direction:column;}
+  .pipe-col{flex:0 0 auto;width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════ -->
+<header class="hdr" role="banner">
+  <div class="hl">
+    <a href="dashboard.html" class="hdr-logo-wrap" style="display:flex;align-items:center;gap:10px;text-decoration:none;" aria-label="Berisa inicio">
+            <svg width="40" height="40" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="pbg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0A1B34"/><stop offset="100%" stop-color="#0F2444"/></linearGradient>
+          <linearGradient id="pgld" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#E8C060"/><stop offset="100%" stop-color="#C9972B"/></linearGradient>
+          <linearGradient id="pslt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5B6472"/><stop offset="100%" stop-color="#3A4452"/></linearGradient>
+          <filter id="pgw"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <circle cx="32" cy="32" r="30" fill="url(#pbg)" stroke="#C9972B" stroke-width="1.5"/>
+        <circle cx="32" cy="32" r="27" fill="none" stroke="rgba(201,151,43,.2)" stroke-width="0.8"/>
+        <polygon points="32,4 29.5,28 34.5,28" fill="#F6F7F9" opacity="0.95"/>
+        <polygon points="32,60 29.5,36 34.5,36" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="60,32 36,29.5 36,34.5" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="4,32 28,29.5 28,34.5" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="52,12 35,29 38,31.5" fill="#C9972B" opacity="0.5"/>
+        <polygon points="12,52 29,35 31.5,38" fill="#C9972B" opacity="0.35"/>
+        <polygon points="12,12 29,29 31.5,26" fill="#C9972B" opacity="0.35"/>
+        <polygon points="52,52 35,35 38,32" fill="#C9972B" opacity="0.35"/>
+        <polygon points="32,10 30,32 34,32" fill="url(#pgld)" filter="url(#pgw)"/>
+        <polygon points="32,54 30,32 34,32" fill="url(#pslt)"/>
+        <circle cx="32" cy="32" r="4.5" fill="#C9972B" stroke="#F6F7F9" stroke-width="1.2"/>
+        <circle cx="32" cy="32" r="2" fill="#F6F7F9" opacity="0.9"/>
+        <text x="32" y="20" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="5.5" font-weight="700" fill="#C9972B">N</text>
+      </svg>
+      <div style="width:1px;height:30px;background:rgba(255,255,255,.15);flex-shrink:0;margin:0 2px"></div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-family:Montserrat,Arial Black,sans-serif;font-size:20px;font-weight:800;letter-spacing:4px;text-transform:uppercase;line-height:1;color:#F6F7F9">BERI<span style="position:relative;display:inline-block">S</span><span style="position:relative;display:inline-block">A<span style="position:absolute;top:-4px;right:-4px;width:5px;height:5px;border-radius:50%;background:#C9972B;display:block"></span></span></span>
+        <span style="font-family:IBM Plex Sans,sans-serif;font-size:8px;font-weight:500;letter-spacing:2.8px;text-transform:uppercase;color:#C9972B;line-height:1">Inteligencia Comercial</span>
+      </div>
+    </a>
+    <div class="hsep"></div>
+    <span id="dDate" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t3);letter-spacing:.5px;"></span>
+    <div class="sec-ind" title="Sesión autenticada"><div class="dot"></div><span id="hdrUser" style="font-size:10px;color:var(--t3)"></span></div>
+  </div>
+  <div class="hr">
+    <div class="pg">
+      <button class="pb" onclick="location.href='dashboard.html'">📊 Dashboard</button>
+      <button class="pb on" onclick="location.href='pipeline.html'">🎯 Pipeline</button>
+      <button class="pb" onclick="location.href='alerts.html'">🔔 Alertas</button>
+      <button class="pb" onclick="location.href='pricing.html'">💳 Planes</button>
+      <button class="pb" id="btnUsersNav" onclick="location.href='users.html'" style="display:none">👥 Usuarios</button>
+    </div>
+    <button class="pb" id="thB" onclick="toggleTheme()" style="font-size:15px">🌙</button>
+    <button class="pb" onclick="doLogout()" style="color:#F87171;border:1px solid rgba(217,64,64,.25);border-radius:3px;padding:4px 9px;" title="Cerrar sesión">⏻</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════════════ -->
+<main class="pipe-section" role="main">
+  <div class="pipe-section-title">Pipeline Comercial</div>
+  <div class="pipe-section-sub">Gestión de oportunidades activas por etapa — actualizado en tiempo real</div>
+
+  <!-- KPI Row -->
+  <div class="pipe-krow" id="pipeKpis"></div>
+
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input class="finp" type="search" id="pipeSearch" placeholder="Buscar oportunidad…" oninput="renderBoard()" style="min-width:220px;"/>
+      <select class="fsel" id="pipeSector" onchange="renderBoard()">
+        <option value="">Sector (todos)</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-primary btn-sm" onclick="openNewOppModal()" id="btnNewOpp">+ Nueva Oportunidad</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleFunnelView()" id="btnFunnel">📊 Vista Embudo</button>
+    </div>
+  </div>
+
+  <!-- KANBAN BOARD -->
+  <div class="pipe-board" id="pipeBoard"></div>
+
+  <!-- FUNNEL VIEW (hidden by default) -->
+  <div id="funnelView" style="display:none;margin-top:20px;">
+    <div class="cc">
+      <div class="cc-h"><div class="cc-t">Embudo de <span>Conversión</span></div></div>
+      <div class="funnel-wrap" id="funnelChart"></div>
+    </div>
+    <div class="r2" style="margin-top:12px;">
+      <div class="cc">
+        <div class="cc-h"><div class="cc-t">Proyección <span>Mensual</span></div></div>
+        <div id="forecastChart"></div>
+      </div>
+      <div class="cc">
+        <div class="cc-h"><div class="cc-t">Pipeline por <span>Sector</span></div></div>
+        <div id="pipeSectorChart"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Footer -->
+<footer class="footer" role="contentinfo">
+  <span>© <b>BERISA</b> — Pipeline Comercial · <span id="footYear"></span></span>
+  <span style="display:flex;align-items:center;gap:10px;"><span class="sec-ind"><div class="dot"></div>Sesión activa</span><span>v1.0.0</span></span>
+</footer>
+
+<!-- ── MODALS ── -->
+<!-- Opportunity Detail Modal -->
+<div class="mov" id="oppDetailModal" role="dialog" aria-modal="true">
+  <div class="modal" style="width:560px;">
+    <div class="mhdr">
+      <div class="mtit" id="oppDetailTit">Detalle Oportunidad</div>
+      <button class="mxbtn" onclick="closeOppDetailModal()">✕</button>
+    </div>
+    <div class="mbody" id="oppDetailBody"></div>
+  </div>
+</div>
+
+<!-- New/Edit Opportunity Modal -->
+<div class="mov" id="oppFormModal" role="dialog" aria-modal="true">
+  <div class="modal" style="width:520px;">
+    <div class="mhdr">
+      <div class="mtit" id="oppFormTit">Nueva Oportunidad</div>
+      <button class="mxbtn" onclick="closeOppFormModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="form-group">
+        <label class="form-label">Nombre del proyecto / oportunidad *</label>
+        <input class="form-input" type="text" id="of_name" placeholder="Ej: Terminal GNL — Expansión Fase II"/>
+        <div class="form-error" id="err_name">Campo requerido</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Empresa / Mandante *</label>
+        <input class="form-input" type="text" id="of_company" placeholder="Ej: GNL Mejillones S.A."/>
+        <div class="form-error" id="err_company">Campo requerido</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Valor estimado USD M *</label>
+          <input class="form-input" type="number" id="of_value" placeholder="Ej: 45" min="0"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Probabilidad %</label>
+          <input class="form-input" type="number" id="of_prob" placeholder="Ej: 60" min="0" max="100"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Etapa *</label>
+          <select class="form-input form-select" id="of_stage">
+            <option value="">Seleccione etapa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sector</label>
+          <select class="form-input form-select" id="of_sector">
+            <option value="">Seleccione sector</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Contacto principal</label>
+          <input class="form-input" type="text" id="of_contact" placeholder="Nombre del contacto"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha estimada de cierre</label>
+          <input class="form-input" type="date" id="of_dueDate"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--bdr);">
+        <button class="btn btn-outline" onclick="closeOppFormModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveOpp" onclick="saveOpp()">Guardar Oportunidad</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" role="status" aria-live="polite"></div>
+
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/berisa-data.js"></script>
+<script src="assets/js/berisa-api.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════
+   BERISA Pipeline — v1.0
+══════════════════════════════════════════════════════ */
+
+/* ─── SESSION GUARD ─── */
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(!tok||!BAuth.restoreSession(tok)){window.location.replace('index.html');return;}
+  const user=JSON.parse(sessionStorage.getItem('berisa_user')||'{}');
+  document.getElementById('hdrUser').textContent=(user.name||'').split(' ')[0];
+  if(BAuth.can('all'))document.getElementById('btnUsersNav').style.display='';
+  // Only managers+ can add opportunities
+  if(!BAuth.can('pipeline')&&!BAuth.can('all')){
+    const btn=document.getElementById('btnNewOpp');if(btn)btn.style.display='none';
+  }
+})();
+function doLogout(){BAuth.logout('manual');sessionStorage.removeItem('berisa_token');sessionStorage.removeItem('berisa_csrf');sessionStorage.removeItem('berisa_user');window.location.replace('index.html');}
+
+/* ─── LOCAL STATE ─── */
+const STAGES = BD.PIPELINE_STAGES;
+const SCOL   = BD.SCOL;
+let opps     = [...BD.PIPELINE_OPP]; // fallback demo
+
+// Load real opportunities from API
+(async () => {
+  try {
+    if (typeof BAPI !== 'undefined') {
+      const result = await BAPI.getOpportunities({ limit: 200 });
+      const data = result?.data || result;
+      if (Array.isArray(data) && data.length > 0) {
+        opps = data;
+        if (typeof renderPipeline === 'function') renderPipeline();
+        else if (typeof renderKanban === 'function') renderKanban();
+        else if (typeof render === 'function') render();
+      }
+    }
+  } catch(e) {
+    console.warn('[Pipeline] API not available, using demo data:', e.message);
+  }
+})();
+let editingId = null;
+let funnelVisible = false;
+let curTheme = 'dark';
+
+/* ─── HELPERS ─── */
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function nf(n){if(n==null)return'—';n=Math.round(n);if(n>=1e6)return(n/1e6).toFixed(1)+' M';return n.toLocaleString('es-CL');}
+function nfM(n){return n?'USD $'+n.toLocaleString('es-CL',{maximumFractionDigits:0})+' M':'—';}
+function probColor(prob){if(prob>=75)return'#2EAD6B';if(prob>=50)return'#C9972B';if(prob>=25)return'#E8A020';return'#64748B';}
+function genId(){return'opp_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);}
+function getFiltered(){
+  const q=document.getElementById('pipeSearch').value.toLowerCase();
+  const sec=document.getElementById('pipeSector').value;
+  return opps.filter(o=>{
+    if(q&&!(o.name+o.company+o.contact||'').toLowerCase().includes(q))return false;
+    if(sec&&o.sector!==sec)return false;
+    return true;
+  });
+}
+
+/* ─── KPI RENDER ─── */
+function renderKPIs(){
+  const filtered=getFiltered();
+  const totalVal=filtered.reduce((s,o)=>s+(o.value||0),0);
+  const weightedVal=filtered.reduce((s,o)=>s+(o.value||0)*(o.prob||0)/100,0);
+  const closingCount=filtered.filter(o=>o.stage==='closing').length;
+  const avgProb=filtered.length?Math.round(filtered.reduce((s,o)=>s+(o.prob||0),0)/filtered.length):0;
+  document.getElementById('pipeKpis').innerHTML=`
+    <div class="kpi"><div class="kico">🎯</div><div class="kl">Oportunidades</div><div class="kv">${nf(filtered.length)}</div><div class="ksb">en pipeline activo</div></div>
+    <div class="kpi"><div class="kico">💰</div><div class="kl">Valor Bruto</div><div class="kv" style="font-size:20px">$${nf(totalVal*1000000/1000000)}<span class="u"> M USD</span></div><div class="ksb">suma sin ponderar</div></div>
+    <div class="kpi"><div class="kico">📊</div><div class="kl">Valor Ponderado</div><div class="kv" style="font-size:20px">$${nf(Math.round(weightedVal))}<span class="u"> M USD</span></div><div class="ksb">ajustado por probabilidad</div></div>
+    <div class="kpi"><div class="kico">🏆</div><div class="kl">En Cierre</div><div class="kv">${nf(closingCount)}</div><div class="ksb">etapa closing (prob ≥85%)</div></div>
+    <div class="kpi"><div class="kico">📈</div><div class="kl">Prob. Promedio</div><div class="kv">${avgProb}<span class="u">%</span></div><div class="ksb">media ponderada pipeline</div></div>
+  `;
+}
+
+/* ─── KANBAN BOARD ─── */
+function renderBoard(){
+  renderKPIs();
+  const board=document.getElementById('pipeBoard');
+  const filtered=getFiltered();
+  const canEdit=BAuth.can('pipeline')||BAuth.can('all');
+  board.innerHTML=STAGES.map(st=>{
+    const stOpps=filtered.filter(o=>o.stage===st.id);
+    const stVal=stOpps.reduce((s,o)=>s+(o.value||0),0);
+    return `<div class="pipe-col">
+      <div class="pipe-col-hdr" style="background:${st.color}12;border-color:${st.color}33;">
+        <div class="pipe-col-hdr-left">
+          <div class="pipe-col-title" style="color:${st.color}">${esc(st.label)}</div>
+          <div class="pipe-col-count">${stOpps.length}</div>
+          <div class="pipe-col-capex">USD $${stVal} M · ${st.prob}% prob base</div>
+        </div>
+        <div style="width:28px;height:28px;border-radius:50%;background:${st.color}20;border:1px solid ${st.color}44;display:flex;align-items:center;justify-content:center;font-size:13px;">${st.prob>=75?'🏆':st.prob>=50?'🎯':st.prob>=25?'📋':'🔍'}</div>
+      </div>
+      <div class="pipe-col-body">
+        ${stOpps.map(o=>renderOppCard(o,st.color)).join('')}
+        ${canEdit?`<button class="add-opp-btn" onclick="openNewOppModal('${st.id}')">+ Agregar oportunidad</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  if(funnelVisible)renderFunnel();
+}
+function renderOppCard(o,stColor){
+  const pc=probColor(o.prob||0);
+  const sectorColor=Object.entries(SCOL).find(([k])=>k===o.sector)?.[1]||'#888';
+  return `<div class="opp-card" style="--stage-color:${stColor}" onclick="openOppDetail('${o.id}')">
+    <div class="opp-card-name">${esc(o.name)}</div>
+    <div class="opp-card-company">${esc(o.company)}</div>
+    <div class="opp-card-row">
+      <div class="opp-card-val">$${o.value} M</div>
+      <div class="opp-card-prob" style="background:${pc}18;color:${pc};border:1px solid ${pc}44">${o.prob}%</div>
+    </div>
+    ${o.sector?`<div style="margin-bottom:4px"><span class="bdg" style="font-size:9px;background:${sectorColor}18;border:1px solid ${sectorColor}44;color:${sectorColor}">${esc(o.sector)}</span></div>`:''}
+    <div class="prob-bar"><div class="prob-fill" style="width:${o.prob}%;background:${pc}"></div></div>
+    <div class="opp-card-footer">
+      <div class="opp-card-contact">👤 ${esc(o.contact||'Sin contacto')}</div>
+      <div class="opp-card-date">${o.dueDate?'📅 '+o.dueDate:''}</div>
+    </div>
+  </div>`;
+}
+
+/* ─── FUNNEL VIEW ─── */
+function toggleFunnelView(){
+  funnelVisible=!funnelVisible;
+  document.getElementById('funnelView').style.display=funnelVisible?'block':'none';
+  document.getElementById('btnFunnel').textContent=funnelVisible?'📋 Vista Kanban':'📊 Vista Embudo';
+  if(funnelVisible)renderFunnel();
+}
+function renderFunnel(){
+  const filtered=getFiltered();
+  const maxVal=STAGES.reduce((max,st)=>{const v=filtered.filter(o=>o.stage===st.id).reduce((s,o)=>s+(o.value||0),0);return Math.max(max,v);},1);
+  document.getElementById('funnelChart').innerHTML=STAGES.map(st=>{
+    const stOpps=filtered.filter(o=>o.stage===st.id);
+    const val=stOpps.reduce((s,o)=>s+(o.value||0),0);
+    const pct=Math.round(val/maxVal*100);
+    return `<div class="funnel-row">
+      <div class="funnel-label">${esc(st.label)}</div>
+      <div class="funnel-bar-wrap">
+        <div class="funnel-bar" style="width:${pct}%;background:${st.color}CC;">
+          <span class="funnel-bar-val">${stOpps.length} · $${val}M</span>
+        </div>
+      </div>
+      <div class="funnel-pct">${st.prob}%</div>
+    </div>`;
+  }).join('');
+
+  // Forecast by month
+  const months=[];const now=new Date();
+  for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);months.push({label:d.toLocaleDateString('es-CL',{month:'short',year:'2-digit'}),date:d});}
+  const maxForecast=Math.max(1,...months.map(m=>{
+    return filtered.filter(o=>{if(!o.dueDate)return false;const d=new Date(o.dueDate);return d.getMonth()===m.date.getMonth()&&d.getFullYear()===m.date.getFullYear();}).reduce((s,o)=>s+(o.value||0)*(o.prob||0)/100,0);
+  }));
+  document.getElementById('forecastChart').innerHTML='<div class="funnel-wrap">'+months.map(m=>{
+    const val=filtered.filter(o=>{if(!o.dueDate)return false;const d=new Date(o.dueDate);return d.getMonth()===m.date.getMonth()&&d.getFullYear()===m.date.getFullYear();}).reduce((s,o)=>s+(o.value||0)*(o.prob||0)/100,0);
+    const pct=Math.round(val/maxForecast*100);
+    return `<div class="forecast-row"><div class="forecast-month">${m.label}</div><div class="forecast-bar-wrap"><div class="forecast-bar" style="width:${pct}%"></div></div><div class="forecast-val">$${val.toFixed(1)}M</div></div>`;
+  }).join('')+'</div>';
+
+  // Sector breakdown
+  const sectors=[...new Set(filtered.map(o=>o.sector).filter(Boolean))];
+  const sMax=Math.max(1,...sectors.map(s=>filtered.filter(o=>o.sector===s).reduce((t,o)=>t+(o.value||0),0)));
+  document.getElementById('pipeSectorChart').innerHTML='<div class="funnel-wrap">'+sectors.map(s=>{
+    const val=filtered.filter(o=>o.sector===s).reduce((t,o)=>t+(o.value||0),0);
+    const col=SCOL[s]||'#888', pct=Math.round(val/sMax*100);
+    return`<div class="funnel-row"><div class="funnel-label" style="color:${col}">${esc(s)}</div><div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${pct}%;background:${col}CC;"><span class="funnel-bar-val">$${val}M</span></div></div><div class="funnel-pct">${filtered.filter(o=>o.sector===s).length}</div></div>`;
+  }).join('')+'</div>';
+}
+
+/* ─── OPP DETAIL MODAL ─── */
+function openOppDetail(id){
+  const o=opps.find(x=>x.id===id);if(!o)return;
+  const stage=STAGES.find(s=>s.id===o.stage)||{};
+  const pc=probColor(o.prob||0);
+  const canEdit=BAuth.can('pipeline')||BAuth.can('all');
+  document.getElementById('oppDetailTit').textContent=o.name;
+  document.getElementById('oppDetailBody').innerHTML=`
+    <div class="opp-detail-grid">
+      <div class="opp-detail-item"><label>Empresa / Mandante</label><div class="val">${esc(o.company)}</div></div>
+      <div class="opp-detail-item"><label>Sector</label><div class="val">${esc(o.sector||'—')}</div></div>
+      <div class="opp-detail-item"><label>Valor Estimado</label><div class="val gold">$${o.value} M USD</div></div>
+      <div class="opp-detail-item"><label>Probabilidad</label><div class="val" style="color:${pc}">${o.prob}%</div></div>
+      <div class="opp-detail-item"><label>Etapa Actual</label><div class="val"><span style="background:${stage.color||'#888'}18;border:1px solid ${stage.color||'#888'}44;color:${stage.color||'#888'};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${esc(stage.label||o.stage)}</span></div></div>
+      <div class="opp-detail-item"><label>Fecha Est. Cierre</label><div class="val">${esc(o.dueDate||'—')}</div></div>
+      <div class="opp-detail-item"><label>Contacto Principal</label><div class="val">${esc(o.contact||'—')}</div></div>
+      <div class="opp-detail-item"><label>Valor Ponderado</label><div class="val" style="color:var(--gold)">$${((o.value||0)*(o.prob||0)/100).toFixed(1)} M USD</div></div>
+    </div>
+    <div class="prob-bar" style="height:6px;margin-bottom:16px;"><div class="prob-fill" style="width:${o.prob}%;background:${pc}"></div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--bdr);">
+      ${canEdit?`<button class="btn btn-outline btn-sm" onclick="closeOppDetailModal();openEditOppModal('${o.id}')">✏️ Editar</button>`:''}
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        ${STAGES.filter(s=>s.id!==o.stage).map(s=>`<button class="btn btn-outline btn-sm" style="font-size:9px;padding:4px 8px;" onclick="moveOpp('${o.id}','${s.id}')">${esc(s.label)} →</button>`).join('')}
+      </div>
+    </div>`;
+  document.getElementById('oppDetailModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeOppDetailModal(){document.getElementById('oppDetailModal').classList.remove('open');document.body.style.overflow='';}
+
+function moveOpp(id,stage){
+  const o=opps.find(x=>x.id===id);if(!o)return;
+  if(!BAuth.can('pipeline')&&!BAuth.can('all')){showToast('Sin permisos para esta acción','error');return;}
+  o.stage=stage;
+  closeOppDetailModal();
+  renderBoard();
+  showToast(`Oportunidad movida a "${STAGES.find(s=>s.id===stage)?.label}"`, 'success');
+}
+
+/* ─── OPP FORM MODAL ─── */
+function openNewOppModal(stageId=null){
+  editingId=null;
+  document.getElementById('oppFormTit').textContent='Nueva Oportunidad';
+  document.getElementById('btnSaveOpp').textContent='Guardar Oportunidad';
+  clearForm();
+  if(stageId)document.getElementById('of_stage').value=stageId;
+  document.getElementById('of_dueDate').valueAsDate=new Date(Date.now()+90*24*60*60*1000);
+  document.getElementById('oppFormModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function openEditOppModal(id){
+  const o=opps.find(x=>x.id===id);if(!o)return;
+  editingId=id;
+  document.getElementById('oppFormTit').textContent='Editar Oportunidad';
+  document.getElementById('btnSaveOpp').textContent='Actualizar';
+  document.getElementById('of_name').value=o.name;
+  document.getElementById('of_company').value=o.company;
+  document.getElementById('of_value').value=o.value;
+  document.getElementById('of_prob').value=o.prob;
+  document.getElementById('of_stage').value=o.stage;
+  document.getElementById('of_sector').value=o.sector||'';
+  document.getElementById('of_contact').value=o.contact||'';
+  document.getElementById('of_dueDate').value=o.dueDate||'';
+  document.getElementById('oppFormModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeOppFormModal(){document.getElementById('oppFormModal').classList.remove('open');document.body.style.overflow='';}
+function clearForm(){['of_name','of_company','of_value','of_prob','of_contact','of_dueDate'].forEach(id=>document.getElementById(id).value='');document.getElementById('of_stage').value='';document.getElementById('of_sector').value='';}
+
+function saveOpp(){
+  if(!BAuth.can('pipeline')&&!BAuth.can('all')){showToast('Sin permisos para esta acción','error');return;}
+  const name=BAuth.sanitize(document.getElementById('of_name').value);
+  const company=BAuth.sanitize(document.getElementById('of_company').value);
+  const stage=document.getElementById('of_stage').value;
+  let valid=true;
+  if(!name){document.getElementById('err_name').classList.add('show');valid=false;}else{document.getElementById('err_name').classList.remove('show');}
+  if(!company){document.getElementById('err_company').classList.add('show');valid=false;}else{document.getElementById('err_company').classList.remove('show');}
+  if(!stage){showToast('Seleccione una etapa','warning');valid=false;}
+  if(!valid)return;
+  const data={
+    id:editingId||genId(),
+    name,company,stage,
+    value:parseInt(document.getElementById('of_value').value)||0,
+    prob:Math.max(0,Math.min(100,parseInt(document.getElementById('of_prob').value)||0)),
+    sector:document.getElementById('of_sector').value,
+    contact:BAuth.sanitize(document.getElementById('of_contact').value),
+    dueDate:document.getElementById('of_dueDate').value,
+  };
+  if(editingId){const idx=opps.findIndex(o=>o.id===editingId);if(idx>=0)opps[idx]=data;}
+  else{opps.unshift(data);}
+  closeOppFormModal();
+  renderBoard();
+  showToast(editingId?'Oportunidad actualizada':'Oportunidad creada exitosamente','success');
+}
+
+/* ─── THEME ─── */
+function toggleTheme(){
+  const curTheme=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',curTheme);
+  document.getElementById('thB').textContent=curTheme==='dark'?'🌙':'☀️';
+}
+
+/* ─── TOAST ─── */
+function showToast(msg,type='info',duration=3500){
+  const icons={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el=document.createElement('div');el.className=`toast toast-${type}`;
+  el.innerHTML=`<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${esc(msg)}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},duration);
+}
+
+/* ─── KEYBOARD ─── */
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeOppDetailModal();closeOppFormModal();}});
+document.getElementById('oppDetailModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeOppDetailModal();});
+document.getElementById('oppFormModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeOppFormModal();});
+
+/* ─── INIT ─── */
+(function(){
+  document.getElementById('dDate').textContent=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('footYear').textContent=new Date().getFullYear();
+  // Populate sector filter
+  const sectors=[...new Set(BD.PROJECTS.map(p=>p.s))].sort();
+  const sel=document.getElementById('pipeSector');
+  sectors.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o);});
+  // Populate form selects
+  STAGES.forEach(st=>{const o=document.createElement('option');o.value=st.id;o.textContent=st.label;document.getElementById('of_stage').appendChild(o);});
+  sectors.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;document.getElementById('of_sector').appendChild(o);});
+  renderBoard();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Berisa — Gestión de Usuarios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800:ital,wght@0,400;0,500;0,600;0,700&family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/berisa.css"/>
+<style>
+.users-page{padding:24px;}
+.users-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.users-title{font-family:'Montserrat','Arial Black',sans-serif;font-size:26px;font-weight:600;color:var(--t1);}
+.users-sub{font-size:11px;color:var(--t3);margin-top:3px;}
+/* Stats row */
+.users-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:20px;}
+/* Tabs */
+.tab-bar{display:flex;gap:2px;border-bottom:1px solid var(--bdr);margin-bottom:20px;}
+.tab-btn{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--t3);padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;transition:var(--tr);cursor:pointer;}
+.tab-btn.on{border-bottom-color:var(--gold);color:var(--gold);}
+.tab-btn:hover:not(.on){color:var(--t2);border-bottom-color:var(--bdr);}
+/* User Cards */
+.users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:24px;}
+.u-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;position:relative;transition:var(--tr);}
+.u-card:hover{border-color:var(--bdh);box-shadow:var(--sh);}
+.u-card-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.u-avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Montserrat','Arial Black',sans-serif;font-size:18px;font-weight:700;flex-shrink:0;border:2px solid var(--gold-border);background:var(--navy-mid);color:var(--gold);}
+.u-info{flex:1;min-width:0;}
+.u-name{font-family:'Montserrat','Arial Black',sans-serif;font-size:16px;font-weight:600;}
+.u-email{font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.u-status-dot{position:absolute;top:14px;right:14px;width:8px;height:8px;border-radius:50%;}
+.u-status-dot.active{background:#2EAD6B;box-shadow:0 0 6px #2EAD6B88;animation:pls 2s infinite;}
+.u-status-dot.inactive{background:#555;}
+@keyframes pls{0%,100%{opacity:1}50%{opacity:.3}}
+.u-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.u-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;}
+.u-stat{background:var(--bg3);border:1px solid var(--bdr);border-radius:4px;padding:8px;text-align:center;}
+.u-stat .v{font-family:'Montserrat','Arial Black',sans-serif;font-size:18px;font-weight:700;color:var(--gold);display:block;}
+.u-stat .l{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);}
+.u-actions{display:flex;gap:5px;}
+.u-btn{flex:1;background:transparent;border:1px solid var(--bdr);color:var(--t2);padding:6px 0;border-radius:3px;font-size:10px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;letter-spacing:.3px;transition:var(--tr);cursor:pointer;text-align:center;}
+.u-btn:hover{border-color:var(--gold);color:var(--gold);}
+.u-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+.u-btn.success:hover{border-color:#2EAD6B;color:#2EAD6B;}
+/* Audit Log */
+.audit-table-wrap{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;}
+.audit-hdr{padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--bg3);display:flex;align-items:center;justify-content:space-between;}
+.audit-title{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);}
+.audit-row{display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--bdr);font-size:11px;transition:var(--tr);}
+.audit-row:last-child{border-bottom:none;}
+.audit-row:hover{background:var(--bg3);}
+.audit-ts{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t3);flex-shrink:0;width:150px;}
+.audit-event{font-weight:600;min-width:160px;}
+.audit-user{color:var(--t3);flex:1;}
+.audit-detail{font-size:10px;color:var(--t3);text-align:right;}
+.audit-event.LOGIN_SUCCESS{color:#2EAD6B;}
+.audit-event.LOGIN_FAILED{color:#D94040;}
+.audit-event.LOGIN_BLOCKED{color:#D94040;}
+.audit-event.LOGOUT{color:#9BA8BB;}
+.audit-event.SESSION_TIMEOUT{color:#E8A020;}
+.audit-event.USER_CREATED{color:#3B82F6;}
+.audit-event.USER_UPDATED{color:#C9972B;}
+.audit-event.PERMISSION_DENIED{color:#D94040;}
+/* Permissions Matrix */
+.perms-table{width:100%;border-collapse:collapse;}
+.perms-table th,.perms-table td{padding:9px 12px;text-align:left;font-size:11px;}
+.perms-table thead tr{background:var(--bg3);border-bottom:2px solid var(--gold);}
+.perms-table th{font-family:'IBM Plex Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);}
+.perms-table tbody tr{border-bottom:1px solid var(--bdr);}
+.perms-table tbody tr:hover{background:var(--bg3);}
+.perm-check{font-size:16px;text-align:center;}
+.perm-x{font-size:16px;text-align:center;opacity:.3;}
+/* Invite badge */
+.invite-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;}
+/* Password strength */
+.pw-strength{margin-top:6px;display:flex;gap:4px;align-items:center;}
+.pw-bar{flex:1;height:3px;border-radius:2px;background:var(--bdr);overflow:hidden;}
+.pw-fill{height:100%;border-radius:2px;transition:width .3s,background .3s;}
+.pw-label{font-size:10px;font-weight:600;min-width:50px;}
+/* Empty state */
+.empty-state{text-align:center;padding:48px 24px;color:var(--t3);}
+.empty-icon{font-size:48px;opacity:.2;margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr" role="banner">
+  <div class="hl">
+    <a href="dashboard.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;" aria-label="Berisa inicio">
+            <svg width="40" height="40" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="pbg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0A1B34"/><stop offset="100%" stop-color="#0F2444"/></linearGradient>
+          <linearGradient id="pgld" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#E8C060"/><stop offset="100%" stop-color="#C9972B"/></linearGradient>
+          <linearGradient id="pslt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5B6472"/><stop offset="100%" stop-color="#3A4452"/></linearGradient>
+          <filter id="pgw"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <circle cx="32" cy="32" r="30" fill="url(#pbg)" stroke="#C9972B" stroke-width="1.5"/>
+        <circle cx="32" cy="32" r="27" fill="none" stroke="rgba(201,151,43,.2)" stroke-width="0.8"/>
+        <polygon points="32,4 29.5,28 34.5,28" fill="#F6F7F9" opacity="0.95"/>
+        <polygon points="32,60 29.5,36 34.5,36" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="60,32 36,29.5 36,34.5" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="4,32 28,29.5 28,34.5" fill="#F6F7F9" opacity="0.55"/>
+        <polygon points="52,12 35,29 38,31.5" fill="#C9972B" opacity="0.5"/>
+        <polygon points="12,52 29,35 31.5,38" fill="#C9972B" opacity="0.35"/>
+        <polygon points="12,12 29,29 31.5,26" fill="#C9972B" opacity="0.35"/>
+        <polygon points="52,52 35,35 38,32" fill="#C9972B" opacity="0.35"/>
+        <polygon points="32,10 30,32 34,32" fill="url(#pgld)" filter="url(#pgw)"/>
+        <polygon points="32,54 30,32 34,32" fill="url(#pslt)"/>
+        <circle cx="32" cy="32" r="4.5" fill="#C9972B" stroke="#F6F7F9" stroke-width="1.2"/>
+        <circle cx="32" cy="32" r="2" fill="#F6F7F9" opacity="0.9"/>
+        <text x="32" y="20" text-anchor="middle" font-family="IBM Plex Sans,sans-serif" font-size="5.5" font-weight="700" fill="#C9972B">N</text>
+      </svg>
+      <div style="width:1px;height:30px;background:rgba(255,255,255,.15);flex-shrink:0;margin:0 2px"></div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-family:Montserrat,Arial Black,sans-serif;font-size:20px;font-weight:800;letter-spacing:4px;text-transform:uppercase;line-height:1;color:#F6F7F9">BERI<span style="position:relative;display:inline-block">S</span><span style="position:relative;display:inline-block">A<span style="position:absolute;top:-4px;right:-4px;width:5px;height:5px;border-radius:50%;background:#C9972B;display:block"></span></span></span>
+        <span style="font-family:IBM Plex Sans,sans-serif;font-size:8px;font-weight:500;letter-spacing:2.8px;text-transform:uppercase;color:#C9972B;line-height:1">Inteligencia Comercial</span>
+      </div>
+    </a>
+    <div class="hsep"></div>
+    <div class="sec-ind"><div class="dot"></div><span id="hdrUser" style="font-size:10px;color:var(--t3)"></span></div>
+  </div>
+  <div class="hr">
+    <div class="pg">
+      <button class="pb" onclick="location.href='dashboard.html'">📊 Dashboard</button>
+      <button class="pb" onclick="location.href='pipeline.html'">🎯 Pipeline</button>
+      <button class="pb" onclick="location.href='alerts.html'">🔔 Alertas</button>
+      <button class="pb" onclick="location.href='pricing.html'">💳 Planes</button>
+      <button class="pb on">👥 Usuarios</button>
+    </div>
+    <button class="pb" id="thB" onclick="toggleTheme()" style="font-size:15px">🌙</button>
+    <button class="pb" onclick="doLogout()" style="color:#F87171;border:1px solid rgba(217,64,64,.25);border-radius:3px;padding:4px 9px;" title="Cerrar sesión">⏻</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="users-page" role="main">
+  <div class="users-header">
+    <div>
+      <div class="users-title">Gestión de Usuarios</div>
+      <div class="users-sub">Administración de accesos, roles y auditoría de actividad</div>
+    </div>
+    <button class="btn btn-primary" onclick="openCreateModal()">+ Crear Usuario</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="users-stats" id="userStats"></div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn on" data-tab="users" onclick="switchTab('users')">👥 Usuarios</button>
+    <button class="tab-btn" data-tab="permissions" onclick="switchTab('permissions')">🔒 Permisos</button>
+    <button class="tab-btn" data-tab="audit" onclick="switchTab('audit')">📋 Auditoría</button>
+    <button class="tab-btn" data-tab="security" onclick="switchTab('security')">🛡️ Seguridad</button>
+  </div>
+
+  <!-- USERS TAB -->
+  <div id="tab-users">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <input class="finp" type="search" id="userSearch" placeholder="Buscar por nombre, email o rol…" oninput="renderUsers()" style="min-width:280px;"/>
+      <div style="display:flex;gap:6px;">
+        <select class="fsel" id="roleFilter" onchange="renderUsers()">
+          <option value="">Todos los roles</option>
+          <option value="ADMIN">Administrador</option>
+          <option value="MANAGER">Gerente</option>
+          <option value="ANALYST">Analista</option>
+          <option value="VIEWER">Visualizador</option>
+        </select>
+        <select class="fsel" id="statusFilter" onchange="renderUsers()">
+          <option value="">Estado (todos)</option>
+          <option value="active">Activos</option>
+          <option value="inactive">Inactivos</option>
+        </select>
+      </div>
+    </div>
+    <div class="users-grid" id="usersGrid"></div>
+  </div>
+
+  <!-- PERMISSIONS TAB -->
+  <div id="tab-permissions" style="display:none;">
+    <div class="cc">
+      <div class="cc-h"><div class="cc-t">Matriz de <span>Permisos por Rol</span></div></div>
+      <div class="tw">
+        <table class="perms-table">
+          <thead><tr>
+            <th>Permiso / Funcionalidad</th>
+            <th>Administrador</th>
+            <th>Gerente</th>
+            <th>Analista</th>
+            <th>Visualizador</th>
+          </tr></thead>
+          <tbody id="permsMatrix"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="disc" style="margin-top:14px;" role="note">
+      <div class="di">ℹ️</div>
+      <div class="dt"><strong>Políticas de acceso.</strong> Los roles son jerárquicos. El Administrador tiene acceso total. Los roles inferiores heredan permisos de solo lectura. La modificación de datos sensibles requiere rol Gerente o superior. El acceso a auditoría y gestión de usuarios es exclusivo del Administrador.</div>
+    </div>
+  </div>
+
+  <!-- AUDIT TAB -->
+  <div id="tab-audit" style="display:none;">
+    <div class="audit-table-wrap">
+      <div class="audit-hdr">
+        <div class="audit-title">Registro de Actividad</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input class="finp" type="search" id="auditSearch" placeholder="Buscar evento…" oninput="renderAudit()" style="min-width:200px;height:28px;"/>
+          <button class="cbtn hc" onclick="renderAudit()">↻ Actualizar</button>
+        </div>
+      </div>
+      <div id="auditLog" style="max-height:500px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- SECURITY TAB -->
+  <div id="tab-security" style="display:none;">
+    <div class="r2" style="margin-bottom:12px;">
+      <div class="cc">
+        <div class="cc-h"><div class="cc-t">Configuración de <span>Seguridad</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--bdr);">
+            <div><div style="font-weight:600;font-size:13px;">Timeout de Sesión</div><div style="font-size:11px;color:var(--t3);margin-top:2px;">Cierre automático por inactividad</div></div>
+            <span class="badge badge-success">30 min</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--bdr);">
+            <div><div style="font-weight:600;font-size:13px;">Intentos de Login</div><div style="font-size:11px;color:var(--t3);margin-top:2px;">Máximo antes de bloqueo temporal</div></div>
+            <span class="badge badge-warning">5 intentos</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--bdr);">
+            <div><div style="font-weight:600;font-size:13px;">Duración de Bloqueo</div><div style="font-size:11px;color:var(--t3);margin-top:2px;">Tiempo de bloqueo por exceso de intentos</div></div>
+            <span class="badge badge-danger">15 min</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--bdr);">
+            <div><div style="font-weight:600;font-size:13px;">Expiración de Token</div><div style="font-size:11px;color:var(--t3);margin-top:2px;">Tiempo máximo de sesión activa</div></div>
+            <span class="badge badge-gold">8 horas</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--bdr);">
+            <div><div style="font-weight:600;font-size:13px;">Almacenamiento Token</div><div style="font-size:11px;color:var(--t3);margin-top:2px;">Ubicación del token de sesión</div></div>
+            <span class="badge badge-success">sessionStorage (tab-bound)</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--bdr);">
+            <div><div style="font-weight:600;font-size:13px;">Content Security Policy</div><div style="font-size:11px;color:var(--t3);margin-top:2px;">Protección contra XSS e inyección</div></div>
+            <span class="badge badge-success">Habilitado</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--bdr);">
+            <div><div style="font-weight:600;font-size:13px;">Sanitización de Inputs</div><div style="font-size:11px;color:var(--t3);margin-top:2px;">Escape de caracteres peligrosos en todos los campos</div></div>
+            <span class="badge badge-success">Activo</span>
+          </div>
+        </div>
+      </div>
+      <div class="cc">
+        <div class="cc-h"><div class="cc-t">Recomendaciones de <span>Hardening</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;" id="hardeningList"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer" role="contentinfo">
+  <span>© <b>BERISA</b> — Gestión de Usuarios · <span id="footYear"></span></span>
+  <span style="display:flex;align-items:center;gap:10px;"><span class="sec-ind"><div class="dot"></div>Sesión activa</span><span>v1.0.0</span></span>
+</footer>
+
+<!-- ── CREATE/EDIT USER MODAL ── -->
+<div class="mov" id="userModal" role="dialog" aria-modal="true" aria-labelledby="userModalTit">
+  <div class="modal" style="width:520px;">
+    <div class="mhdr">
+      <div class="mtit" id="userModalTit">Crear Usuario</div>
+      <button class="mxbtn" onclick="closeUserModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="form-group">
+        <label class="form-label">Nombre completo *</label>
+        <input class="form-input" type="text" id="uf_name" placeholder="Ej: María González Reyes" autocomplete="off"/>
+        <div class="form-error" id="uf_err_name">Nombre requerido (mín. 3 caracteres)</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Correo electrónico *</label>
+        <input class="form-input" type="email" id="uf_email" placeholder="usuario@empresa.cl" autocomplete="off"/>
+        <div class="form-error" id="uf_err_email">Formato de email inválido</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rol *</label>
+        <select class="form-input form-select" id="uf_role">
+          <option value="">Seleccione un rol</option>
+          <option value="ADMIN">Administrador — acceso total</option>
+          <option value="MANAGER">Gerente — edición y pipeline</option>
+          <option value="ANALYST">Analista — lectura y pipeline</option>
+          <option value="VIEWER">Visualizador — solo lectura</option>
+        </select>
+        <div class="form-error" id="uf_err_role">Seleccione un rol</div>
+      </div>
+      <div class="form-group" id="uf_pass_group">
+        <label class="form-label">Contraseña *</label>
+        <div style="position:relative;">
+          <input class="form-input" type="password" id="uf_password" placeholder="Mínimo 8 caracteres" oninput="checkPwStrength(this.value)" autocomplete="new-password"/>
+          <button type="button" onclick="togglePw('uf_password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;">👁</button>
+        </div>
+        <div class="pw-strength">
+          <div class="pw-bar"><div class="pw-fill" id="pwFill"></div></div>
+          <div class="pw-label" id="pwLabel" style="color:var(--t3)"></div>
+        </div>
+        <div class="form-error" id="uf_err_pass">La contraseña no cumple los requisitos</div>
+        <div class="form-hint" id="uf_hint_pass">Mínimo 8 caracteres, una mayúscula, un número y un carácter especial</div>
+      </div>
+      <div class="form-group" id="uf_confirm_group">
+        <label class="form-label">Confirmar contraseña *</label>
+        <div style="position:relative;">
+          <input class="form-input" type="password" id="uf_confirm" placeholder="Repita la contraseña" autocomplete="new-password"/>
+          <button type="button" onclick="togglePw('uf_confirm',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;">👁</button>
+        </div>
+        <div class="form-error" id="uf_err_confirm">Las contraseñas no coinciden</div>
+      </div>
+      <!-- Role description -->
+      <div id="roleDesc" style="padding:10px 12px;background:var(--gold-glow);border:1px solid var(--gold-border);border-radius:var(--r);font-size:11px;color:var(--t2);margin-bottom:16px;display:none;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--bdr);">
+        <button class="btn btn-outline" onclick="closeUserModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveUser" onclick="saveUser()">Crear Usuario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM DEACTIVATE MODAL ── -->
+<div class="mov" id="confirmModal" role="dialog" aria-modal="true">
+  <div class="modal" style="width:380px;">
+    <div class="mhdr">
+      <div class="mtit" style="color:var(--danger)">⚠️ Confirmar Acción</div>
+      <button class="mxbtn" onclick="closeConfirmModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <p id="confirmMsg" style="font-size:13px;color:var(--t2);margin-bottom:20px;line-height:1.6;"></p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeConfirmModal()">Cancelar</button>
+        <button class="btn btn-danger" id="btnConfirmAction">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" role="status" aria-live="polite"></div>
+
+<script src="assets/js/berisa-api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════
+   BERISA Users — v1.0
+═══════════════════════════════════════════════════ */
+
+/* ─── GUARD (Admin only) ─── */
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(!tok||!BAuth.restoreSession(tok)){window.location.replace('index.html');return;}
+  if(!BAuth.can('all')){showToast('Acceso restringido a Administradores','error');setTimeout(()=>window.location.replace('dashboard.html'),1800);return;}
+  const user=JSON.parse(sessionStorage.getItem('berisa_user')||'{}');
+  document.getElementById('hdrUser').textContent=(user.name||'').split(' ')[0];
+})();
+function doLogout(){BAuth.logout('manual');sessionStorage.removeItem('berisa_token');sessionStorage.removeItem('berisa_csrf');sessionStorage.removeItem('berisa_user');window.location.replace('index.html');}
+
+/* ─── HELPERS ─── */
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function nf(n){return(n||0).toLocaleString('es-CL');}
+
+/* ─── ROLE META ─── */
+const ROLE_META={
+  ADMIN:{label:'Administrador',color:'var(--gold)',cls:'role-admin',desc:'Acceso completo: gestión de usuarios, configuración de seguridad, auditoría y todas las funcionalidades.',icon:'👑'},
+  MANAGER:{label:'Gerente',color:'#3B82F6',cls:'role-manager',desc:'Acceso a dashboard, pipeline comercial, edición de oportunidades y exportación de datos.',icon:'📊'},
+  ANALYST:{label:'Analista',color:'#2EAD6B',cls:'role-analyst',desc:'Lectura de dashboard, acceso a pipeline y exportación. Sin edición de configuración.',icon:'🔍'},
+  VIEWER:{label:'Visualizador',color:'#64748B',cls:'role-viewer',desc:'Solo lectura del dashboard de proyectos. Sin acceso a pipeline ni exportación.',icon:'👁'},
+};
+
+/* ─── STATS ─── */
+function renderStats(){
+  const users=BAuth.getUsers();
+  const total=users.length,active=users.filter(u=>u.active).length;
+  const byRole=Object.fromEntries(Object.keys(ROLE_META).map(r=>[r,users.filter(u=>u.role===r).length]));
+  document.getElementById('userStats').innerHTML=`
+    <div class="kpi"><div class="kico">👥</div><div class="kl">Total Usuarios</div><div class="kv">${nf(total)}</div><div class="ksb">registrados en plataforma</div></div>
+    <div class="kpi"><div class="kico">✅</div><div class="kl">Usuarios Activos</div><div class="kv">${nf(active)}</div><div class="ksb">con acceso habilitado</div></div>
+    <div class="kpi"><div class="kico">👑</div><div class="kl">Administradores</div><div class="kv">${nf(byRole.ADMIN||0)}</div><div class="ksb">acceso total</div></div>
+    <div class="kpi"><div class="kico">📋</div><div class="kl">Sesiones Hoy</div><div class="kv">${nf(BAuth.getAuditLog().filter(e=>e.event==='LOGIN_SUCCESS'&&e.ts.startsWith(new Date().toISOString().split('T')[0])).length)}</div><div class="ksb">logins exitosos</div></div>
+  `;
+}
+
+/* ─── USERS GRID ─── */
+let editingUserId=null;
+function renderUsers(){
+  const q=(document.getElementById('userSearch').value||'').toLowerCase();
+  const role=document.getElementById('roleFilter').value;
+  const status=document.getElementById('statusFilter').value;
+  let users=BAuth.getUsers();
+  if(q)users=users.filter(u=>(u.name+u.email+u.role).toLowerCase().includes(q));
+  if(role)users=users.filter(u=>u.role===role);
+  if(status==='active')users=users.filter(u=>u.active);
+  if(status==='inactive')users=users.filter(u=>!u.active);
+  const grid=document.getElementById('usersGrid');
+  if(!users.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">👤</div>No se encontraron usuarios con esos filtros.</div>`;return;}
+  const currentSess=BAuth.getSession();
+  grid.innerHTML=users.map(u=>{
+    const rm=ROLE_META[u.role]||{label:u.role,color:'#888',cls:'',icon:'👤'};
+    const isMe=currentSess&&currentSess.userId===u.id;
+    const lastLogin=u.lastLogin?new Date(u.lastLogin).toLocaleString('es-CL',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'Nunca';
+    const loginCount=BAuth.getAuditLog().filter(e=>e.event==='LOGIN_SUCCESS'&&e.userId===u.id).length;
+    return`<div class="u-card" role="article" aria-label="Usuario ${esc(u.name)}">
+      <div class="u-status-dot ${u.active?'active':'inactive'}" title="${u.active?'Activo':'Inactivo'}"></div>
+      <div class="u-card-top">
+        <div class="u-avatar">${esc(u.avatar||'?')}</div>
+        <div class="u-info">
+          <div class="u-name">${esc(u.name)}${isMe?` <span class="invite-badge" title="Sesión actual">Yo</span>`:''}</div>
+          <div class="u-email" title="${esc(u.email)}">${esc(u.email)}</div>
+        </div>
+      </div>
+      <div class="u-meta">
+        <span class="user-role ${rm.cls}" style="--rc:${rm.color}">${rm.icon} ${rm.label}</span>
+        ${!u.active?`<span class="badge badge-danger">Inactivo</span>`:''}
+      </div>
+      <div class="u-stats">
+        <div class="u-stat"><span class="v">${nf(loginCount)}</span><span class="l">Sesiones</span></div>
+        <div class="u-stat"><span class="v" style="font-size:11px">${esc(u.created||'—')}</span><span class="l">Creado</span></div>
+        <div class="u-stat"><span class="v" style="font-size:9px">${esc(lastLogin)}</span><span class="l">Último acceso</span></div>
+      </div>
+      <div class="u-actions">
+        <button class="u-btn" onclick="openEditModal('${esc(u.id)}')">✏️ Editar</button>
+        ${!isMe?`<button class="u-btn ${u.active?'danger':'success'}" onclick="${u.active?`confirmDeactivate('${esc(u.id)}','${esc(u.name)}')`:`reactivateUser('${esc(u.id)}')`}">${u.active?'🚫 Desactivar':'✅ Reactivar'}</button>`:`<button class="u-btn" disabled style="opacity:.3;cursor:default">🔒 Sesión actual</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ─── PERMISSIONS MATRIX ─── */
+const PERMS=[
+  {perm:'Ver Dashboard de Proyectos',roles:{ADMIN:true,MANAGER:true,ANALYST:true,VIEWER:true}},
+  {perm:'Acceder a Pipeline Comercial',roles:{ADMIN:true,MANAGER:true,ANALYST:true,VIEWER:false}},
+  {perm:'Crear/Editar Oportunidades',roles:{ADMIN:true,MANAGER:true,ANALYST:false,VIEWER:false}},
+  {perm:'Exportar Datos',roles:{ADMIN:true,MANAGER:true,ANALYST:true,VIEWER:false}},
+  {perm:'Modificar Filtros y Vistas',roles:{ADMIN:true,MANAGER:true,ANALYST:true,VIEWER:true}},
+  {perm:'Ver Datos de Contacto',roles:{ADMIN:true,MANAGER:true,ANALYST:true,VIEWER:false}},
+  {perm:'Gestión de Usuarios',roles:{ADMIN:true,MANAGER:false,ANALYST:false,VIEWER:false}},
+  {perm:'Ver Registro de Auditoría',roles:{ADMIN:true,MANAGER:false,ANALYST:false,VIEWER:false}},
+  {perm:'Configuración de Seguridad',roles:{ADMIN:true,MANAGER:false,ANALYST:false,VIEWER:false}},
+  {perm:'Crear/Editar Proyectos (futuro)',roles:{ADMIN:true,MANAGER:true,ANALYST:false,VIEWER:false}},
+  {perm:'Acceso a API (futuro)',roles:{ADMIN:true,MANAGER:true,ANALYST:false,VIEWER:false}},
+];
+function renderPerms(){
+  document.getElementById('permsMatrix').innerHTML=PERMS.map(p=>`<tr>
+    <td style="font-weight:500">${esc(p.perm)}</td>
+    ${['ADMIN','MANAGER','ANALYST','VIEWER'].map(r=>`<td class="perm-check" style="text-align:center">${p.roles[r]?'✅':'<span class="perm-x">✗</span>'}</td>`).join('')}
+  </tr>`).join('');
+}
+
+/* ─── AUDIT LOG ─── */
+function renderAudit(){
+  const q=(document.getElementById('auditSearch').value||'').toLowerCase();
+  const log=BAuth.getAuditLog().filter(e=>!q||(e.event+e.userId+JSON.stringify(e)).toLowerCase().includes(q));
+  const wrap=document.getElementById('auditLog');
+  if(!log.length){wrap.innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div>Sin eventos de auditoría registrados${q?' con ese filtro':''}.</div>`;return;}
+  wrap.innerHTML=log.map(e=>{
+    const ts=new Date(e.ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const icons={LOGIN_SUCCESS:'✅',LOGIN_FAILED:'❌',LOGIN_BLOCKED:'🚫',LOGOUT:'🔒',SESSION_TIMEOUT:'⏱️',SESSION_RESTORED:'🔄',SESSION_RESTORE_FAILED:'❌',USER_CREATED:'➕',USER_UPDATED:'✏️',USER_DELETED:'🗑️',PERMISSION_DENIED:'⛔'};
+    const detail=e.email?`Email: ${e.email}`:(e.reason?`Razón: ${e.reason}`:(e.permission?`Permiso: ${e.permission}`:''));
+    return`<div class="audit-row">
+      <div class="audit-ts">${ts}</div>
+      <div class="audit-event ${e.event}">${icons[e.event]||'•'} ${esc(e.event)}</div>
+      <div class="audit-user">${e.userId?`👤 ${esc(e.userId)}`:e.email?`📧 ${esc(e.email)}`:'—'}</div>
+      ${detail?`<div class="audit-detail">${esc(detail)}</div>`:'<div></div>'}
+    </div>`;
+  }).join('');
+}
+
+/* ─── SECURITY TAB ─── */
+const HARDENING=[
+  {ok:false,title:'Mover a servidor HTTPS',desc:'En producción, servir todos los archivos sobre HTTPS para proteger tokens en tránsito.'},
+  {ok:false,title:'Implementar backend de autenticación',desc:'Reemplazar la validación de credenciales en cliente con un servidor seguro (Node.js/Python/PHP) con bcrypt.'},
+  {ok:true,title:'Content Security Policy activo',desc:'CSP implementado en todas las páginas. Previene inyección de scripts externos no autorizados.'},
+  {ok:true,title:'Sanitización de inputs',desc:'Todos los datos del usuario pasan por sanitización antes de renderizarse en el DOM.'},
+  {ok:true,title:'Rate limiting de login',desc:'Máximo 5 intentos antes de bloqueo temporal de 15 minutos por cuenta.'},
+  {ok:false,title:'Agregar 2FA (autenticación de dos factores)',desc:'Implementar TOTP (Google Authenticator) para cuentas con rol Admin y Manager.'},
+  {ok:false,title:'Implementar refresh tokens',desc:'Para producción, usar access tokens de corta duración + refresh tokens en httpOnly cookies.'},
+  {ok:true,title:'sessionStorage (no localStorage)',desc:'Los tokens de sesión se almacenan en sessionStorage, que se limpia al cerrar la pestaña.'},
+  {ok:false,title:'Logging server-side',desc:'En producción, enviar el audit log a un servidor central (SIEM) para persistencia y alertas.'},
+  {ok:false,title:'Monitoreo de sesiones concurrentes',desc:'Implementar detección de sesiones paralelas sospechosas y alerta al usuario.'},
+];
+function renderHardening(){
+  document.getElementById('hardeningList').innerHTML=HARDENING.map(h=>`
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3);border:1px solid ${h.ok?'rgba(46,173,107,.2)':'rgba(217,64,64,.1)'};border-radius:var(--r);">
+      <div style="font-size:16px;flex-shrink:0;margin-top:1px">${h.ok?'✅':'⚠️'}</div>
+      <div><div style="font-weight:600;font-size:12px;margin-bottom:2px;color:${h.ok?'#2EAD6B':'#E8A020'}">${esc(h.title)}</div><div style="font-size:10px;color:var(--t3);line-height:1.5">${esc(h.desc)}</div></div>
+    </div>`).join('');
+}
+
+/* ─── TABS ─── */
+function switchTab(name){
+  ['users','permissions','audit','security'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===name?'block':'none';});
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));
+  if(name==='audit')renderAudit();
+  if(name==='permissions')renderPerms();
+  if(name==='security')renderHardening();
+}
+
+/* ─── FORM ─── */
+function openCreateModal(){
+  editingUserId=null;
+  document.getElementById('userModalTit').textContent='Crear Nuevo Usuario';
+  document.getElementById('btnSaveUser').textContent='Crear Usuario';
+  document.getElementById('uf_pass_group').style.display='';
+  document.getElementById('uf_confirm_group').style.display='';
+  ['uf_name','uf_email','uf_password','uf_confirm'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('uf_role').value='';
+  document.getElementById('roleDesc').style.display='none';
+  document.getElementById('pwFill').style.width='0%';
+  document.getElementById('pwLabel').textContent='';
+  document.querySelectorAll('#userModal .form-error').forEach(e=>e.classList.remove('show'));
+  document.getElementById('userModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function openEditModal(id){
+  const users=BAuth.getUsers();const u=users.find(x=>x.id===id);if(!u)return;
+  editingUserId=id;
+  document.getElementById('userModalTit').textContent='Editar Usuario: '+u.name;
+  document.getElementById('btnSaveUser').textContent='Actualizar Usuario';
+  document.getElementById('uf_pass_group').style.display='none';
+  document.getElementById('uf_confirm_group').style.display='none';
+  document.getElementById('uf_name').value=u.name;
+  document.getElementById('uf_email').value=u.email;
+  document.getElementById('uf_role').value=u.role;
+  document.getElementById('roleDesc').style.display='none';
+  document.querySelectorAll('#userModal .form-error').forEach(e=>e.classList.remove('show'));
+  document.getElementById('userModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeUserModal(){document.getElementById('userModal').classList.remove('open');document.body.style.overflow='';}
+
+document.getElementById('uf_role').addEventListener('change',function(){
+  const rm=ROLE_META[this.value];
+  const desc=document.getElementById('roleDesc');
+  if(rm){desc.textContent=rm.icon+' '+rm.desc;desc.style.display='block';}
+  else{desc.style.display='none';}
+});
+
+function checkPwStrength(pw){
+  let strength=0;
+  if(pw.length>=8)strength++;
+  if(pw.length>=12)strength++;
+  if(/[A-Z]/.test(pw))strength++;
+  if(/[0-9]/.test(pw))strength++;
+  if(/[!@#$%^&*()_+\-=\[\]{}]/.test(pw))strength++;
+  const pcts=[0,20,45,65,85,100],labs=['','Muy débil','Débil','Aceptable','Fuerte','Muy fuerte'];
+  const colors=['','#D94040','#E8A020','#F59E0B','#2EAD6B','#10B981'];
+  document.getElementById('pwFill').style.width=pcts[strength]+'%';
+  document.getElementById('pwFill').style.background=colors[strength]||'transparent';
+  document.getElementById('pwLabel').textContent=labs[strength]||'';
+  document.getElementById('pwLabel').style.color=colors[strength]||'var(--t3)';
+}
+function togglePw(id,btn){const inp=document.getElementById(id);const isT=inp.type==='text';inp.type=isT?'password':'text';btn.textContent=isT?'👁':'🙈';}
+
+function saveUser(){
+  const name=BAuth.sanitize(document.getElementById('uf_name').value);
+  const email=BAuth.sanitize(document.getElementById('uf_email').value);
+  const role=document.getElementById('uf_role').value;
+  const password=document.getElementById('uf_password').value;
+  const confirm=document.getElementById('uf_confirm').value;
+  let valid=true;
+  if(!name||name.length<3){document.getElementById('uf_err_name').classList.add('show');valid=false;}else{document.getElementById('uf_err_name').classList.remove('show');}
+  if(!BAuth.validateEmail(email)){document.getElementById('uf_err_email').classList.add('show');valid=false;}else{document.getElementById('uf_err_email').classList.remove('show');}
+  if(!role){document.getElementById('uf_err_role').classList.add('show');valid=false;}else{document.getElementById('uf_err_role').classList.remove('show');}
+  if(!editingUserId){
+    const pwCheck=BAuth.validatePassword(password);
+    if(!pwCheck.valid){document.getElementById('uf_err_pass').textContent=pwCheck.errors.join(' · ');document.getElementById('uf_err_pass').classList.add('show');valid=false;}else{document.getElementById('uf_err_pass').classList.remove('show');}
+    if(password!==confirm){document.getElementById('uf_err_confirm').classList.add('show');valid=false;}else{document.getElementById('uf_err_confirm').classList.remove('show');}
+  }
+  if(!valid)return;
+  let result;
+  if(editingUserId){result=BAuth.updateUser(editingUserId,{name,role});}
+  else{result=BAuth.createUser({name,email,password,role});}
+  if(result.success){
+    closeUserModal();renderUsers();renderStats();
+    showToast(editingUserId?'Usuario actualizado exitosamente':'Usuario creado exitosamente','success');
+  } else {
+    showToast(result.error||'Error al guardar usuario','error');
+  }
+}
+
+/* ─── DEACTIVATE / REACTIVATE ─── */
+let _pendingAction=null;
+function confirmDeactivate(id,name){
+  _pendingAction={type:'deactivate',id};
+  document.getElementById('confirmMsg').textContent=`¿Está seguro que desea desactivar al usuario "${name}"? Esta acción revocará inmediatamente su acceso a la plataforma.`;
+  document.getElementById('btnConfirmAction').textContent='Desactivar Usuario';
+  document.getElementById('confirmModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function reactivateUser(id){
+  if(!BAuth.can('all')){showToast('Sin permisos','error');return;}
+  const result=BAuth.updateUser(id,{active:true});
+  if(result.success){renderUsers();renderStats();showToast('Usuario reactivado','success');}
+  else showToast(result.error,'error');
+}
+document.getElementById('btnConfirmAction').addEventListener('click',()=>{
+  if(!_pendingAction)return;
+  if(_pendingAction.type==='deactivate'){
+    const result=BAuth.deactivateUser(_pendingAction.id);
+    if(result.success){closeConfirmModal();renderUsers();renderStats();showToast('Usuario desactivado','warning');}
+    else showToast(result.error,'error');
+  }
+  _pendingAction=null;
+});
+function closeConfirmModal(){document.getElementById('confirmModal').classList.remove('open');document.body.style.overflow='';_pendingAction=null;}
+
+/* ─── THEME ─── */
+function toggleTheme(){const cur=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',cur);document.getElementById('thB').textContent=cur==='dark'?'🌙':'☀️';}
+
+/* ─── TOAST ─── */
+function showToast(msg,type='info',duration=3500){
+  const icons={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el=document.createElement('div');el.className=`toast toast-${type}`;
+  el.innerHTML=`<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${esc(msg)}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},duration);
+}
+
+/* ─── KEYBOARD ─── */
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeUserModal();closeConfirmModal();}});
+document.getElementById('userModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeUserModal();});
+document.getElementById('confirmModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeConfirmModal();});
+
+/* ─── INIT ─── */
+document.getElementById('footYear').textContent=new Date().getFullYear();
+renderStats();renderUsers();
+</script>
+</body>
+</html>

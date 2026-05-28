@@ -1,0 +1,22 @@
+<svg width="520" height="120" viewBox="0 0 520 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+<title id="title">Berisa Inteligencia Comercial</title>
+<desc id="desc">Marca Berisa con símbolo de brújula y logotipo profesional.</desc>
+<rect width="520" height="120" fill="transparent"/>
+<g transform="translate(24 18)">
+  <circle cx="42" cy="42" r="34" stroke="#0A1B34" stroke-width="7" stroke-dasharray="62 13"/>
+  <circle cx="42" cy="42" r="24" stroke="#C9972B" stroke-width="2"/>
+  <path d="M42 2 L46 24 L42 19 L38 24 Z" fill="#0A1B34"/>
+  <path d="M42 82 L38 60 L42 65 L46 60 Z" fill="#0A1B34"/>
+  <path d="M2 42 L24 38 L19 42 L24 46 Z" fill="#0A1B34"/>
+  <path d="M82 42 L60 46 L65 42 L60 38 Z" fill="#0A1B34"/>
+  <path d="M56 28 L37 47 L29 55 L48 36 L56 28Z" fill="#C9972B"/>
+  <path d="M28 56 L47 37 L55 29 L36 48 L28 56Z" fill="#0A1B34"/>
+  <circle cx="42" cy="42" r="7" fill="#C9972B"/>
+  <circle cx="42" cy="42" r="3" fill="#F6F7F9"/>
+</g>
+<line x1="122" y1="24" x2="122" y2="96" stroke="#5B6472" stroke-width="1"/>
+<text x="154" y="58" font-family="Arial, Helvetica, sans-serif" font-size="44" letter-spacing="14" fill="#0A1B34" font-weight="700">BERISA</text>
+<line x1="154" y1="74" x2="452" y2="74" stroke="#C9972B" stroke-width="2"/>
+<circle cx="305" cy="74" r="5" fill="#C9972B"/>
+<text x="156" y="94" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="9" fill="#5B6472" font-weight="600">INTELIGENCIA COMERCIAL</text>
+</svg>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Berisa — Acreditación de Personal en Faena</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/berisa.css"/>
+<style>
+.pg{padding:20px 24px}
+.worker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px}
+.wc{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:13px;transition:all .2s}
+.wc:hover{border-color:var(--bdh);transform:translateY(-2px)}
+.wc-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px;flex-shrink:0}
+.wc-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.lic-badge{padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700;border:1px solid;margin:2px}
+.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.bar-wrap{flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px}
+.expiring-list{display:flex;flex-direction:column;gap:6px}
+.exp-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--r);border:1px solid rgba(255,140,66,.2)}
+</style>
+</head>
+<body>
+<header class="hdr" id="hdr-root"><div class="hl"></div><div class="hr"></div></header>
+<div class="pg">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div><h1 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:700;margin-bottom:3px">👷 Acreditación de Personal en Faena</h1>
+    <p style="font-size:11px;color:var(--t3)">DS 76/2007 · DS 44/2024 · DS 132 · Inducción · Licencias habilitantes · Exámenes médicos</p></div>
+    <div style="display:flex;gap:8px">
+      <select class="fsel" id="filterProject" onchange="renderWorkers()"><option value="">Todos los proyectos</option><option value="p1">Central Solar Atacama III</option><option value="p2">Obra B — Santiago</option></select>
+      <button class="btn btn-primary btn-sm" onclick="showToast('Registrar nuevo trabajador','info')">+ Registrar trabajador</button>
+    </div>
+  </div>
+
+  <!-- Summary KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:16px" id="kpiRow"></div>
+
+  <!-- Expiring alerts -->
+  <div style="background:rgba(239,159,39,.05);border:1px solid rgba(239,159,39,.2);border-radius:var(--r-lg);padding:14px;margin-bottom:14px" id="expiringSection"></div>
+
+  <!-- Worker cards -->
+  <div style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;margin-bottom:8px">Personal acreditado</div>
+  <div class="worker-grid" id="workerGrid"></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/berisa-header.js"></script>
+<script src="assets/js/berisa-api.js"></script>
+<script>
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(!tok||!BAuth.restoreSession(tok)){window.location.replace('index.html');return;}
+  BHeader.render({active:'hse'});
+  loadAll();
+})();
+function doLogout(){BAuth.logout('manual');['berisa_token','berisa_csrf','berisa_user'].forEach(k=>sessionStorage.removeItem(k));window.location.replace('index.html')}
+function toggleTheme(){const c=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',c)}
+function showToast(msg,type='info',dur=3500){const i={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};const el=document.createElement('div');el.className=`toast toast-${type}`;el.innerHTML=`<span class="toast-icon">${i[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;document.getElementById('toast-container').appendChild(el);setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300)},dur);}
+
+const DEMO_WORKERS=[
+  {id:'w1',name:'Juan Pérez',rut:'12.345.678-9',role:'Maestro albañil',co:'Constructora del Sur',col:'#00D4A0',ind:true,med:'fit',sts:'active',
+    licenses:[{t:'Conductor B',ok:true,exp:'2027-03-15'},{t:'Trab. Altura',ok:true,exp:'2026-08-10'}],scores:[100,80,100]},
+  {id:'w2',name:'María González',rut:'15.678.901-2',role:'Jefa de bodega',co:'Electro Power',col:'#4895EF',ind:true,med:'fit',sts:'active',
+    licenses:[{t:'Grúa Horquilla',ok:false,exp:'2026-05-30'},{t:'Manejo Maq.',ok:true,exp:'2027-01-20'}],scores:[100,40,80]},
+  {id:'w3',name:'Carlos Morales',rut:'18.901.234-5',role:'Operador maquinaria',co:'Serv. Mineros Norte',col:'#FF8C42',ind:false,med:'pending',sts:'pending',
+    licenses:[{t:'Conductor A',ok:true,exp:'2026-11-05'}],scores:[0,60,85]},
+  {id:'w4',name:'Lucía Vásquez',rut:'11.234.567-8',role:'Supervisora HSE',co:'Constructora del Sur',col:'#34D17A',ind:true,med:'fit',sts:'active',
+    licenses:[{t:'Experta Prev.',ok:true,exp:'2027-06-30'},{t:'Primeros Aux.',ok:true,exp:'2026-09-15'}],scores:[100,100,100]},
+  {id:'w5',name:'Diego Rojas',rut:'14.567.890-1',role:'Electricista industrial',co:'Electro Power',col:'#9B72CF',ind:true,med:'fit_restricted',sts:'active',
+    licenses:[{t:'Clase A',ok:true,exp:'2027-02-28'},{t:'Trab. Eléctrico',ok:true,exp:'2026-07-20'}],scores:[100,100,90]},
+  {id:'w6',name:'Ana Fuentes',rut:'17.890.123-4',role:'Técnica ambiental',co:'Ingeniería Hídrica',col:'#10B981',ind:true,med:'fit',sts:'active',
+    licenses:[{t:'Muestreo RESPEL',ok:false,exp:'2026-05-28'}],scores:[100,70,100]},
+];
+
+async function loadAll(){
+  const workers = await BAPI.getWorkerAccreditations().catch(()=>DEMO_WORKERS);
+  const expiring = await BAPI.getExpiringLicenses(60).catch(()=>DEMO_WORKERS.flatMap(w=>w.licenses.filter(l=>!l.ok).map(l=>({...l,worker_name:w.name,company_name:w.co}))));
+  renderKPIs(workers);
+  renderExpiring(expiring);
+  renderWorkers(workers);
+}
+
+function renderKPIs(ws){
+  const active=ws.filter(w=>w.sts==='active'||w.accreditation_status==='active').length;
+  const pending=ws.filter(w=>w.sts==='pending'||w.accreditation_status==='pending').length;
+  document.getElementById('kpiRow').innerHTML=[
+    {n:ws.length,l:'Total registrados',c:'#378ADD'},{n:active,l:'Acreditados activos',c:'#2EAD6B'},
+    {n:pending,l:'Pendiente inducción',c:'#FF8C42'},{n:'100%',l:'Objetivo acreditación',c:'var(--gold)'},
+  ].map(k=>`<div style="background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);padding:11px;border-left:2px solid ${k.c}">
+    <div style="font-family:'Montserrat',sans-serif;font-size:24px;font-weight:700;color:${k.c}">${k.n}</div>
+    <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">${k.l}</div>
+  </div>`).join('');
+}
+
+function renderExpiring(exp){
+  const sec=document.getElementById('expiringSection');
+  if(!exp||!exp.length){sec.innerHTML='<div style="font-size:11px;color:var(--t3);text-align:center">✓ Sin licencias ni exámenes próximos a vencer en los próximos 60 días</div>';return;}
+  sec.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--warn);margin-bottom:10px">⚠️ ${exp.length} licencias próximas a vencer (próximos 60 días)</div>
+  <div class="expiring-list">${exp.map(l=>`<div class="exp-row">
+    <div style="width:8px;height:8px;border-radius:50%;background:${new Date(l.exp||l.expiry_date)<new Date(Date.now()+15*864e5)?'#E24B4A':'#FF8C42'};flex-shrink:0"></div>
+    <div style="flex:1"><div style="font-size:11px;font-weight:600">${l.worker_name||l.name}</div>
+    <div style="font-size:10px;color:var(--t3)">${l.license_type||l.t} · ${l.company_name||l.co}</div></div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#FF8C42">Vence: ${l.exp||l.expiry_date||''}</div>
+    <button class="btn btn-outline btn-sm" onclick="showToast('Renovar licencia','info')">Renovar</button>
+  </div>`).join('')}</div>`;
+}
+
+function renderWorkers(ws){
+  const grid=document.getElementById('workerGrid');
+  const workers=ws||DEMO_WORKERS;
+  grid.innerHTML=workers.map(w=>`<div class="wc">
+    <div class="wc-top">
+      <div class="wc-av" style="background:${w.col||'#888'}18;border:2px solid ${w.col||'#888'}44;color:${w.col||'#888'}">${(w.name||w.worker_name||'?').split(' ').map(n=>n[0]).join('').slice(0,2)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.name||w.worker_name}</div>
+        <div style="font-size:10px;color:var(--t2)">${w.role||w.worker_role}</div>
+        <div style="font-size:10px;color:var(--t3)">${w.co||w.company_name||''}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+      <span class="lic-badge" style="background:${w.ind?'rgba(0,212,160,.1)':'rgba(255,71,87,.1)'};border-color:${w.ind?'rgba(0,212,160,.25)':'rgba(255,71,87,.25)'};color:${w.ind?'#00D4A0':'#FF4757'}">${w.ind?'✓ Inducción':'✗ Sin inducción'}</span>
+      <span class="lic-badge" style="background:${w.med==='fit'?'rgba(0,212,160,.1)':w.med==='fit_restricted'?'rgba(255,140,66,.1)':'rgba(55,138,221,.1)'};border-color:${w.med==='fit'?'rgba(0,212,160,.25)':w.med==='fit_restricted'?'rgba(255,140,66,.25)':'rgba(55,138,221,.25)'};color:${w.med==='fit'?'#00D4A0':w.med==='fit_restricted'?'#FF8C42':'#4895EF'}">${w.med==='fit'?'✓ Apto':w.med==='fit_restricted'?'⚠ Con restricción':w.med==='unfit'?'✗ No apto':'🕐 Pendiente'}</span>
+    </div>
+    <div style="font-size:9px;color:var(--t3);margin-bottom:5px">Licencias: ${(w.licenses||[]).map(l=>`<span style="color:${l.ok?'#2EAD6B':'#FF4757'}">${l.t||l.license_type}</span>`).join(' · ')}</div>
+    ${(w.scores||[]).length?[['Inducción','#00D4A0'],['Examen médico','#4895EF'],['Licencias','#34D17A']].map(([l,c],i)=>`<div class="bar-row">
+      <span style="font-size:8px;color:var(--t3);width:70px">${l}</span>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${w.scores[i]||0}%;background:${c}"></div></div>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:${c};width:28px;text-align:right">${w.scores[i]||0}%</span>
+    </div>`).join(''):''}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">
+      <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${(w.sts||w.accreditation_status)==='active'?'rgba(0,212,160,.1)':'rgba(255,140,66,.1)'};border:1px solid ${(w.sts||w.accreditation_status)==='active'?'rgba(0,212,160,.3)':'rgba(255,140,66,.3)'};color:${(w.sts||w.accreditation_status)==='active'?'#00D4A0':'#FF8C42'}">${(w.sts||w.accreditation_status)==='active'?'ACREDITADO':'PENDIENTE'}</span>
+      ${!(w.ind)&&(w.sts||w.accreditation_status)==='pending'?`<button class="btn btn-primary btn-sm" onclick="showToast('Registrar inducción de seguridad','success')">✓ Registrar inducción</button>`:''}
+    </div>
+  </div>`).join('');
+}
+</script>
+</body></html>

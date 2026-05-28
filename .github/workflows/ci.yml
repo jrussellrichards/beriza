@@ -1,0 +1,54 @@
+name: berisa-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  static-and-build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: berisa
+          POSTGRES_USER: berisa_ci
+          POSTGRES_PASSWORD: ci_password_for_ephemeral_runner_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U berisa_ci -d berisa"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      NODE_ENV: test
+      PORT: 8080
+      DATABASE_URL: postgres://berisa_ci:ci_password_for_ephemeral_runner_only@localhost:5432/berisa
+      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      JWT_EXPIRES_IN: 8h
+      SESSION_COOKIE_NAME: berisa_session
+      COOKIE_SECURE: false
+      CORS_ORIGIN: http://localhost:8080,http://localhost:5173
+      ADMIN_EMAIL: admin-ci@example.local
+      ADMIN_PASSWORD: ci_admin_password_ephemeral_only_123456
+      ADMIN_NAME: Administrador CI
+      PII_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      ALERT_WEBHOOK_SECRET: ci_webhook_secret_ephemeral_only_123456
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install backend
+        run: cd backend && npm install
+      - name: Install frontend
+        run: cd frontend && npm install
+      - name: Static checks
+        run: cd backend && npm run ci:check
+      - name: Backend syntax
+        run: find backend/src backend/scripts -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Migrate and seed
+        run: cd backend && npm run migrate && npm run seed
+      - name: Frontend build
+        run: cd frontend && npm run build

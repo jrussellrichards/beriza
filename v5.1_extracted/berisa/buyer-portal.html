@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Berisa — Portal Comprador</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/berisa.css"/>
+<style>
+.bp-page{padding:20px 24px}
+.bp-tabs{display:flex;gap:2px;border-bottom:1px solid var(--bdr);margin-bottom:20px}
+.bp-tab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--t3);padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:var(--tr);cursor:pointer}
+.bp-tab.on{border-bottom-color:var(--gold);color:var(--gold)}
+.bp-tab:hover:not(.on){color:var(--t2)}
+/* RFQ cards */
+.rfq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.rfq-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:16px;transition:var(--tr);cursor:pointer}
+.rfq-card:hover{border-color:var(--bdh);box-shadow:var(--sh)}
+.rfq-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px}
+.rfq-title{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;line-height:1.3;flex:1}
+.rfq-status{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.rfqs-draft{background:rgba(91,100,114,.15);border:1px solid rgba(91,100,114,.3);color:var(--slate)}
+.rfqs-published{background:rgba(46,173,107,.12);border:1px solid rgba(46,173,107,.3);color:#2EAD6B}
+.rfqs-closed{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#3B82F6}
+.rfqs-awarded{background:rgba(201,151,43,.15);border:1px solid rgba(201,151,43,.3);color:var(--gold)}
+.rfq-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.rfq-meta-item{font-size:11px;color:var(--t3)}.rfq-meta-item b{color:var(--t1)}
+.rfq-footer{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--bdr)}
+.rfq-invited{font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px}
+.rfq-proposals{font-size:11px;font-weight:600;color:var(--gold)}
+/* Supplier shortlist table */
+.sl-table-wrap{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden}
+.sl-hdr{padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--bg3);display:flex;align-items:center;justify-content:space-between}
+.sl-title{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.sl-sup-row{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--bdr);transition:var(--tr)}
+.sl-sup-row:hover{background:var(--bg3)}
+.sl-rank{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:700;color:var(--gold);width:28px;text-align:center;flex-shrink:0}
+.sl-info{flex:1;min-width:0}
+.sl-name{font-weight:600;font-size:12px;margin-bottom:2px}
+.sl-detail{font-size:10px;color:var(--t3)}
+.sl-score-bar{width:80px;height:6px;background:var(--bdr);border-radius:3px;overflow:hidden}
+.sl-score-fill{height:100%;border-radius:3px;background:var(--gold)}
+.sl-actions{display:flex;gap:5px;flex-shrink:0}
+/* KPI Process cards */
+.process-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px;margin-bottom:20px}
+/* Timeline */
+.process-timeline{display:flex;flex-direction:column;gap:6px}
+.pt-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr)}
+.pt-item:last-child{border-bottom:none}
+.pt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.pt-body{flex:1}
+.pt-event{font-size:12px;font-weight:500}
+.pt-date{font-size:10px;color:var(--t3)}
+/* Match score */
+.match-score{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600}
+/* Empty */
+.bp-empty{text-align:center;padding:48px;color:var(--t3)}
+.bp-empty-icon{font-size:48px;opacity:.2;margin-bottom:12px}
+</style>
+</head>
+<body>
+<header class="hdr" id="hdr-root"><div class="hl"></div><div class="hr"></div></header>
+
+<main class="bp-page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div>
+      <h1 style="font-family:'Montserrat',sans-serif;font-size:24px;font-weight:700;margin-bottom:3px">Portal Comprador</h1>
+      <p style="font-size:11px;color:var(--t3)">Gestión de procesos de cotización, shortlists y adjudicaciones</p>
+    </div>
+    <button class="btn btn-primary" onclick="openNewRFQ()">+ Nuevo proceso RFQ</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="process-kpis" id="processKPIs"></div>
+
+  <!-- Tabs -->
+  <div class="bp-tabs">
+    <button class="bp-tab on" data-t="rfq" onclick="switchTab('rfq')">📋 Procesos RFQ</button>
+    <button class="bp-tab" data-t="shortlist" onclick="switchTab('shortlist')">⭐ Shortlists</button>
+    <button class="bp-tab" data-t="awarded" onclick="switchTab('awarded')">🏆 Adjudicados</button>
+    <button class="bp-tab" data-t="history" onclick="switchTab('history')">📊 Historial</button>
+  </div>
+
+  <div id="tabContent"></div>
+</main>
+
+<footer class="footer"><span>© <b>BERISA</b> · Portal Comprador · <span id="footYear"></span></span></footer>
+
+<!-- New RFQ Modal -->
+<div class="mov" id="rfqModal">
+  <div class="modal" style="width:580px">
+    <div class="mhdr"><div class="mtit">Nuevo Proceso RFQ</div><button class="mxbtn" onclick="closeRFQ()">✕</button></div>
+    <div class="mbody">
+      <div class="form-group"><label class="form-label">Título del proceso *</label><input class="form-input" id="rfq_title" placeholder="Ej: Suministro de acero estructural — Proyecto Solar Atacama"/></div>
+      <div class="fg2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Sector</label>
+          <select class="form-input form-select" id="rfq_sector">
+            <option value="">Seleccione sector</option>
+            <option>Energía</option><option>Infraestructura</option><option>Minería</option>
+            <option>Industrial</option><option>Agua y Sanitaria</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Presupuesto est. (USD M)</label><input class="form-input" type="number" id="rfq_budget" placeholder="Ej: 12"/></div>
+      </div>
+      <div class="fg2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Nivel ICE mínimo</label>
+          <select class="form-input form-select" id="rfq_level">
+            <option value="nivel_1">Nivel 1 — Registrado</option>
+            <option value="nivel_2">Nivel 2 — Básico</option>
+            <option value="nivel_3" selected>Nivel 3 — Calificado</option>
+            <option value="nivel_4">Nivel 4 — Estratégico</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Fecha límite propuestas</label><input class="form-input" type="date" id="rfq_due"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Descripción del requerimiento</label><textarea class="form-input" id="rfq_desc" rows="3" placeholder="Especificaciones técnicas, alcance, condiciones especiales…"></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bdr)">
+        <button class="btn btn-outline" onclick="closeRFQ()">Cancelar</button>
+        <button class="btn btn-outline" onclick="saveRFQ('draft')">Guardar borrador</button>
+        <button class="btn btn-primary" onclick="saveRFQ('publish')">Publicar y generar shortlist →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shortlist Modal -->
+<div class="mov" id="slModal">
+  <div class="modal" style="width:680px">
+    <div class="mhdr"><div class="mtit" id="slModalTitle">Shortlist de Proveedores</div><button class="mxbtn" onclick="closeSL()">✕</button></div>
+    <div class="mbody" id="slModalBody"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/berisa-data.js"></script>
+<script src="assets/js/berisa-api.js"></script>
+<script src="assets/js/berisa-header.js"></script>
+<script>
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(!tok||!BAuth.restoreSession(tok)){window.location.replace('index.html');return;}
+  if(BAuth.can('all'))BHeader.render({active:'procurement',showUsers:true});
+  else BHeader.render({active:'procurement'});
+})();
+function doLogout(){BAuth.logout('manual');['berisa_token','berisa_csrf','berisa_user'].forEach(k=>sessionStorage.removeItem(k));window.location.replace('index.html')}
+function toggleTheme(){const c=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',c);const b=document.getElementById('thB');if(b)b.textContent=c==='dark'?'🌙':'☀️'}
+
+// ── DEMO DATA ─────────────────────────────────────────────
+const RFQS=[
+  {id:'rfq_01',title:'Suministro de estructuras metálicas — Planta Solar Atacama',sector:'Energía',budget:8.5,status:'published',invited:6,proposals:4,due_date:'2026-06-30',created:'2026-05-01',level:'nivel_3'},
+  {id:'rfq_02',title:'Servicio de montaje electromecánico — Terminal GNL',sector:'Energía',budget:22,status:'awarded',invited:8,proposals:5,due_date:'2026-05-15',created:'2026-04-01',level:'nivel_3',awarded_to:'Constructora del Sur S.A.'},
+  {id:'rfq_03',title:'Obras civiles plataforma perforación — Fase 3',sector:'Minería',budget:15,status:'closed',invited:5,proposals:3,due_date:'2026-05-20',created:'2026-04-10',level:'nivel_2'},
+  {id:'rfq_04',title:'Transporte especializado equipos pesados',sector:'Industrial',budget:3,status:'draft',invited:0,proposals:0,due_date:'2026-07-15',created:'2026-05-10',level:'nivel_1'},
+];
+const SHORTLIST=[
+  {rank:1,name:'Constructora del Sur S.A.',level:'nivel_4',rating:4.8,match:94,certs:['ISO 9001','ISO 45001'],status:'accepted'},
+  {rank:2,name:'Electro Power S.A.',level:'nivel_4',rating:4.9,match:91,certs:['ISO 9001','ISO 14001'],status:'pending'},
+  {rank:3,name:'Tecnoelectro SpA',level:'nivel_3',rating:4.5,match:82,certs:['ISO 9001'],status:'pending'},
+  {rank:4,name:'Servicios Mineros del Norte',level:'nivel_3',rating:4.2,match:74,certs:['ISO 45001'],status:'declined'},
+];
+const HISTORY=[
+  {date:'2026-05-10',event:'RFQ publicada: Estructuras metálicas',type:'rfq',color:'#C9972B'},
+  {date:'2026-05-08',event:'Shortlist generada: 6 proveedores invitados',type:'match',color:'#3B82F6'},
+  {date:'2026-05-05',event:'Propuesta recibida de Constructora del Sur',type:'proposal',color:'#2EAD6B'},
+  {date:'2026-05-03',event:'Propuesta recibida de Electro Power',type:'proposal',color:'#2EAD6B'},
+  {date:'2026-04-22',event:'Adjudicación: Terminal GNL → Constructora del Sur',type:'award',color:'#C9972B'},
+  {date:'2026-04-15',event:'Proceso cerrado: Plataforma perforación',type:'close',color:'#5B6472'},
+];
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function nf(n){return(n||0).toLocaleString('es-CL')}
+
+function renderKPIs(){
+  const published=RFQS.filter(r=>r.status==='published').length;
+  const awarded  =RFQS.filter(r=>r.status==='awarded').length;
+  const totalBudget=RFQS.reduce((s,r)=>s+(r.budget||0),0);
+  const avgProps=RFQS.filter(r=>r.proposals>0).length?Math.round(RFQS.reduce((s,r)=>s+r.proposals,0)/RFQS.filter(r=>r.proposals>0).length*10)/10:0;
+  document.getElementById('processKPIs').innerHTML=`
+    <div class="kpi"><div class="kico">📋</div><div class="kl">Procesos activos</div><div class="kv" style="color:var(--gold)">${published}</div><div class="ksb">publicados y abiertos</div></div>
+    <div class="kpi"><div class="kico">🏆</div><div class="kl">Adjudicados</div><div class="kv" style="color:var(--success)">${awarded}</div><div class="ksb">procesos cerrados</div></div>
+    <div class="kpi"><div class="kico">💰</div><div class="kl">Presupuesto total</div><div class="kv">$${totalBudget.toFixed(0)}<span class="u"> M USD</span></div><div class="ksb">en procesos activos</div></div>
+    <div class="kpi"><div class="kico">📬</div><div class="kl">Prop. promedio</div><div class="kv">${avgProps}</div><div class="ksb">propuestas por RFQ</div></div>`;
+}
+
+let curTab='rfq';
+function switchTab(t){
+  curTab=t;
+  document.querySelectorAll('.bp-tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  renderTab();
+}
+function renderTab(){
+  const c=document.getElementById('tabContent');
+  if(curTab==='rfq'){
+    const active=RFQS.filter(r=>r.status!=='awarded');
+    if(!active.length){c.innerHTML=`<div class="bp-empty"><div class="bp-empty-icon">📋</div>Sin procesos activos. <button class="cbtn hc" onclick="openNewRFQ()">+ Crear RFQ</button></div>`;return;}
+    c.innerHTML=`<div class="rfq-grid">${active.map(rfqCard).join('')}</div>`;
+  } else if(curTab==='shortlist'){
+    c.innerHTML=`<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;color:var(--t2)">Shortlist generada para: <b>Estructuras metálicas — Solar Atacama</b></span><button class="cbtn hc" onclick="openSL()">Ver completa</button></div>`+buildShortlistTable();
+  } else if(curTab==='awarded'){
+    const aw=RFQS.filter(r=>r.status==='awarded');
+    c.innerHTML=aw.length?`<div class="rfq-grid">${aw.map(rfqCard).join('')}</div>`:`<div class="bp-empty"><div class="bp-empty-icon">🏆</div>Sin adjudicaciones aún.</div>`;
+  } else {
+    c.innerHTML=`<div class="cc"><div class="cc-h"><div class="cc-t">Historial de <span>Actividad</span></div></div>
+      <div class="process-timeline">${HISTORY.map(h=>`<div class="pt-item">
+        <div class="pt-dot" style="background:${h.color};box-shadow:0 0 5px ${h.color}88"></div>
+        <div class="pt-body"><div class="pt-event">${esc(h.event)}</div><div class="pt-date">${esc(h.date)}</div></div>
+      </div>`).join('')}</div></div>`;
+  }
+}
+
+function rfqCard(r){
+  const stMap={draft:'rfqs-draft',published:'rfqs-published',closed:'rfqs-closed',awarded:'rfqs-awarded'};
+  const stLbl={draft:'Borrador',published:'Publicada',closed:'Cerrada',awarded:'Adjudicada'};
+  return`<div class="rfq-card" onclick="openDetail('${r.id}')">
+    <div class="rfq-header">
+      <div class="rfq-title">${esc(r.title)}</div>
+      <span class="rfq-status ${stMap[r.status]||''}">${stLbl[r.status]||r.status}</span>
+    </div>
+    <div class="rfq-meta">
+      <div class="rfq-meta-item">Sector: <b>${esc(r.sector)}</b></div>
+      <div class="rfq-meta-item">Budget: <b>USD $${r.budget} M</b></div>
+      <div class="rfq-meta-item">Nivel ICE: <b>${r.level}</b></div>
+      <div class="rfq-meta-item">Vence: <b>${esc(r.due_date)}</b></div>
+    </div>
+    ${r.awarded_to?`<div style="padding:6px 8px;background:rgba(46,173,107,.08);border-radius:4px;font-size:11px;color:#2EAD6B;margin-bottom:8px">🏆 Adjudicado a: <b>${esc(r.awarded_to)}</b></div>`:''}
+    <div class="rfq-footer">
+      <div class="rfq-invited">👥 ${r.invited} invitados</div>
+      <div class="rfq-proposals">${r.proposals} propuestas</div>
+      ${r.status==='published'?`<button class="cbtn hc" onclick="event.stopPropagation();openSL('${r.id}')">Ver shortlist →</button>`:''}
+    </div>
+  </div>`;
+}
+
+function buildShortlistTable(){
+  return`<div class="sl-table-wrap">
+    <div class="sl-hdr"><div class="sl-title">Proveedores <span style="color:var(--gold)">Invitados</span></div><span style="font-size:11px;color:var(--t3)">${SHORTLIST.length} coincidencias</span></div>
+    ${SHORTLIST.map(s=>{
+      const statusMap={accepted:{color:'#2EAD6B',lbl:'Aceptó'},pending:{color:'var(--gold)',lbl:'Pendiente'},declined:{color:'var(--danger)',lbl:'Rechazó'}};
+      const sm=statusMap[s.status]||statusMap.pending;
+      return`<div class="sl-sup-row">
+        <div class="sl-rank">${s.rank}</div>
+        <div class="sl-info">
+          <div class="sl-name">${esc(s.name)}</div>
+          <div class="sl-detail">Nivel ${s.level} · ★${s.rating} · ${s.certs.join(', ')}</div>
+        </div>
+        <div style="text-align:center;min-width:80px">
+          <div class="match-score" style="color:${s.match>=85?'#2EAD6B':'var(--gold)'}">⬤ ${s.match}%</div>
+          <div style="font-size:9px;color:var(--t3)">match score</div>
+          <div class="sl-score-bar" style="margin-top:4px"><div class="sl-score-fill" style="width:${s.match}%;background:${s.match>=85?'#2EAD6B':'var(--gold)'}"></div></div>
+        </div>
+        <div style="text-align:center;min-width:72px">
+          <div style="font-size:10px;font-weight:600;color:${sm.color}">${sm.lbl}</div>
+        </div>
+        <div class="sl-actions">
+          <button class="cbtn hc" onclick="awardTo('${esc(s.name)}')">Adjudicar</button>
+          <a href="supplier-directory.html" class="cbtn" style="display:inline-block;text-decoration:none">Ver perfil</a>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function openDetail(id){
+  const r=RFQS.find(x=>x.id===id);
+  if(!r)return;
+  document.getElementById('slModalTitle').textContent=r.title;
+  document.getElementById('slModalBody').innerHTML=`
+    <div class="ig3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="mi"><label>Sector</label><div class="v">${esc(r.sector)}</div></div>
+      <div class="mi"><label>Presupuesto</label><div class="big">$${r.budget} M</div></div>
+      <div class="mi"><label>Estado</label><div class="v">${esc(r.status)}</div></div>
+      <div class="mi"><label>Nivel ICE mín.</label><div class="v">${esc(r.level)}</div></div>
+      <div class="mi"><label>Invitados</label><div class="v">${r.invited}</div></div>
+      <div class="mi"><label>Propuestas</label><div class="v" style="color:var(--gold)">${r.proposals}</div></div>
+    </div>
+    ${buildShortlistTable()}
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bdr);margin-top:14px">
+      <button class="btn btn-outline" onclick="closeSL()">Cerrar</button>
+      ${r.status==='published'?`<button class="btn btn-danger btn-sm" onclick="closeRFQProcess('${r.id}')">Cerrar proceso</button>`:''}
+    </div>`;
+  document.getElementById('slModal').classList.add('open');document.body.style.overflow='hidden';
+}
+
+function openSL(id){
+  if(id)openDetail(id);
+  else{
+    document.getElementById('slModalTitle').textContent='Shortlist — Estructuras metálicas Solar Atacama';
+    document.getElementById('slModalBody').innerHTML=buildShortlistTable()+`<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn btn-outline" onclick="closeSL()">Cerrar</button></div>`;
+    document.getElementById('slModal').classList.add('open');document.body.style.overflow='hidden';
+  }
+}
+function closeSL(){document.getElementById('slModal').classList.remove('open');document.body.style.overflow=''}
+
+function awardTo(name){
+  showToast(`✅ Proceso adjudicado a ${name}`,'success',4000);
+  closeSL();renderTab();
+}
+function closeRFQProcess(id){
+  const r=RFQS.find(x=>x.id===id);
+  if(r)r.status='closed';
+  closeSL();renderTab();
+  showToast('Proceso cerrado correctamente','info');
+}
+
+function openNewRFQ(){
+  const d=new Date(Date.now()+30*24*60*60*1000);
+  document.getElementById('rfq_due').value=d.toISOString().split('T')[0];
+  document.getElementById('rfqModal').classList.add('open');document.body.style.overflow='hidden';
+}
+function closeRFQ(){document.getElementById('rfqModal').classList.remove('open');document.body.style.overflow=''}
+
+function saveRFQ(mode){
+  const title=document.getElementById('rfq_title').value.trim();
+  if(!title){showToast('Ingrese un título para el proceso','warning');return;}
+  const sector=document.getElementById('rfq_sector').value;
+  const budget=parseFloat(document.getElementById('rfq_budget').value)||0;
+  const level=document.getElementById('rfq_level').value;
+  const due=document.getElementById('rfq_due').value;
+  const newRfq={id:'rfq_'+Date.now(),title,sector,budget,status:mode==='publish'?'published':'draft',invited:mode==='publish'?4:0,proposals:0,due_date:due||'—',created:new Date().toISOString().split('T')[0],level};
+  RFQS.unshift(newRfq);
+  closeRFQ();renderKPIs();renderTab();
+  showToast(mode==='publish'?`✅ RFQ publicada. Shortlist generada con ${newRfq.invited} proveedores.`:'Borrador guardado','success',4000);
+}
+
+function showToast(msg,type='info',dur=3500){
+  const i={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el=document.createElement('div');el.className=`toast toast-${type}`;
+  el.innerHTML=`<span class="toast-icon">${i[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300)},dur);
+}
+
+document.getElementById('rfqModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeRFQ()});
+document.getElementById('slModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSL()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeRFQ();closeSL()}});
+document.getElementById('footYear').textContent=new Date().getFullYear();
+renderKPIs();renderTab();
+</script>
+</body></html>

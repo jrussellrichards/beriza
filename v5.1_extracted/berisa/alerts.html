@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>Berisa — Alertas de Mercado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/berisa.css"/>
+<style>
+.alerts-page{padding:20px 24px}
+.alerts-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.alerts-left{display:flex;flex-direction:column;gap:4px}
+.alerts-title{font-family:'Montserrat',sans-serif;font-size:24px;font-weight:700;color:var(--t1)}
+.alerts-sub{font-size:11px;color:var(--t3)}
+.alerts-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.alert-krow{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:20px}
+.alert-tabs{display:flex;gap:2px;border-bottom:1px solid var(--bdr);margin-bottom:18px}
+.at-tab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--t3);padding:10px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:var(--tr);cursor:pointer}
+.at-tab.on{border-bottom-color:var(--gold);color:var(--gold)}
+.at-tab:hover:not(.on){color:var(--t2);border-bottom-color:var(--bdr)}
+.alerts-layout{display:grid;grid-template-columns:1fr 340px;gap:14px;align-items:start}
+.alert-feed{display:flex;flex-direction:column;gap:8px}
+/* Sidebar config */
+.alerts-sidebar{display:flex;flex-direction:column;gap:12px;position:sticky;top:70px}
+.sidebar-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);padding:14px}
+.sidebar-title{font-family:'IBM Plex Sans',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--bdr)}
+.filter-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bdr)}
+.filter-row:last-child{border-bottom:none}
+.filter-label{font-size:11px;color:var(--t2)}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;transition:.2s;cursor:pointer}
+.toggle input:checked+.toggle-track{background:var(--gold);border-color:var(--gold)}
+.toggle-thumb{position:absolute;left:3px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s;pointer-events:none}
+.toggle input:checked~.toggle-thumb{transform:translateX(16px)}
+.channel-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.channel-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+.channel-label{font-size:11px;color:var(--t2);flex:1}
+.channel-status{font-size:9px;font-weight:700;letter-spacing:.5px}
+.channel-status.on{color:var(--success)}.channel-status.off{color:var(--t3)}
+/* Alert types */
+.alert-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);padding:12px 14px;display:flex;align-items:flex-start;gap:12px;transition:var(--tr);cursor:pointer}
+.alert-card:hover{border-color:var(--bdh);background:var(--bg3)}
+.alert-card.unread{border-left:4px solid var(--gold)}
+.alert-card.u-green{border-left:4px solid var(--success)}
+.alert-card.u-red{border-left:4px solid var(--danger)}
+.alert-card.u-blue{border-left:4px solid #3B82F6}
+.alert-ico{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.alert-body{flex:1;min-width:0}
+.alert-title{font-weight:600;font-size:12px;margin-bottom:3px;line-height:1.3}
+.alert-meta{font-size:11px;color:var(--t3);margin-bottom:5px}
+.alert-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.alert-ts{font-size:10px;color:var(--t3);flex-shrink:0;margin-top:2px;white-space:nowrap}
+.abadge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.ab-new{background:rgba(46,173,107,.15);border:1px solid rgba(46,173,107,.35);color:#2EAD6B}
+.ab-upd{background:rgba(201,151,43,.15);border:1px solid rgba(201,151,43,.35);color:var(--gold)}
+.ab-urg{background:rgba(217,64,64,.1);border:1px solid rgba(217,64,64,.3);color:var(--danger)}
+.ab-sec{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#3B82F6}
+.unread-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex-shrink:0;box-shadow:0 0 5px rgba(201,151,43,.6);animation:pls 2s infinite;margin-top:4px}
+@keyframes pls{0%,100%{opacity:1}50%{opacity:.3}}
+.empty-alerts{text-align:center;padding:48px;color:var(--t3)}
+.empty-alerts .ei{font-size:48px;opacity:.2;margin-bottom:14px}
+/* Config alert rule */
+.rule-card{background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;transition:var(--tr)}
+.rule-card:hover{border-color:var(--bdh)}
+.rule-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center}
+.rule-body{flex:1;min-width:0}
+.rule-name{font-size:12px;font-weight:600;margin-bottom:2px}
+.rule-desc{font-size:10px;color:var(--t3)}
+.rule-toggle{flex-shrink:0}
+.new-rule-btn{width:100%;background:transparent;border:1px dashed var(--bdr);color:var(--t3);padding:9px;border-radius:var(--r-sm);font-family:'IBM Plex Sans',sans-serif;font-size:11px;transition:var(--tr);cursor:pointer;text-align:center;margin-top:4px}
+.new-rule-btn:hover{border-color:var(--gold);color:var(--gold)}
+/* Config modal */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:1000px){.alerts-layout{grid-template-columns:1fr}.alerts-sidebar{position:static}}
+@media(max-width:700px){.alert-krow{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header class="hdr" role="banner" id="hdr-root">
+  <div class="hl"></div><div class="hr"></div>
+</header>
+
+<main class="alerts-page" role="main">
+  <div class="alerts-toolbar">
+    <div class="alerts-left">
+      <div class="alerts-title">🔔 Alertas de Mercado</div>
+      <div class="alerts-sub">Notificaciones de proyectos nuevos, actualizaciones y ventanas de oportunidad</div>
+    </div>
+    <div class="alerts-actions">
+      <input class="finp" type="search" id="alertSearch" placeholder="Buscar en alertas…" oninput="renderAlerts()" style="min-width:220px"/>
+      <select class="fsel" id="alertType" onchange="renderAlerts()">
+        <option value="">Todos los tipos</option>
+        <option value="new">Proyecto nuevo</option>
+        <option value="update">Actualización</option>
+        <option value="urgent">Urgente</option>
+        <option value="sector">Por sector</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="markAllRead()">✓ Marcar todo leído</button>
+      <button class="btn btn-primary btn-sm" onclick="openConfigModal()">⚙️ Configurar reglas</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="alert-krow" id="alertKPIs"></div>
+
+  <!-- Tabs -->
+  <div class="alert-tabs">
+    <button class="at-tab on" data-tab="all" onclick="switchTab('all')">🔔 Todas <span id="tc-all" style="background:var(--gold);color:var(--navy);border-radius:10px;padding:1px 6px;font-size:9px;margin-left:3px"></span></button>
+    <button class="at-tab" data-tab="unread" onclick="switchTab('unread')">📌 No leídas <span id="tc-unread" style="background:var(--gold);color:var(--navy);border-radius:10px;padding:1px 6px;font-size:9px;margin-left:3px"></span></button>
+    <button class="at-tab" data-tab="new" onclick="switchTab('new')">🆕 Proyectos nuevos</button>
+    <button class="at-tab" data-tab="urgent" onclick="switchTab('urgent')">🚨 Urgentes</button>
+  </div>
+
+  <div class="alerts-layout">
+    <!-- Feed -->
+    <div>
+      <div class="alert-feed" id="alertFeed"></div>
+    </div>
+    <!-- Sidebar -->
+    <div class="alerts-sidebar">
+      <div class="sidebar-card">
+        <div class="sidebar-title">📡 Canales de notificación</div>
+        <div class="channel-row"><span class="channel-icon">📧</span><span class="channel-label">Email (info@berisa.com)</span><span class="channel-status on">ACTIVO</span></div>
+        <div class="channel-row"><span class="channel-icon">💬</span><span class="channel-label">Slack Webhook</span><span class="channel-status off">INACTIVO</span></div>
+        <div class="channel-row"><span class="channel-icon">📱</span><span class="channel-label">WhatsApp Business</span><span class="channel-status off">PRÓX.</span></div>
+        <div class="channel-row"><span class="channel-icon">🔗</span><span class="channel-label">Webhook personalizado</span><span class="channel-status off">CONFIG.</span></div>
+        <button class="new-rule-btn" onclick="showToast('Configuración de canales próximamente','info')">+ Conectar canal</button>
+      </div>
+      <div class="sidebar-card">
+        <div class="sidebar-title">⚙️ Reglas activas</div>
+        <div id="rulesList"></div>
+        <button class="new-rule-btn" onclick="openConfigModal()">+ Nueva regla</button>
+      </div>
+      <div class="sidebar-card">
+        <div class="sidebar-title">🎯 Filtros rápidos</div>
+        <div id="quickFilters"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer" role="contentinfo">
+  <span>© <b>BERISA</b> · Alertas de Mercado · <span id="footYear"></span></span>
+  <span style="display:flex;align-items:center;gap:10px"><span class="sec-ind"><div class="dot"></div>Sesión activa</span><span>v2.0</span></span>
+</footer>
+
+<!-- Config Modal -->
+<div class="mov" id="cfgModal" role="dialog" aria-modal="true">
+  <div class="modal" style="width:560px">
+    <div class="mhdr">
+      <div class="mtit">⚙️ Configurar Regla de Alerta</div>
+      <button class="mxbtn" onclick="closeCfgModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="cfg-grid">
+        <div class="form-group">
+          <label class="form-label">Nombre de la regla</label>
+          <input class="form-input" id="ruleName" placeholder="Ej: Energía norte Chile"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de evento</label>
+          <select class="form-input form-select" id="ruleType">
+            <option value="new">Proyecto nuevo</option>
+            <option value="update">Actualización de estado</option>
+            <option value="capex">Umbral de inversión</option>
+            <option value="opp">Ventana de oportunidad</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sector</label>
+          <select class="form-input form-select" id="ruleSector">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Región</label>
+          <select class="form-input form-select" id="ruleRegion">
+            <option value="">Todas</option>
+            <option>Antofagasta</option><option>Metropolitana</option>
+            <option>Valparaíso</option><option>Biobío</option>
+            <option>Tarapacá</option><option>Atacama</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CAPEX mínimo (USD M)</label>
+          <input class="form-input" id="ruleCapex" type="number" placeholder="Ej: 100" min="0"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frecuencia</label>
+          <select class="form-input form-select" id="ruleFreq">
+            <option value="immediate">Inmediata</option>
+            <option value="daily">Resumen diario</option>
+            <option value="weekly">Resumen semanal</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Canal de notificación</label>
+        <select class="form-input form-select" id="ruleChannel">
+          <option value="email">Email</option>
+          <option value="slack">Slack (requiere webhook)</option>
+          <option value="webhook">Webhook personalizado</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--bdr)">
+        <button class="btn btn-outline" onclick="closeCfgModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveRule()">Guardar Regla</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" role="status" aria-live="polite"></div>
+
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/berisa-data.js"></script>
+<script src="assets/js/berisa-api.js"></script>
+<script src="assets/js/berisa-header.js"></script>
+<script>
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(!tok||!BAuth.restoreSession(tok)){window.location.replace('index.html');return;}
+  if(BAuth.can('all'))BHeader.render({active:'alerts',showUsers:true});
+  else BHeader.render({active:'alerts'});
+})();
+function doLogout(){BAuth.logout('manual');['berisa_token','berisa_csrf','berisa_user'].forEach(k=>sessionStorage.removeItem(k));window.location.replace('index.html')}
+function toggleTheme(){const c=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',c);const b=document.getElementById('thB');if(b)b.textContent=c==='dark'?'🌙':'☀️'}
+
+// ── DEMO ALERTS DATA ──────────────────────────────────
+let ALERTS=[
+  {id:'a01',type:'new',    unread:true, urgent:false, title:'Nuevo proyecto: Planta Solar Tarapacá Norte — 620 MW', meta:'Región de Tarapacá · Energía · USD 780 M', tags:['new','green'], sector:'Energía',  region:'Tarapacá',    capex:780, ts:'Hace 2 horas',  source:'SEIA (simulado)', icon:'☀️', iconBg:'rgba(245,158,11,.15)', borderClass:'u-green'},
+  {id:'a02',type:'urgent', unread:true, urgent:true,  title:'Licitación abierta: Autopista Costanera Sur Concepción', meta:'Ministerio de Obras Públicas · Infraestructura · USD 1.200 M', tags:['urgent','green'], sector:'Infraestructura', region:'Biobío', capex:1200, ts:'Hace 4 horas',  source:'MOP (simulado)', icon:'🚨', iconBg:'rgba(217,64,64,.15)', borderClass:'u-red'},
+  {id:'a03',type:'update', unread:true, urgent:false, title:'Actualización: Terminal GNL Mejillones avanza a Factibilidad', meta:'GNL Mejillones S.A. · Energía · USD 430 M', tags:['update'], sector:'Energía', region:'Antofagasta', capex:430, ts:'Hace 6 horas',  source:'CBC (simulado)', icon:'🔄', iconBg:'rgba(201,151,43,.15)', borderClass:'unread'},
+  {id:'a04',type:'new',    unread:true, urgent:false, title:'Proyecto ingresado a SEIA: Parque Eólico Tierra del Fuego', meta:'Empresa privada · Energía · USD 340 M', tags:['new'], sector:'Energía', region:'Magallanes', capex:340, ts:'Ayer 18:30', source:'SEIA (simulado)', icon:'💨', iconBg:'rgba(59,130,246,.15)', borderClass:'u-green'},
+  {id:'a05',type:'sector', unread:false,urgent:false, title:'Resumen semanal sector Minería: 3 proyectos nuevos', meta:'Regiones I, II, IV · Inversión total: USD 6.200 M', tags:['sector'], sector:'Minería', region:'', capex:6200, ts:'Hace 2 días', source:'Berisa Analytics', icon:'⛏️', iconBg:'rgba(139,92,246,.15)', borderClass:''},
+  {id:'a06',type:'update', unread:false,urgent:false, title:'Hospital Regional Rancagua: ingreso a revisión DGA', meta:'Ministerio de Salud · Salud · USD 320 M', tags:['update'], sector:'Salud', region:"O'Higgins", capex:320, ts:'Hace 2 días', source:'MOP (simulado)', icon:'🏥', iconBg:'rgba(46,173,107,.15)', borderClass:''},
+  {id:'a07',type:'new',    unread:false,urgent:false, title:'Nuevo contrato MOP: Mejoramiento Ruta 5 Norte Tramo III', meta:'MOP · Infraestructura · USD 195 M', tags:['new'], sector:'Infraestructura', region:'Coquimbo', capex:195, ts:'Hace 3 días', source:'Mercado Público (simulado)', icon:'🛣️', iconBg:'rgba(16,185,129,.15)', borderClass:''},
+  {id:'a08',type:'urgent', unread:false,urgent:true,  title:'Cierre de ventana: Estadio Temuco — presupuesto aprobado', meta:'Ministerio del Deporte · Inmobiliario · USD 95 M', tags:['urgent'], sector:'Inmobiliario', region:'La Araucanía', capex:95, ts:'Hace 3 días', source:'Berisa Analytics', icon:'⏰', iconBg:'rgba(217,64,64,.15)', borderClass:''},
+];
+
+let RULES=[
+  {id:'r01',name:'Energía zona norte',icon:'☀️',desc:'Sector Energía · Regiones I-IV · CAPEX>100M',active:true},
+  {id:'r02',name:'Infraestructura MOP',icon:'🛣️',desc:'Sector Infraestructura · Todas las regiones',active:true},
+  {id:'r03',name:'Minería grandes obras',icon:'⛏️',desc:'Sector Minería · CAPEX>500M',active:false},
+];
+
+let curTab='all';
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+function getFiltered(){
+  const q=(document.getElementById('alertSearch')||{}).value||'';
+  const tp=(document.getElementById('alertType')||{}).value||'';
+  return ALERTS.filter(a=>{
+    if(curTab==='unread'&&!a.unread)return false;
+    if(curTab==='new'&&a.type!=='new')return false;
+    if(curTab==='urgent'&&!a.urgent)return false;
+    if(tp&&a.type!==tp)return false;
+    if(q&&!(a.title+a.meta+a.sector).toLowerCase().includes(q.toLowerCase()))return false;
+    return true;
+  });
+}
+function renderAlerts(){
+  renderKPIs();renderFeed();renderCounts();
+}
+function renderKPIs(){
+  const total=ALERTS.length,unread=ALERTS.filter(a=>a.unread).length,urg=ALERTS.filter(a=>a.urgent).length,newA=ALERTS.filter(a=>a.type==='new').length;
+  document.getElementById('alertKPIs').innerHTML=`
+    <div class="kpi"><div class="kico">🔔</div><div class="kl">Total Alertas</div><div class="kv">${total}</div><div class="ksb">en historial activo</div></div>
+    <div class="kpi"><div class="kico">📌</div><div class="kl">No Leídas</div><div class="kv" style="color:var(--gold)">${unread}</div><div class="ksb">pendientes de revisión</div></div>
+    <div class="kpi"><div class="kico">🆕</div><div class="kl">Proyectos Nuevos</div><div class="kv" style="color:var(--success)">${newA}</div><div class="ksb">detectados esta semana</div></div>
+    <div class="kpi"><div class="kico">🚨</div><div class="kl">Urgentes</div><div class="kv" style="color:var(--danger)">${urg}</div><div class="ksb">ventanas próximas a cerrar</div></div>`;
+}
+function renderFeed(){
+  const filtered=getFiltered();
+  const feed=document.getElementById('alertFeed');
+  if(!filtered.length){feed.innerHTML=`<div class="empty-alerts"><div class="ei">🔔</div><div>Sin alertas${curTab!=='all'?' en esta categoría':''}</div></div>`;return;}
+  feed.innerHTML=filtered.map(a=>`
+    <div class="alert-card ${a.borderClass}" onclick="readAlert('${a.id}',this)" role="article">
+      ${a.unread?'<div class="unread-dot" title="No leída"></div>':'<div style="width:7px;flex-shrink:0"></div>'}
+      <div class="alert-ico" style="background:${a.iconBg}">${a.icon}</div>
+      <div class="alert-body">
+        <div class="alert-title">${esc(a.title)}</div>
+        <div class="alert-meta">${esc(a.meta)}</div>
+        <div class="alert-tags">
+          ${a.type==='new'?'<span class="abadge ab-new">🆕 Nuevo</span>':a.type==='urgent'?'<span class="abadge ab-urg">🚨 Urgente</span>':a.type==='update'?'<span class="abadge ab-upd">🔄 Actualización</span>':'<span class="abadge ab-sec">📊 Sector</span>'}
+          ${a.sector?`<span class="abadge" style="background:rgba(91,100,114,.12);border:1px solid rgba(91,100,114,.3);color:var(--slate)">${esc(a.sector)}</span>`:''}
+          ${a.region?`<span class="abadge ab-sec">📍 ${esc(a.region)}</span>`:''}
+          <span style="font-size:10px;color:var(--t3);margin-left:4px">📡 ${esc(a.source)}</span>
+        </div>
+      </div>
+      <div class="alert-ts">${esc(a.ts)}</div>
+    </div>`).join('');
+}
+function renderCounts(){
+  const all=ALERTS.length,unread=ALERTS.filter(a=>a.unread).length;
+  document.getElementById('tc-all').textContent=all;
+  document.getElementById('tc-unread').textContent=unread;
+}
+function readAlert(id,el){
+  const a=ALERTS.find(x=>x.id===id);if(!a)return;
+  a.unread=false;
+  el.querySelector('.unread-dot')&&(el.querySelector('.unread-dot').style.display='none');
+  renderCounts();renderKPIs();
+  showToast('Alerta marcada como leída','info',1500);
+}
+function markAllRead(){ALERTS.forEach(a=>a.unread=false);renderAlerts();showToast('Todas las alertas marcadas como leídas','success')}
+function switchTab(t){
+  curTab=t;
+  document.querySelectorAll('.at-tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  renderAlerts();
+}
+function renderRules(){
+  document.getElementById('rulesList').innerHTML=RULES.map(r=>`
+    <div class="rule-card">
+      <div class="rule-icon">${r.icon}</div>
+      <div class="rule-body"><div class="rule-name">${esc(r.name)}</div><div class="rule-desc">${esc(r.desc)}</div></div>
+      <label class="toggle rule-toggle">
+        <input type="checkbox" ${r.active?'checked':''} onchange="toggleRule('${r.id}',this.checked)">
+        <div class="toggle-track"></div><div class="toggle-thumb"></div>
+      </label>
+    </div>`).join('');
+}
+function toggleRule(id,val){const r=RULES.find(x=>x.id===id);if(r){r.active=val;showToast(`Regla "${r.name}" ${val?'activada':'desactivada'}`,val?'success':'warning')}}
+function renderQuickFilters(){
+  const sectors=[...new Set(BD.PROJECTS.map(p=>p.s))].sort();
+  document.getElementById('quickFilters').innerHTML=sectors.map(s=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:11px">
+      <span style="color:var(--t2)">${esc(s)}</span>
+      <span style="color:var(--t3);font-size:10px">${ALERTS.filter(a=>a.sector===s).length} alertas</span>
+    </div>`).join('');
+}
+function openConfigModal(){
+  const sels=document.getElementById('ruleSector');if(sels.children.length<=1){const sectors=[...new Set(BD.PROJECTS.map(p=>p.s))].sort();sectors.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sels.appendChild(o)});}
+  document.getElementById('cfgModal').classList.add('open');document.body.style.overflow='hidden';
+}
+function closeCfgModal(){document.getElementById('cfgModal').classList.remove('open');document.body.style.overflow=''}
+function saveRule(){
+  const name=BAuth.sanitize(document.getElementById('ruleName').value.trim());
+  if(!name){showToast('Ingrese un nombre para la regla','warning');return;}
+  const type=document.getElementById('ruleType').value;
+  const sector=document.getElementById('ruleSector').value;
+  const region=document.getElementById('ruleRegion').value;
+  const capex=document.getElementById('ruleCapex').value;
+  const desc=[sector&&'Sector: '+sector,region&&'Región: '+region,capex&&'CAPEX>'+capex+'M'].filter(Boolean).join(' · ')||'Sin filtros adicionales';
+  const icons={Energía:'⚡',Infraestructura:'🏗️',Minería:'⛏️',Industrial:'🏭',default:'🔔'};
+  RULES.push({id:'r'+Date.now(),name,icon:icons[sector]||icons.default,desc,active:true});
+  closeCfgModal();renderRules();showToast(`Regla "${name}" creada exitosamente`,'success');
+}
+function showToast(msg,type='info',dur=3500){
+  const i={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el=document.createElement('div');el.className=`toast toast-${type}`;
+  el.innerHTML=`<span class="toast-icon">${i[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300)},dur);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCfgModal()});
+document.getElementById('cfgModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeCfgModal()});
+document.getElementById('footYear').textContent=new Date().getFullYear();
+renderAlerts();renderRules();renderQuickFilters();
+</script>
+</body></html>

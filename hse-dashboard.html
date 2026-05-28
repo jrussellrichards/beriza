@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Berisa — Dashboard HSE</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/berisa.css"/>
+<style>
+.hse-pg{padding:20px 24px}
+.hse-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.hse-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:9px;margin-bottom:18px}
+.kpi-box{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:14px;border-left:3px solid}
+.kpi-n{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:700;line-height:1;margin-bottom:3px}
+.kpi-l{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--t3)}
+.kpi-ref{font-size:10px;margin-top:4px;color:var(--t2)}
+.hse-body{display:grid;grid-template-columns:1fr 320px;gap:12px}
+.hse-main{}
+.hse-panel{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:14px;margin-bottom:12px}
+.panel-title{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.inc-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.inc-row:last-child{border-bottom:none}
+.sev-badge{padding:2px 8px;border-radius:12px;font-size:9px;font-weight:700;border:1px solid;white-space:nowrap}
+.sev-fatal{background:rgba(217,0,0,.15);border-color:rgba(217,0,0,.3);color:#FF4444}
+.sev-serious{background:rgba(226,75,74,.12);border-color:rgba(226,75,74,.3);color:var(--danger)}
+.sev-minor{background:rgba(239,159,39,.1);border-color:rgba(239,159,39,.3);color:var(--warn)}
+.sev-near_miss{background:rgba(55,138,221,.1);border-color:rgba(55,138,221,.3);color:#5BA8F5}
+.sev-property_damage{background:rgba(91,100,114,.12);border-color:rgba(91,100,114,.3);color:var(--slate)}
+.prog-bar{height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.acred-row{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:var(--r);margin-bottom:6px}
+.acred-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.permit-card{background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r);padding:10px;margin-bottom:7px}
+.permit-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+</style>
+</head>
+<body>
+<header class="hdr" id="hdr-root"><div class="hl"></div><div class="hr"></div></header>
+
+<div class="hse-pg">
+  <div class="hse-top">
+    <div>
+      <h1 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:700;margin-bottom:3px">🛡️ Dashboard HSE</h1>
+      <p style="font-size:11px;color:var(--t3)">Seguridad · Salud Ocupacional · Prevención · DS 44/2024 · Ley 16.744</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select class="fsel" id="yearSel" onchange="loadAll()"></select>
+      <button class="btn btn-primary btn-sm" onclick="openIncidentModal()">+ Registrar Incidente</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="hse-kpis" id="kpiRow"></div>
+
+  <div class="hse-body">
+    <div class="hse-main">
+      <!-- Prevention Summary -->
+      <div class="hse-panel">
+        <div class="panel-title">Gestión de Prevención DS 44 <button class="btn btn-outline btn-sm" onclick="location.href='hse-prevention.html'">Ver detalle →</button></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px" id="prevGrid"></div>
+      </div>
+      <!-- Recent Incidents -->
+      <div class="hse-panel">
+        <div class="panel-title">Incidentes recientes <button class="btn btn-outline btn-sm" onclick="location.href='hse-incidents.html'">Ver todos →</button></div>
+        <div id="incList"></div>
+      </div>
+      <!-- Accreditation Alerts -->
+      <div class="hse-panel">
+        <div class="panel-title">⚠️ Licencias próximas a vencer <button class="btn btn-outline btn-sm" onclick="location.href='hse-accreditation.html'">Gestionar →</button></div>
+        <div id="licExpList"></div>
+      </div>
+    </div>
+    <!-- Sidebar -->
+    <div>
+      <div class="hse-panel">
+        <div class="panel-title">Permisos de trabajo activos</div>
+        <div id="permitList"></div>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px" onclick="location.href='hse-work-permits.html'">Gestionar permisos →</button>
+      </div>
+      <div class="hse-panel">
+        <div class="panel-title">🌿 Resumen Ambiental <button class="btn btn-outline btn-sm" onclick="location.href='hse-environmental.html'">Ver →</button></div>
+        <div id="envSummary"></div>
+      </div>
+      <div class="hse-panel" style="background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.15)">
+        <div class="panel-title" style="color:#10B981">Base normativa activa</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${[
+            'DS 44/2024 (vigente 01/02/2025)','Ley 16.744 · DS 67 (siniestralidad)',
+            'DS 76 · Ley 20.123 (subcontr.)','DS 594 (higiene laboral)',
+            'DS 132 (minería) · SERNAGEOMIN','Ley 19.300 · SEIA · DS 148','ISO 45001 · ISO 14001'
+          ].map(n=>`<div style="font-size:10px;color:var(--t2);padding:3px 7px;background:rgba(16,185,129,.06);border-radius:4px;border-left:2px solid rgba(16,185,129,.3)">✓ ${n}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Incident Modal -->
+<div class="mov" id="incModal">
+  <div class="modal" style="width:540px">
+    <div class="mhdr"><div class="mtit">Registrar Incidente / Accidente</div><button class="mxbtn" onclick="closeModal('incModal')">✕</button></div>
+    <div class="mbody">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Fecha *</label><input class="form-input" type="date" id="inc_date"/></div>
+        <div class="form-group"><label class="form-label">Tipo *</label>
+          <select class="form-input form-select" id="inc_type">
+            <option value="accident_work">Accidente del trabajo</option>
+            <option value="near_miss">Cuasi-accidente</option>
+            <option value="occupational_disease">Enfermedad profesional</option>
+            <option value="accident_commute">Accidente de trayecto</option>
+            <option value="environmental">Incidente ambiental</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Severidad *</label>
+          <select class="form-input form-select" id="inc_sev">
+            <option value="minor">Leve</option>
+            <option value="serious">Grave</option>
+            <option value="fatal">Fatal</option>
+            <option value="near_miss">Cuasi-accidente</option>
+            <option value="property_damage">Daño material</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Días perdidos</label><input class="form-input" type="number" id="inc_lost" value="0" min="0"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Título *</label><input class="form-input" id="inc_title" placeholder="Ej: Caída a mismo nivel en bodega sector 3"/></div>
+      <div class="form-group"><label class="form-label">Descripción</label><textarea class="form-input" id="inc_desc" rows="3" placeholder="Descripción detallada del incidente…"></textarea></div>
+      <div class="form-group"><label class="form-label">Lugar</label><input class="form-input" id="inc_loc" placeholder="Área, sector o faena"/></div>
+      <div class="callout ci" style="margin-bottom:8px">
+        <div class="di">⚖️</div>
+        <div class="dt">Ley 16.744: Todo accidente grave o fatal debe reportarse al Organismo Administrador dentro de <strong>24 horas</strong> y requiere investigación formal dentro de <strong>48 horas</strong>.</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--bdr)">
+        <button class="btn btn-outline" onclick="closeModal('incModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveIncident()">Registrar incidente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/berisa-header.js"></script>
+<script src="assets/js/berisa-api.js"></script>
+<script>
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(!tok||!BAuth.restoreSession(tok)){window.location.replace('index.html');return;}
+  BHeader.render({active:'hse'});
+  const yr=new Date().getFullYear();
+  const sel=document.getElementById('yearSel');
+  for(let y=yr;y>=yr-3;y--) sel.innerHTML+=`<option value="${y}"${y===yr?' selected':''}>${y}</option>`;
+})();
+function doLogout(){BAuth.logout('manual');['berisa_token','berisa_csrf','berisa_user'].forEach(k=>sessionStorage.removeItem(k));window.location.replace('index.html')}
+function toggleTheme(){const c=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',c)}
+
+const SEV_DEMO=[
+  {id:'i1',incident_date:'2026-05-15',severity:'serious',incident_type:'accident_work',title:'Caída andamiaje nivel 3',status:'investigating',supplier_id:'s1',company_name:'Constructora del Sur',lost_days:7},
+  {id:'i2',incident_date:'2026-05-20',severity:'minor',incident_type:'accident_work',title:'Corte mano derecha con sierra',status:'capa_open',company_name:'Electro Power',lost_days:2},
+  {id:'i3',incident_date:'2026-05-22',severity:'near_miss',incident_type:'near_miss',title:'Cuasi-accidente vehículo en patio',status:'open',company_name:'Servicios Mineros Norte',lost_days:0},
+  {id:'i4',incident_date:'2026-04-28',severity:'minor',incident_type:'accident_work',title:'Golpe ojo por proyección partícula',status:'closed',company_name:'Constructora del Sur',lost_days:1},
+];
+
+async function loadAll(){
+  const yr=parseInt(document.getElementById('yearSel').value);
+  const [stats,kpis,prevSum,explic,permits,envSum] = await Promise.all([
+    BAPI.getIncidentStats(yr).catch(()=>({total:4,serious:1,minor:2,near_misses:1,total_lost_days:10,open_count:2})),
+    BAPI.getHseKpis({period_start:`${yr}-01-01`,period_end:`${yr}-12-31`}).catch(()=>({ta:2.1,if_:8.4,ig:42.0,sector_avg_ta:3.5,sector_avg_if:12.4})),
+    BAPI.getPreventionSummary().catch(()=>({programs_this_year:1,active_cphs:2,overdue_capa:3,inspections_this_year:8})),
+    BAPI.getExpiringLicenses(60).catch(()=>[
+      {worker_name:'Juan Pérez',license_type:'driver_A',expiry_date:'2026-06-10',company_name:'Constructora del Sur'},
+      {worker_name:'María González',license_type:'crane_operator',expiry_date:'2026-06-25',company_name:'Electro Power'},
+    ]),
+    BAPI.getWorkPermits({status:'active'}).catch(()=>[
+      {id:'p1',permit_type:'height',title:'Techumbre edificio B',status:'active',start_datetime:'2026-05-27 08:00',workers_count:4},
+      {id:'p2',permit_type:'confined_space',title:'Revisión depósito 12',status:'approved',start_datetime:'2026-05-27 14:00',workers_count:2},
+    ]),
+    BAPI.getEnvironmentalSummary().catch(()=>({rca:{total:12,compliant:10,overdue:1,compliance_pct:83},waste:{records:5,total_kg:1240},incidents:{total:0,open:0}})),
+  ]);
+
+  // KPIs
+  const ta=parseFloat(kpis.ta||2.1), iff=parseFloat(kpis.if_||8.4), ig=parseFloat(kpis.ig||42);
+  const taOk=ta<=kpis.sector_avg_ta, ifOk=iff<=kpis.sector_avg_if;
+  document.getElementById('kpiRow').innerHTML=[
+    {n:stats.total||0, l:'Accidentes totales', ref:`Fatal: ${stats.fatal||0} · Grave: ${stats.serious||0}`, col:'#E24B4A', bc:'rgba(226,75,74,.3)'},
+    {n:(ta||0).toFixed(1)+'%', l:'Tasa accidentabilidad (TA)', ref:`Promedio sector: 3.5% ${taOk?'✓':'⚠'}`, col:taOk?'#2EAD6B':'#EF9F27', bc:taOk?'rgba(46,173,107,.3)':'rgba(239,159,39,.3)'},
+    {n:(iff||0).toFixed(1), l:'Índice Frecuencia (IF)', ref:`Promedio sector: 12.4 ${ifOk?'✓':'⚠'}`, col:ifOk?'#2EAD6B':'#EF9F27', bc:ifOk?'rgba(46,173,107,.3)':'rgba(239,159,39,.3)'},
+    {n:(ig||0).toFixed(0), l:'Índice Gravedad (IG)', ref:'Días perdidos/10⁶ hrs', col:'#EF9F27', bc:'rgba(239,159,39,.3)'},
+    {n:stats.total_lost_days||10, l:'Días perdidos totales', ref:'Acumulado período', col:'#378ADD', bc:'rgba(55,138,221,.3)'},
+    {n:stats.open_count||2, l:'Incidentes abiertos', ref:'Requieren acción', col:stats.open_count>0?'#EF9F27':'#2EAD6B', bc:stats.open_count>0?'rgba(239,159,39,.3)':'rgba(46,173,107,.3)'},
+  ].map(k=>`<div class="kpi-box" style="border-left-color:${k.bc}"><div class="kpi-n" style="color:${k.col}">${k.n}</div><div class="kpi-l">${k.l}</div><div class="kpi-ref">${k.ref}</div></div>`).join('');
+
+  // Prevention summary
+  document.getElementById('prevGrid').innerHTML=[
+    {ico:'📋',n:prevSum.programs_this_year,l:'Programas',col:'#BA7517'},
+    {ico:'🏛️',n:prevSum.active_cphs,l:'CPHS activos',col:'#378ADD'},
+    {ico:'🔴',n:prevSum.overdue_capa,l:'CAPA vencidas',col:'#E24B4A'},
+    {ico:'🔍',n:prevSum.inspections_this_year,l:'Inspecciones',col:'#2EAD6B'},
+  ].map(p=>`<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">
+    <div style="font-size:18px;margin-bottom:3px">${p.ico}</div>
+    <div style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;color:${p.col}">${p.n}</div>
+    <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">${p.l}</div>
+  </div>`).join('');
+
+  // Incidents list
+  document.getElementById('incList').innerHTML=SEV_DEMO.slice(0,4).map(i=>`
+    <div class="inc-row">
+      <span class="sev-badge sev-${i.severity}">${i.severity==='minor'?'Leve':i.severity==='serious'?'Grave':i.severity==='fatal'?'Fatal':i.severity==='near_miss'?'Cuasi':i.severity==='property_damage'?'Daño mat.':i.severity}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.title}</div>
+        <div style="font-size:10px;color:var(--t3)">${i.incident_date} · ${i.company_name} · ${i.lost_days} días perdidos</div>
+      </div>
+      <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--t2);white-space:nowrap">${i.status==='investigating'?'Investigando':i.status==='capa_open'?'CAPA abierta':i.status==='open'?'Abierto':'Cerrado'}</span>
+    </div>`).join('');
+
+  // Expiring licenses
+  document.getElementById('licExpList').innerHTML=explic.length ? explic.map(l=>`
+    <div class="acred-row">
+      <div class="acred-dot" style="background:${new Date(l.expiry_date)<new Date(Date.now()+15*864e5)?'var(--danger)':'var(--warn)'}"></div>
+      <div style="flex:1"><div style="font-size:11px;font-weight:600">${l.worker_name}</div><div style="font-size:10px;color:var(--t3)">${l.license_type} · ${l.company_name}</div></div>
+      <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--warn)">Vence: ${l.expiry_date}</div>
+    </div>`).join('') : '<p style="font-size:11px;color:var(--t3);text-align:center;padding:12px">✓ Sin licencias próximas a vencer</p>';
+
+  // Work permits
+  const PT={height:'⬆️ Altura',confined_space:'⬛ Espacio conf.',hot_work:'🔥 Trabajo caliente',electrical:'⚡ Eléctrico',excavation:'⬇️ Excavación',general:'📋 General'};
+  document.getElementById('permitList').innerHTML=permits.length ? permits.map(p=>`
+    <div class="permit-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span class="permit-type" style="color:${p.status==='active'?'#2EAD6B':'#EF9F27'}">${PT[p.permit_type]||p.permit_type}</span>
+        <span style="font-size:9px;font-weight:700;color:${p.status==='active'?'#2EAD6B':'#EF9F27'}">${p.status==='active'?'ACTIVO':'APROBADO'}</span>
+      </div>
+      <div style="font-size:11px;font-weight:600">${p.title}</div>
+      <div style="font-size:10px;color:var(--t3)">${p.workers_count} trabajadores · ${typeof p.start_datetime==='string'?p.start_datetime.slice(0,16):''}</div>
+    </div>`).join('') : '<p style="font-size:11px;color:var(--t3);text-align:center;padding:8px">Sin permisos activos</p>';
+
+  // Env summary
+  const es=envSum;
+  document.getElementById('envSummary').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:5px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg3);border-radius:4px">
+        <span style="font-size:10px;color:var(--t2)">Cumplimiento RCA</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:${es.rca?.compliance_pct>=90?'#2EAD6B':'#EF9F27'}">${es.rca?.compliance_pct||83}%</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${es.rca?.compliance_pct||83}%;background:${es.rca?.compliance_pct>=90?'#2EAD6B':'#EF9F27'}"></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg3);border-radius:4px">
+        <span style="font-size:10px;color:var(--t2)">Residuos gestionados</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#2EAD6B">${(es.waste?.total_kg/1000||1.24).toFixed(2)} ton</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg3);border-radius:4px">
+        <span style="font-size:10px;color:var(--t2)">Incidentes ambientales</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:${es.incidents?.open>0?'#E24B4A':'#2EAD6B'}">${es.incidents?.open||0} abiertos</span>
+      </div>
+    </div>`;
+}
+
+function openIncidentModal(){document.getElementById('incModal').classList.add('open');document.body.style.overflow='hidden';document.getElementById('inc_date').value=new Date().toISOString().split('T')[0];}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+async function saveIncident(){
+  const inc={incident_date:document.getElementById('inc_date').value,incident_type:document.getElementById('inc_type').value,severity:document.getElementById('inc_sev').value,title:document.getElementById('inc_title').value,description:document.getElementById('inc_desc').value,location:document.getElementById('inc_loc').value,lost_days:parseInt(document.getElementById('inc_lost').value)||0};
+  if(!inc.incident_date||!inc.title){showToast('Fecha y título son requeridos','warning');return;}
+  const res=await BAPI.createIncident(inc).catch(()=>null);
+  if(res) showToast('Incidente registrado','success',4000);
+  else showToast('Incidente registrado en modo demo','info',4000);
+  closeModal('incModal');
+  ['inc_title','inc_desc','inc_loc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inc_lost').value='0';
+  loadAll();
+}
+function showToast(msg,type='info',dur=3500){
+  const i={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el=document.createElement('div');el.className=`toast toast-${type}`;
+  el.innerHTML=`<span class="toast-icon">${i[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300)},dur);
+}
+document.querySelectorAll('.mov').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mov.open').forEach(m=>closeModal(m.id))});
+loadAll();
+</script>
+</body>
+</html>

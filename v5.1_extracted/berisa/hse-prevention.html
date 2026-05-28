@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Berisa — Gestión de Prevención DS 44</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/berisa.css"/>
+<style>
+.pg{padding:20px 24px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bdr);margin-bottom:18px;flex-wrap:wrap}
+.tab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--t3);padding:9px 14px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.8px;cursor:pointer;transition:all .15s}
+.tab.on{border-bottom-color:var(--gold);color:var(--gold)}
+.tab:hover:not(.on){color:var(--t2)}
+.prog-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg2);border-radius:var(--r);margin-bottom:7px;border:1px solid var(--bdr);transition:all .2s}
+.prog-item:hover{border-color:var(--bdh)}
+.prog-n{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.risk-cell{width:38px;height:38px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;cursor:pointer;transition:transform .15s}
+.risk-cell:hover{transform:scale(1.1)}
+.cphs-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:14px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header class="hdr" id="hdr-root"><div class="hl"></div><div class="hr"></div></header>
+<div class="pg">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div><h1 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:700;margin-bottom:3px">🏛️ Gestión de Prevención</h1>
+    <p style="font-size:11px;color:var(--t3)">DS 44/2024 · Matriz de Riesgos · CPHS · Programa Anual · Inspecciones</p></div>
+    <button class="btn btn-primary btn-sm" onclick="showToast('Crear nuevo elemento','info')">+ Nuevo</button>
+  </div>
+  <div class="tabs">
+    <button class="tab on" onclick="setTab('program',this)">📋 Programa Anual</button>
+    <button class="tab" onclick="setTab('matrix',this)">⚠️ Matriz de Riesgos DS 44</button>
+    <button class="tab" onclick="setTab('cphs',this)">🏛️ CPHS</button>
+    <button class="tab" onclick="setTab('inspections',this)">🔍 Inspecciones</button>
+  </div>
+  <div id="tabContent"></div>
+</div>
+<div id="toast-container"></div>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/berisa-header.js"></script>
+<script src="assets/js/berisa-api.js"></script>
+<script>
+(function(){
+  const tok=sessionStorage.getItem('berisa_token');
+  if(!tok||!BAuth.restoreSession(tok)){window.location.replace('index.html');return;}
+  BHeader.render({active:'hse'});
+})();
+function doLogout(){BAuth.logout('manual');['berisa_token','berisa_csrf','berisa_user'].forEach(k=>sessionStorage.removeItem(k));window.location.replace('index.html')}
+function toggleTheme(){const c=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',c)}
+function showToast(msg,type='info',dur=3500){const i={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};const el=document.createElement('div');el.className=`toast toast-${type}`;el.innerHTML=`<span class="toast-icon">${i[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;document.getElementById('toast-container').appendChild(el);setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300)},dur);}
+
+const DEMO_PROGRAM=[
+  {n:1,cat:'🎓 Capacitación',t:'Capacitación trabajo en altura DS 44',st:'completed',d:'Mar 2026',ev:'Registro asistencia firmado'},
+  {n:2,cat:'🔍 Inspección',t:'Inspección mensual andamiajes Obra B',st:'completed',d:'Abr 2026',ev:'Informe inspección 2026-04'},
+  {n:3,cat:'🏛️ Comité',t:'Sesión CPHS mensual mayo',st:'completed',d:'May 2026',ev:'Acta sesión firmada'},
+  {n:4,cat:'🎓 Capacitación',t:'Manejo defensivo para operadores',st:'pending',d:'Jun 2026',ev:null},
+  {n:5,cat:'🔥 Simulacro',t:'Simulacro evacuación por incendio',st:'pending',d:'Ago 2026',ev:null},
+  {n:6,cat:'🔍 Auditoría',t:'Auditoría interna SG-SST DS 44',st:'pending',d:'Oct 2026',ev:null},
+];
+const DEMO_MATRIX=[
+  {act:'Trabajo en andamiaje',haz:'Caída de altura',risk:'Fracturas/muerte',p:4,c:5,ctrl:'Arnés, línea de vida, CPRO',st:'open'},
+  {act:'Operación maquinaria pesada',haz:'Atrapamiento',risk:'Lesión grave miembro',p:3,c:4,ctrl:'Resguardos, procedimiento bloqueo LOTO',st:'controlled'},
+  {act:'Manejo de químicos',haz:'Exposición a agentes',risk:'Enfermedad profesional',p:3,c:3,ctrl:'EPP químico, hoja SDS en área',st:'controlled'},
+  {act:'Carga y descarga manual',haz:'Sobreesfuerzo',risk:'Lesión músculo-esquelética',p:4,c:2,ctrl:'Capacitación ergonomía, ayudas mecánicas',st:'open'},
+];
+const DEMO_CPHS=[
+  {name:'CPHS Constructora del Sur — Obra B',type:'own',dt:'DT-2025-1234',pres:'Juan Pérez',members:8,stt:'active',sessions:5,next:'05 Jun 2026'},
+  {name:'CPHS de Faena — Proyecto Central Solar',type:'site_faena',dt:'DT-2025-5678',pres:'María González',members:12,stt:'active',sessions:3,next:'12 Jun 2026'},
+];
+const DEMO_INSP=[
+  {title:'Inspección andamiajes sector B',type:'Preventiva',d:'20 May 2026',result:'with_observations',findings:3,critical:0},
+  {title:'Inspección EPP cuadrilla C',type:'Preventiva',d:'15 May 2026',result:'satisfactory',findings:0,critical:0},
+  {title:'Inspección post-accidente',type:'Reactiva',d:'10 May 2026',result:'unsatisfactory',findings:5,critical:2},
+];
+
+function setTab(tab,btn){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const c=document.getElementById('tabContent');
+  if(tab==='program'){
+    const done=DEMO_PROGRAM.filter(a=>a.st==='completed').length;
+    const pct=Math.round(done/DEMO_PROGRAM.length*100);
+    c.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:600">Programa Anual de Prevención 2026 — ${pct}% completado</div>
+      <span style="font-family:'IBM Plex Mono',sans-serif;font-size:11px;color:var(--gold)">${done}/${DEMO_PROGRAM.length} actividades</span></div>
+    <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:14px"><div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--gold),#2EAD6B);border-radius:3px"></div></div>`+
+    DEMO_PROGRAM.map(a=>`<div class="prog-item">
+      <div class="prog-n" style="background:${a.st==='completed'?'rgba(46,173,107,.15)':'rgba(255,255,255,.05)'};border:1px solid ${a.st==='completed'?'rgba(46,173,107,.3)':'rgba(255,255,255,.1)'};color:${a.st==='completed'?'#2EAD6B':'var(--t3)'}">${a.n}</div>
+      <div style="font-size:9px;color:var(--t3);width:120px;flex-shrink:0">${a.cat}</div>
+      <div style="flex:1;font-size:12px;font-weight:500;color:${a.st==='completed'?'var(--t1)':'var(--t2)'}">${a.t}</div>
+      <div style="font-size:10px;color:var(--t3)">${a.d}</div>
+      <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${a.st==='completed'?'rgba(46,173,107,.1)':'rgba(239,159,39,.1)'};border:1px solid ${a.st==='completed'?'rgba(46,173,107,.3)':'rgba(239,159,39,.3)'};color:${a.st==='completed'?'#2EAD6B':'var(--warn)'}">${a.st==='completed'?'✓ Completada':'Pendiente'}</span>
+      ${a.st==='pending'?`<button class="btn btn-outline btn-sm" onclick="showToast('Actividad registrada como completada','success')">✓ Registrar</button>`:''}
+    </div>`).join('');
+  } else if(tab==='matrix'){
+    c.innerHTML=`<div style="font-size:12px;color:var(--t2);margin-bottom:12px">Matriz de Identificación y Evaluación de Riesgos — <strong style="color:var(--t1)">DS 44/2024</strong> · ${DEMO_MATRIX.length} riesgos identificados</div>
+    <div style="overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr)"><table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead style="background:var(--bg2);border-bottom:2px solid rgba(239,159,39,.2)"><tr>
+        <th style="padding:9px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)">Actividad</th>
+        <th style="padding:9px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)">Peligro</th>
+        <th style="padding:9px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)">Riesgo</th>
+        <th style="padding:9px 12px;text-align:center;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)">P</th>
+        <th style="padding:9px 12px;text-align:center;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)">C</th>
+        <th style="padding:9px 12px;text-align:center;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)">Nivel</th>
+        <th style="padding:9px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)">Controles</th>
+        <th style="padding:9px 12px;text-align:center;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)">Estado</th>
+      </tr></thead>
+      <tbody>${DEMO_MATRIX.map(r=>{
+        const v=r.p*r.c;
+        const rl=v>=15?{l:'Crítico',c:'#FF4757'}:v>=10?{l:'Alto',c:'#FF8C42'}:v>=5?{l:'Medio',c:'var(--gold)'}:{l:'Bajo',c:'#2EAD6B'};
+        return`<tr style="border-bottom:1px solid var(--bdr)">
+          <td style="padding:8px 12px;font-weight:500">${r.act}</td>
+          <td style="padding:8px 12px;color:var(--t2)">${r.haz}</td>
+          <td style="padding:8px 12px;color:var(--t2)">${r.risk}</td>
+          <td style="padding:8px 12px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:700">${r.p}</td>
+          <td style="padding:8px 12px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:700">${r.c}</td>
+          <td style="padding:8px 12px;text-align:center"><span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:${rl.c}18;border:1px solid ${rl.c}44;color:${rl.c}">${v} — ${rl.l}</span></td>
+          <td style="padding:8px 12px;font-size:11px;color:var(--t2)">${r.ctrl}</td>
+          <td style="padding:8px 12px;text-align:center"><span style="font-size:9px;color:${r.st==='controlled'?'#2EAD6B':'var(--warn)'}">${r.st==='controlled'?'✓ Controlado':'⚠ Abierto'}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  } else if(tab==='cphs'){
+    c.innerHTML=DEMO_CPHS.map(ch=>`<div class="cphs-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+        <div><div style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;margin-bottom:2px">${ch.name}</div>
+        <div style="font-size:10px;color:var(--t3)">Tipo: ${ch.type==='own'?'Propio empresa':'De faena (DS 76)'} · DT: ${ch.dt}</div></div>
+        <span style="padding:2px 8px;border-radius:12px;font-size:9px;font-weight:700;background:rgba(46,173,107,.1);border:1px solid rgba(46,173,107,.3);color:#2EAD6B">ACTIVO</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        ${[{l:'Presidente',v:ch.pres},{l:'Miembros',v:ch.members},{l:'Sesiones 2026',v:ch.sessions},{l:'Próxima sesión',v:ch.next}].map(m=>`<div style="background:var(--bg3);border-radius:4px;padding:7px 10px"><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">${m.l}</div><div style="font-size:11px;font-weight:500">${m.v}</div></div>`).join('')}
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="showToast('Registrar sesión CPHS','info')">+ Registrar sesión</button>
+        <button class="btn btn-outline btn-sm" onclick="showToast('Ver actas','info')">Ver actas</button>
+      </div>
+    </div>`).join('');
+  } else {
+    c.innerHTML=DEMO_INSP.map(ins=>{
+      const rc={satisfactory:'#2EAD6B',with_observations:'var(--warn)',unsatisfactory:'#E24B4A'};
+      const rl={satisfactory:'Satisfactoria',with_observations:'Con observaciones',unsatisfactory:'Insatisfactoria'};
+      return`<div style="background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:13px;margin-bottom:9px;border-left:3px solid ${rc[ins.result]||'var(--t3)'}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+          <div><div style="font-size:13px;font-weight:600">${ins.title}</div>
+          <div style="font-size:10px;color:var(--t3)">${ins.type} · ${ins.d}</div></div>
+          <span style="padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:${rc[ins.result]}14;border:1px solid ${rc[ins.result]}30;color:${rc[ins.result]}">${rl[ins.result]}</span>
+        </div>
+        <div style="display:flex;gap:10px;font-size:11px">
+          <span style="color:var(--t2)">Hallazgos: <strong>${ins.findings}</strong></span>
+          <span style="color:${ins.critical>0?'#E24B4A':'var(--ok)'}">Críticos: <strong>${ins.critical}</strong></span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+setTab('program', document.querySelector('.tab'));
+</script>
+</body></html>
