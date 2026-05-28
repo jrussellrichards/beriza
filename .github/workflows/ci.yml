@@ -2,11 +2,17 @@ name: berisa-ci
 
 on:
   push:
+    branches: [main, master]
   pull_request:
+    branches: [main, master]
 
 jobs:
   static-and-build:
     runs-on: ubuntu-latest
+    env:
+      # Force actions to use Node 24 (required after June 2 2026)
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      NODE_VERSION: 24
     services:
       postgres:
         image: postgres:16-alpine
@@ -16,18 +22,18 @@ jobs:
           POSTGRES_PASSWORD: ci_password_for_ephemeral_runner_only
         ports:
           - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U berisa_ci -d berisa"
+        options: >
+          --health-cmd="pg_isready -U beriza_ci -d beriza"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
     env:
       NODE_ENV: test
       PORT: 8080
-      DATABASE_URL: postgres://berisa_ci:ci_password_for_ephemeral_runner_only@localhost:5432/berisa
+      DATABASE_URL: postgres://beriza_ci:ci_password_for_ephemeral_runner_only@localhost:5432/beriza
       JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       JWT_EXPIRES_IN: 8h
-      SESSION_COOKIE_NAME: berisa_session
+      SESSION_COOKIE_NAME: beriza_session
       COOKIE_SECURE: false
       CORS_ORIGIN: http://localhost:8080,http://localhost:5173
       ADMIN_EMAIL: admin-ci@example.local
@@ -39,11 +45,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}   # now Node 24
       - name: Install backend
-        run: cd backend && npm install
+        run: cd backend && npm ci
       - name: Install frontend
-        run: cd frontend && npm install
+        run: cd frontend && npm ci
       - name: Static checks
         run: cd backend && npm run ci:check
       - name: Backend syntax
@@ -52,3 +58,23 @@ jobs:
         run: cd backend && npm run migrate && npm run seed
       - name: Frontend build
         run: cd frontend && npm run build
+
+  # Deploy to production – runs only on pushes to main/master
+  deploy-prod:
+    needs: static-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /root/beriza
+            git pull origin main
+            docker build -t beriza-app .
+            docker stop beriza-app || true
+            docker rm beriza-app || true
+            docker run -d --name beriza-app --restart always -p 3002:80 beriza-app
