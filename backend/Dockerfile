@@ -1,4 +1,5 @@
 FROM node:20-alpine AS base
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN apk add --no-cache curl
 WORKDIR /app
 
