@@ -16,6 +16,7 @@ jobs:
       NODE_ENV: test
       PORT: 8080
       PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
       DATABASE_URL: postgres://beriza_ci:ci_password_for_ephemeral_runner_only@localhost:5432/beriza
       JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       JWT_EXPIRES_IN: 8h
