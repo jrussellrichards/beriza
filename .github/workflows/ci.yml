@@ -77,7 +77,7 @@ jobs:
             git fetch origin master
             git reset --hard origin/master
             if [ ! -f .env ]; then
-              cd backend && npm install && node scripts/create-env.js && cd ..
+              cd backend && node scripts/create-env.js && cd ..
             fi
             docker stop beriza-app || true
             docker rm beriza-app || true
