@@ -37,8 +37,8 @@ router.post('/register',valid([
     const trialEnd=new Date(Date.now()+14*864e5);
     const slug=orgName.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,60)+'-'+uuid().slice(0,6);
     const result=await withTransaction(async c=>{
-      const o=await c.query('INSERT INTO organizations(name,slug,plan,plan_status,trial_ends_at)VALUES($1,$2,'starter','trial',$3)RETURNING id',[orgName,slug,trialEnd]);
-      const u=await c.query('INSERT INTO users(org_id,email,password_hash,name,role)VALUES($1,$2,$3,$4,'admin')RETURNING id,name,email,role',[o.rows[0].id,email,hash,name]);
+      const o=await c.query("INSERT INTO organizations(name,slug,plan,plan_status,trial_ends_at)VALUES($1,$2,'starter','trial',$3)RETURNING id",[orgName,slug,trialEnd]);
+      const u=await c.query("INSERT INTO users(org_id,email,password_hash,name,role)VALUES($1,$2,$3,$4,'admin')RETURNING id,name,email,role",[o.rows[0].id,email,hash,name]);
       await c.query('INSERT INTO onboarding_progress(org_id)VALUES($1)',[o.rows[0].id]);
       return{orgId:o.rows[0].id,user:u.rows[0]};
     });
