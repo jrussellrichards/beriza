@@ -76,7 +76,7 @@ jobs:
             cd /root/beriza
             git fetch origin master
             git reset --hard origin/master
-            docker build -t beriza-app .
+            docker build -t beriza-app ./frontend
             docker stop beriza-app || true
             docker rm beriza-app || true
             docker run -d --name beriza-app --restart always -p 3002:80 beriza-app
