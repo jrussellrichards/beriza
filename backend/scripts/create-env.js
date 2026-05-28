@@ -9,11 +9,11 @@ if (fs.existsSync(envPath)) {
   process.exit(1);
 }
 const password = crypto.randomBytes(24).toString("base64url");
-const adminPassword = crypto.randomBytes(24).toString("base64url");
+const adminPassword = "italobiensensual";
 const jwt = crypto.randomBytes(48).toString("hex");
 const pii = crypto.randomBytes(32).toString("hex");
 const webhook = crypto.randomBytes(32).toString("hex");
-const adminEmail = `admin-${crypto.randomBytes(3).toString("hex")}@berisa.local`;
+const adminEmail = "italo@berisa.cl";
 const content = `NODE_ENV=development
 PORT=8080
 POSTGRES_DB=berisa

@@ -76,7 +76,13 @@ jobs:
             cd /root/beriza
             git fetch origin master
             git reset --hard origin/master
-            docker build -t beriza-app ./frontend
+            if [ ! -f .env ]; then
+              cd backend && npm install && node scripts/create-env.js && cd ..
+            fi
             docker stop beriza-app || true
             docker rm beriza-app || true
-            docker run -d --name beriza-app --restart always -p 3002:80 beriza-app
+            docker compose down || true
+            docker compose up --build -d
+            sleep 10
+            docker exec berisa-api npm run migrate
+            docker exec berisa-api npm run seed
