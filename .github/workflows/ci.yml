@@ -74,7 +74,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /root/beriza
-            git pull origin master
+            git fetch origin master
+            git reset --hard origin/master
             docker build -t beriza-app .
             docker stop beriza-app || true
             docker rm beriza-app || true
