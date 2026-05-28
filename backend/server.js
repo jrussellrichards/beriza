@@ -10,7 +10,7 @@ const auditMw=require('./middleware/audit');
 
 const app=express();
 app.use(helmet({contentSecurityPolicy:false}));
-const origins=(process.env.CORS_ALLOWED_ORIGINS||'').split(',').map(s=>s.trim());
+const origins=(process.env.CORS_ALLOWED_ORIGINS||process.env.CORS_ORIGIN||'').split(',').map(s=>s.trim());
 app.use(cors({origin:(o,cb)=>(!o||origins.includes(o))?cb(null,true):cb(new Error('CORS')),credentials:true}));
 app.use('/api/v1/billing/webhook',express.raw({type:'application/json'}),require('./routes/billing-webhook'));
 app.use(express.json({limit:'2mb'}));
