@@ -1,12 +1,14 @@
 {
   "name": "berisa-backend",
-  "version": "2.0.0",
+  "version": "3.0.0",
+  "type": "module",
   "description": "BERISA Platform Backend — Inteligencia Comercial en Infraestructura",
-  "main": "server.js",
+  "main": "src/server.js",
   "engines": { "node": ">=18.0.0" },
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "worker": "node scripts/scheduler.js",
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "ci:check": "node scripts/ci-check.js",

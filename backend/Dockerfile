@@ -12,7 +12,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN addgroup -S berisa && adduser -S berisa -G berisa
 USER berisa
-EXPOSE 4000
+EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD curl -f http://localhost:4000/health || exit 1
-CMD ["node", "server.js"]
+  CMD curl -f http://localhost:8080/api/health || exit 1
+CMD ["node", "src/server.js"]

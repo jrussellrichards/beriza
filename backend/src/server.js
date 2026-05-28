@@ -38,13 +38,28 @@ app.use(helmet({
   }
 }));
 
-app.use(cors({
-  credentials: true,
-  origin(origin, callback) {
-    if (!origin || env.corsOrigin.includes(origin)) return callback(null, true);
-    return callback(new Error("CORS origin not allowed"));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin) return next();
+  if (env.corsOrigin.includes(origin)) {
+    return cors({ credentials: true, origin: true })(req, res, next);
   }
-}));
+  try {
+    const originUrl = new URL(origin);
+    const host = req.headers.host;
+    const getHostname = (s) => (s ? s.split(":")[0] : "");
+    if (originUrl.hostname === getHostname(host)) {
+      return cors({ credentials: true, origin: true })(req, res, next);
+    }
+  } catch {}
+  return cors({
+    credentials: true,
+    origin(originVal, callback) {
+      if (env.corsOrigin.includes(originVal)) return callback(null, true);
+      return callback(new Error("CORS origin not allowed"));
+    }
+  })(req, res, next);
+});
 
 app.use(express.json({ limit: "2mb" }));
 app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
