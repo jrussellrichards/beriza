@@ -14,7 +14,8 @@ const origins=(process.env.CORS_ALLOWED_ORIGINS||process.env.CORS_ORIGIN||'').sp
 app.use((req,res,next)=>{
   const origin=req.headers.origin;
   const host=req.headers.host;
-  const isSameOrigin=origin&&(origin===`http://${host}`||origin===`https://${host}`);
+  const getHost=s=>s?s.replace(/^https?:\/\//,'').split(':')[0]:'';
+  const isSameOrigin=origin&&host&&getHost(origin)===getHost(host);
   if(!origin||isSameOrigin||origins.includes(origin)){
     res.setHeader('Access-Control-Allow-Origin',origin||'*');
     res.setHeader('Access-Control-Allow-Credentials','true');
