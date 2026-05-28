@@ -25,5 +25,5 @@ router.post('/:id/publish',requireManager,async(req,res,next)=>{
   }catch(err){next(err);}
 });
 router.get('/:id/proposals',async(req,res,next)=>{try{const{rows}=await query('SELECT rp.*,s.company_name,s.homolog_level,s.rating FROM rfq_proposals rp JOIN suppliers s ON s.id=rp.supplier_id WHERE rp.rfq_id=$1 ORDER BY rp.score DESC NULLS LAST',[req.params.id]);res.json(rows);}catch(err){next(err);}});
-router.post('/:id/award',requireManager,async(req,res,next)=>{try{await query('UPDATE rfq_requests SET status='awarded',awarded_to=$1,awarded_at=NOW(),award_notes=$2 WHERE id=$3 AND org_id=$4',[req.body.supplier_id,req.body.notes||null,req.params.id,req.org.id]);res.json({awarded:true});}catch(err){next(err);}});
+router.post('/:id/award',requireManager,async(req,res,next)=>{try{await query("UPDATE rfq_requests SET status='awarded',awarded_to=$1,awarded_at=NOW(),award_notes=$2 WHERE id=$3 AND org_id=$4",[req.body.supplier_id,req.body.notes||null,req.params.id,req.org.id]);res.json({awarded:true});}catch(err){next(err);}});
 module.exports=router;

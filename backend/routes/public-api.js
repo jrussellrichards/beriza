@@ -18,5 +18,5 @@ router.get('/projects',async(req,res,next)=>{
   }catch(err){next(err);}
 });
 router.get('/projects/:id',async(req,res,next)=>{try{const{rows}=await query('SELECT id,name,sector,status,country,region,capex_usd_m,score,opp_window,start_date,end_date,owner_name,typology,description,lat,lon,updated_at FROM projects WHERE id=$1 AND is_active=true',[req.params.id]);if(!rows.length)return res.status(404).json({error:'Proyecto no encontrado'});res.json(rows[0]);}catch(err){next(err);}});
-router.get('/stats',async(_req,res,next)=>{try{const{rows:[s]}=await query('SELECT COUNT(*) as total_projects,COUNT(*) FILTER(WHERE opp_window='green') as actionable,SUM(capex_usd_m) as total_capex_usd_m,COUNT(DISTINCT sector) as sectors,COUNT(DISTINCT country) as countries FROM projects WHERE is_active=true');res.json(s);}catch(err){next(err);}});
+router.get('/stats',async(_req,res,next)=>{try{const{rows:[s]}=await query("SELECT COUNT(*) as total_projects,COUNT(*) FILTER(WHERE opp_window='green') as actionable,SUM(capex_usd_m) as total_capex_usd_m,COUNT(DISTINCT sector) as sectors,COUNT(DISTINCT country) as countries FROM projects WHERE is_active=true");res.json(s);}catch(err){next(err);}});
 module.exports=router;

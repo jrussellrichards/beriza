@@ -60,7 +60,7 @@ router.post('/',requireManager,async(req,res,next)=>{
     const{name,sector,status,country='CL',region,location_text,lat,lon,capex_usd_m,start_date,end_date,typology,owner_name,description,tags}=req.body;
     if(!name) return res.status(400).json({error:'Nombre requerido'});
     const opp=computeOppWindow({start_date});
-    const{rows:[p]}=await query('INSERT INTO projects(name,sector,status,country,region,location_text,lat,lon,capex_usd_m,start_date,end_date,typology,owner_name,description,tags,opp_window,opp_label,source)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'manual')RETURNING *',
+    const{rows:[p]}=await query("INSERT INTO projects(name,sector,status,country,region,location_text,lat,lon,capex_usd_m,start_date,end_date,typology,owner_name,description,tags,opp_window,opp_label,source)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'manual')RETURNING *",
       [name,sector,status,country,region,location_text,lat,lon,capex_usd_m,start_date,end_date,typology,owner_name,description,tags||[],opp.window,opp.label]);
     const sc=scoreProject(p);
     await query('UPDATE projects SET score=$1,score_breakdown=$2 WHERE id=$3',[sc.score,JSON.stringify(sc.breakdown),p.id]);

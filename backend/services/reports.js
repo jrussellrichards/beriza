@@ -12,7 +12,7 @@ async function generateReport(reportId){
       content+=rows.map(s=>`${s.sector}: ${s.count} projects, USD ${parseFloat(s.capex||0).toFixed(0)}M`).join('\n');
     }
     if(r.type==='pipeline_export'){
-      const{rows}=await query('SELECT o.name,o.stage,o.value_usd_m,o.probability,u.name as assignee FROM opportunities o LEFT JOIN users u ON u.id=o.assigned_to WHERE o.org_id=$1 AND o.stage NOT IN('won','lost')',[r.org_id]);
+      const{rows}=await query("SELECT o.name,o.stage,o.value_usd_m,o.probability,u.name as assignee FROM opportunities o LEFT JOIN users u ON u.id=o.assigned_to WHERE o.org_id=$1 AND o.stage NOT IN('won','lost')",[r.org_id]);
       content+=rows.map(o=>`${o.name}|${o.stage}|$${o.value_usd_m}M|${o.probability}%|${o.assignee||'-'}`).join('\n');
     }
     // In production: use pdf-lib to generate real PDF and upload to S3

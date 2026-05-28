@@ -11,7 +11,7 @@ router.get('/opportunities',async(req,res,next)=>{
     if(stage){c.push(`o.stage=$${i++}`);v.push(stage);}
     if(assigned_to){c.push(`o.assigned_to=$${i++}`);v.push(assigned_to);}
     const{rows}=await query(`SELECT o.*,u.name as assignee_name,p.name as project_name FROM opportunities o LEFT JOIN users u ON u.id=o.assigned_to LEFT JOIN projects p ON p.id=o.project_id WHERE ${c.join(' AND ')} ORDER BY o.created_at DESC LIMIT ${lim} OFFSET ${offset}`,v);
-    const{rows:sum}=await query('SELECT stage,COUNT(*) as count,SUM(value_usd_m) as total_value,SUM(value_usd_m*probability/100) as weighted_value FROM opportunities WHERE org_id=$1 AND stage NOT IN('won','lost') GROUP BY stage',[req.org.id]);
+    const{rows:sum}=await query("SELECT stage,COUNT(*) as count,SUM(value_usd_m) as total_value,SUM(value_usd_m*probability/100) as weighted_value FROM opportunities WHERE org_id=$1 AND stage NOT IN('won','lost') GROUP BY stage",[req.org.id]);
     res.json({data:rows,pipeline:sum});
   }catch(err){next(err);}
 });
