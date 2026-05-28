@@ -13,21 +13,6 @@ jobs:
       # Force actions to use Node 24 (required after June 2 2026)
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       NODE_VERSION: 24
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: berisa
-          POSTGRES_USER: berisa_ci
-          POSTGRES_PASSWORD: ci_password_for_ephemeral_runner_only
-        ports:
-          - 5432:5432
-        options: >
-          --health-cmd="pg_isready -U beriza_ci -d beriza"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-    env:
       NODE_ENV: test
       PORT: 8080
       DATABASE_URL: postgres://beriza_ci:ci_password_for_ephemeral_runner_only@localhost:5432/beriza
@@ -41,6 +26,20 @@ jobs:
       ADMIN_NAME: Administrador CI
       PII_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       ALERT_WEBHOOK_SECRET: ci_webhook_secret_ephemeral_only_123456
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: beriza
+          POSTGRES_USER: beriza_ci
+          POSTGRES_PASSWORD: ci_password_for_ephemeral_runner_only
+        ports:
+          - 5432:5432
+        options: >
+          --health-cmd="pg_isready -U beriza_ci -d beriza"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
