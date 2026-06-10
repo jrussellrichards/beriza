@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BERISA — Descripción del Producto</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&family=Instrument+Sans:wght@300;400;500;600&family=Fira+Code:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0E1117;--paper:#F7F4EF;--warm:#F0EBE0;--dust:#E8E0D0;
+  --teal:#1A5C52;--teal-l:#2A8575;--teal-xl:#EAF5F2;
+  --gold:#8B6914;--gold-l:#C9972B;--gold-xl:#FBF5E6;
+  --slate:#3E4A5C;--fog:#8C95A0;--ghost:#C5CDD6;
+  --red:#8B1A1A;--red-xl:#FDF0F0;
+  --ff:'Instrument Sans',system-ui,sans-serif;
+  --fd:'Fraunces',Georgia,serif;
+  --fm:'Fira Code',monospace;
+  --r:5px;--r-lg:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:15px}
+body{font-family:var(--ff);background:var(--paper);color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--teal);text-decoration:none}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--teal);border-radius:2px}
+
+/* ── PORTADA ─────────────────────────────── */
+.cover{min-height:100vh;display:flex;flex-direction:column;background:var(--ink);color:var(--paper);position:relative;overflow:hidden}
+.cover-noise{position:absolute;inset:0;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px;pointer-events:none}
+.cover-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(26,92,82,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(26,92,82,.12) 1px,transparent 1px);background-size:52px 52px;pointer-events:none;mask-image:radial-gradient(ellipse 80% 90% at 50% 50%,black,transparent)}
+.cover-top{padding:36px 52px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)}
+.cover-logo{font-family:var(--fd);font-size:26px;font-weight:600;letter-spacing:3px;color:var(--paper)}
+.cover-tag{font-family:var(--fm);font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.15);padding:4px 12px;border-radius:var(--r)}
+.cover-body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:80px 52px 52px;position:relative;z-index:1;max-width:920px}
+.cover-eyebrow{font-family:var(--fm);font-size:10px;letter-spacing:3.5px;text-transform:uppercase;color:rgba(26,92,82,.8);margin-bottom:24px;padding-bottom:10px;border-bottom:1px solid rgba(26,92,82,.3);width:fit-content}
+.cover-h{font-family:var(--fd);font-size:clamp(52px,7vw,96px);line-height:.9;letter-spacing:-2px;font-weight:600;margin-bottom:24px}
+.cover-h .alt{font-style:italic;color:rgba(255,255,255,.5)}
+.cover-sub{font-size:16px;color:rgba(255,255,255,.55);max-width:580px;line-height:1.7;margin-bottom:40px;font-weight:300}
+.cover-meta{display:flex;gap:28px;flex-wrap:wrap}
+.cm{font-family:var(--fm);font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase}
+.cm b{color:rgba(255,255,255,.7);display:block;font-size:11px;margin-bottom:2px;letter-spacing:0}
+.cover-bar{margin-top:auto;padding:28px 52px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:32px;flex-wrap:wrap}
+.cv-stat{}.cv-n{font-family:var(--fd);font-size:34px;font-weight:600;color:var(--teal-l);line-height:1}
+.cv-l{font-family:var(--fm);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-top:3px}
+
+/* ── LAYOUT ──────────────────────────────── */
+.doc{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+.sidebar{background:var(--warm);border-right:1px solid var(--dust);padding:32px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-brand{padding:0 24px;font-family:var(--fd);font-size:18px;font-weight:600;letter-spacing:2px;color:var(--ink);margin-bottom:28px}
+.sb-sect{padding:0 24px;font-family:var(--fm);font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:var(--fog);margin:18px 0 6px}
+.sb-a{display:flex;align-items:center;gap:8px;padding:6px 24px;font-size:12px;color:var(--slate);cursor:pointer;transition:all .15s;border-left:2px solid transparent;text-decoration:none}
+.sb-a:hover{color:var(--teal);background:var(--teal-xl)}
+.sb-a.on{border-left-color:var(--teal);color:var(--teal);background:var(--teal-xl);font-weight:500}
+.sb-ico{font-size:14px;flex-shrink:0;width:18px}
+.main{padding:0}
+.content{padding:52px 56px;max-width:860px}
+
+/* ── SECTIONS ────────────────────────────── */
+.sec{margin-bottom:64px;scroll-margin-top:16px}
+.sec-label{font-family:var(--fm);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+.sec-h{font-family:var(--fd);font-size:clamp(28px,3.5vw,44px);font-weight:600;line-height:.9;letter-spacing:-1px;color:var(--ink);margin-bottom:16px}
+.sec-h em{font-style:italic;color:var(--teal)}
+.sec-rule{height:1px;background:linear-gradient(90deg,var(--teal),var(--dust),transparent);margin-bottom:24px}
+p{color:var(--slate);line-height:1.75;margin-bottom:16px;font-size:15px}
+p strong{color:var(--ink)}
+p em{color:var(--teal-l);font-style:normal}
+.lead{font-size:17px;color:var(--ink);line-height:1.7;padding:18px 22px;border-left:3px solid var(--teal);background:var(--teal-xl);border-radius:0 var(--r-lg) var(--r-lg) 0;margin-bottom:28px;font-weight:300}
+
+/* ── MÓDULO CARDS ────────────────────────── */
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px}
+.mc{background:var(--paper);border:1px solid var(--dust);border-radius:var(--r-lg);padding:20px;transition:all .2s;position:relative;overflow:hidden}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.mc:hover{border-color:var(--ghost);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06)}
+.mc-ico{font-size:24px;margin-bottom:10px;display:block}
+.mc-title{font-family:var(--fd);font-size:18px;font-weight:600;color:var(--ink);margin-bottom:4px;line-height:1.2}
+.mc-norm{font-family:var(--fm);font-size:8px;letter-spacing:1px;color:var(--fog);margin-bottom:10px}
+.mc-desc{font-size:12px;color:var(--slate);line-height:1.65}
+.mc-feats{margin-top:10px;display:flex;flex-wrap:wrap;gap:4px}
+.feat-tag{padding:2px 7px;border-radius:var(--r);font-size:10px;font-weight:500;border:1px solid var(--dust);background:var(--warm);color:var(--slate)}
+
+/* ── FEATURE TABLE ───────────────────────── */
+.ftable{width:100%;border-collapse:collapse;margin:16px 0 28px;font-size:13px}
+.ftable thead tr{border-bottom:2px solid var(--dust)}
+.ftable th{font-family:var(--fm);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--fog);padding:8px 12px;text-align:left;font-weight:500}
+.ftable tbody tr{border-bottom:1px solid var(--dust);transition:background .12s}
+.ftable tbody tr:hover{background:var(--warm)}
+.ftable td{padding:9px 12px;vertical-align:middle;color:var(--slate)}
+.ftable td:first-child{font-weight:500;color:var(--ink)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+
+/* ── NORMA PILL ──────────────────────────── */
+.norma{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--r);font-family:var(--fm);font-size:9px;border:1px solid;margin:2px;vertical-align:middle;font-weight:500}
+.n-cl{background:#EAF5F2;border-color:#1A5C5240;color:#1A5C52}
+.n-iso{background:#EEF0F7;border-color:#3E4A5C40;color:#3E4A5C}
+.n-mu{background:#FBF5E6;border-color:#8B691440;color:#8B6914}
+
+/* ── PROCESS FLOW ────────────────────────── */
+.flow{display:flex;gap:0;margin:20px 0 28px;overflow-x:auto}
+.fstep{flex:1;min-width:120px;padding:14px 16px;background:var(--warm);border:1px solid var(--dust);border-right:none;position:relative}
+.fstep:last-child{border-right:1px solid var(--dust);border-radius:0 var(--r-lg) var(--r-lg) 0}
+.fstep:first-child{border-radius:var(--r-lg) 0 0 var(--r-lg)}
+.fstep::after{content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--fog);font-size:14px;z-index:1;background:var(--paper);padding:0 2px}
+.fstep:last-child::after{display:none}
+.fstep-n{font-family:var(--fm);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--fog);margin-bottom:4px}
+.fstep-t{font-size:11px;font-weight:600;color:var(--ink);line-height:1.3}
+
+/* ── PLAN TABLE ──────────────────────────── */
+.plan-wrap{overflow-x:auto;margin:20px 0 28px}
+.plan-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.plan-tbl th{padding:12px 16px;font-family:var(--fd);font-size:15px;font-weight:600;text-align:center;border-bottom:2px solid var(--dust)}
+.plan-tbl td{padding:9px 14px;border-bottom:1px solid var(--dust);vertical-align:middle}
+.plan-tbl td:first-child{font-size:12px;color:var(--slate)}
+.plan-tbl td:not(:first-child){text-align:center;font-size:13px}
+.plan-tbl tr:hover td{background:var(--warm)}
+.pname{font-size:12px;font-weight:500;color:var(--fog);display:block;margin-top:1px}
+.ptag{font-family:var(--fm);font-size:8px;padding:2px 7px;border-radius:var(--r);border:1px solid var(--dust);background:var(--warm)}
+
+/* ── CALLOUT ─────────────────────────────── */
+.callout{display:flex;gap:14px;padding:16px 18px;border-radius:var(--r-lg);margin-bottom:20px;border:1px solid}
+.callout.teal{background:var(--teal-xl);border-color:rgba(26,92,82,.2)}
+.callout.gold{background:var(--gold-xl);border-color:rgba(139,105,20,.2)}
+.callout.red{background:var(--red-xl);border-color:rgba(139,26,26,.15)}
+.callout-ico{font-size:20px;flex-shrink:0;margin-top:1px}
+.callout-body{font-size:13px;color:var(--slate);line-height:1.65}
+.callout-body strong{color:var(--ink);display:block;font-size:14px;margin-bottom:4px}
+
+/* ── ARCH STACK ──────────────────────────── */
+.arch{border:1px solid var(--dust);border-radius:var(--r-lg);overflow:hidden;margin:16px 0 28px}
+.arch-row{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--dust)}
+.arch-row:last-child{border-bottom:none}
+.arch-label{width:160px;padding:12px 18px;background:var(--warm);font-family:var(--fm);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--fog);flex-shrink:0;border-right:1px solid var(--dust)}
+.arch-items{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px;flex:1}
+.arch-item{padding:4px 10px;border-radius:var(--r);font-size:11px;font-weight:500;border:1px solid}
+
+/* ── KPI CARDS ───────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:16px 0 28px}
+.kpi-c{background:var(--warm);border:1px solid var(--dust);border-radius:var(--r-lg);padding:14px;border-top:2px solid}
+.kpi-n{font-family:var(--fd);font-size:28px;font-weight:600;line-height:1;margin-bottom:4px}
+.kpi-l{font-size:10px;color:var(--fog);font-family:var(--fm);letter-spacing:.5px}
+
+footer{background:var(--ink);color:rgba(255,255,255,.35);padding:40px 56px;font-family:var(--fm);font-size:9px;letter-spacing:2px;text-transform:uppercase;text-align:center}
+footer b{color:rgba(255,255,255,.6)}
+
+@media(max-width:900px){.doc{grid-template-columns:1fr}.sidebar{display:none}.content{padding:24px 20px}.mod-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ── PORTADA ─────────────────────────────── -->
+<section class="cover">
+  <div class="cover-noise"></div><div class="cover-lines"></div>
+  <div class="cover-top">
+    <div class="cover-logo">BERISA</div>
+    <div class="cover-tag">Documento descriptivo del producto · v5.1</div>
+  </div>
+  <div class="cover-body">
+    <div class="cover-eyebrow">Plataforma SaaS · Inteligencia Comercial · Compliance HSE</div>
+    <h1 class="cover-h">Plataforma de<br><span class="alt">inteligencia</span><br>comercial para<br>infraestructura</h1>
+    <p class="cover-sub">BERISA es una plataforma multi-lado que conecta mandantes, contratistas y proveedores de servicios en proyectos de infraestructura, construcción, minería y energía en Chile y LatAm, integrando inteligencia de mercado, homologación normativa y compliance HSE/ambiental en un único sistema operativo.</p>
+    <div class="cover-meta">
+      <div class="cm"><b>Segmento</b>Chile · LatAm</div>
+      <div class="cm"><b>Industrias</b>Construcción · Minería · Energía · Infraestructura</div>
+      <div class="cm"><b>Modelo</b>SaaS multi-lado · Freemium → Enterprise</div>
+      <div class="cm"><b>Versión</b>5.1 · Mayo 2026</div>
+    </div>
+  </div>
+  <div class="cover-bar">
+    <div class="cv-stat"><div class="cv-n">18</div><div class="cv-l">Módulos funcionales</div></div>
+    <div class="cv-stat"><div class="cv-n">76</div><div class="cv-l">Tablas de base de datos</div></div>
+    <div class="cv-stat"><div class="cv-n">200+</div><div class="cv-l">Endpoints de API</div></div>
+    <div class="cv-stat"><div class="cv-n">12</div><div class="cv-l">Normativas integradas</div></div>
+    <div class="cv-stat"><div class="cv-n">6</div><div class="cv-l">Módulos HSE</div></div>
+    <div class="cv-stat"><div class="cv-n">4</div><div class="cv-l">Planes comerciales</div></div>
+  </div>
+</section>
+
+<!-- ── DOCUMENTO ──────────────────────────── -->
+<div class="doc">
+<aside class="sidebar">
+  <div class="sb-brand">BERISA</div>
+  <div class="sb-sect">Visión general</div>
+  <a class="sb-a on" href="#s-overview">🏛️ Qué es BERISA</a>
+  <a class="sb-a" href="#s-market">🌎 Mercado objetivo</a>
+  <a class="sb-a" href="#s-arch">⚙️ Arquitectura</a>
+  <div class="sb-sect">Módulos de producto</div>
+  <a class="sb-a" href="#s-inteligencia">📡 Inteligencia comercial</a>
+  <a class="sb-a" href="#s-suppliers">🏭 Red de proveedores</a>
+  <a class="sb-a" href="#s-crm">🎯 CRM & Pipeline</a>
+  <a class="sb-a" href="#s-procurement">🛒 Procurement</a>
+  <a class="sb-a" href="#s-hse">🛡️ Módulos HSE</a>
+  <a class="sb-a" href="#s-ambiental">🌿 Gestión ambiental</a>
+  <a class="sb-a" href="#s-analytics">📊 Analytics & Reportes</a>
+  <a class="sb-a" href="#s-api">🔌 API & Integraciones</a>
+  <div class="sb-sect">Operación</div>
+  <a class="sb-a" href="#s-roles">👤 Roles y permisos</a>
+  <a class="sb-a" href="#s-planes">💳 Planes y acceso</a>
+  <a class="sb-a" href="#s-normativa">📋 Marco normativo</a>
+  <a class="sb-a" href="#s-deploy">🚀 Despliegue</a>
+</aside>
+
+<div class="main">
+<div class="content">
+
+<!-- ── 1. QUÉ ES BERISA ─────────────────────── -->
+<section class="sec" id="s-overview">
+  <div class="sec-label">01 · Descripción general</div>
+  <h2 class="sec-h">Qué es <em>BERISA</em></h2>
+  <div class="sec-rule"></div>
+  <p class="lead">BERISA es una plataforma SaaS de inteligencia comercial y compliance normativo diseñada para empresas que participan en proyectos de infraestructura en Chile y América Latina. Centraliza la información de mercado, gestiona la cadena de proveedores y automatiza el cumplimiento de las normativas HSE y ambientales vigentes en un único sistema operativo.</p>
+  <p>El sistema opera como un <strong>marketplace de inteligencia</strong>: el lado comprador (mandantes, operadoras, empresas de ingeniería) accede a datos de proyectos en licitación y adjudicación, mientras el lado vendedor (contratistas, proveedores de servicios) gestiona su perfil de homologación, certifica sus capacidades y compite con información de siniestralidad y compliance verificable.</p>
+  <p>A diferencia de los sistemas tradicionales de homologación (SICEP, plataformas internas de mandantes), BERISA es <strong>independiente</strong>: un proveedor mantiene su perfil único y lo presenta a múltiples mandantes sin duplicar documentación. El mandante, a su vez, obtiene inteligencia de mercado que no está disponible en ninguna plataforma pública.</p>
+  <div class="kpi-row">
+    <div class="kpi-c" style="border-top-color:var(--teal)"><div class="kpi-n" style="color:var(--teal)">3</div><div class="kpi-l">Tipos de actor</div></div>
+    <div class="kpi-c" style="border-top-color:var(--gold-l)"><div class="kpi-n" style="color:var(--gold-l)">850+</div><div class="kpi-l">Proyectos SEIA activos</div></div>
+    <div class="kpi-c" style="border-top-color:var(--teal)"><div class="kpi-n" style="color:var(--teal)">12</div><div class="kpi-l">Normativas cubiertas</div></div>
+    <div class="kpi-c" style="border-top-color:var(--gold-l)"><div class="kpi-n" style="color:var(--gold-l)">6</div><div class="kpi-l">Módulos HSE</div></div>
+    <div class="kpi-c" style="border-top-color:var(--slate)"><div class="kpi-n" style="color:var(--slate)">200+</div><div class="kpi-l">Endpoints API</div></div>
+  </div>
+  <div class="callout teal">
+    <div class="callout-ico">💡</div>
+    <div class="callout-body"><strong>Propuesta de valor central</strong>BERISA resuelve el problema de información asimétrica en el mercado de infraestructura: los mandantes no saben qué contratistas tienen capacidad real y cumplimiento HSE verificado; los contratistas no saben qué licitaciones están próximas a abrirse. BERISA es el puente que conecta ambos lados con datos verificados, automatizados y normativamente trazables.</div>
+  </div>
+</section>
+
+<!-- ── 2. MERCADO ───────────────────────────── -->
+<section class="sec" id="s-market">
+  <div class="sec-label">02 · Segmento de mercado</div>
+  <h2 class="sec-h">A quiénes <em>sirve</em></h2>
+  <div class="sec-rule"></div>
+  <div class="mod-grid">
+    <div class="mc" style="border-top:3px solid var(--teal)">
+      <span class="mc-ico">🏢</span>
+      <div class="mc-title">Mandantes y operadoras</div>
+      <div class="mc-norm">Constructoras, mineras, generadoras, concesionarias</div>
+      <div class="mc-desc">Necesitan identificar proveedores calificados, verificar su siniestralidad y cumplimiento DS 76 antes de adjudicar contratos. Requieren control de acceso a faena y trazabilidad de incidentes de subcontratistas.</div>
+      <div class="mc-feats"><span class="feat-tag">Buyer portal</span><span class="feat-tag">HSE Dashboard</span><span class="feat-tag">Matching ICE</span></div>
+    </div>
+    <div class="mc" style="border-top:3px solid var(--gold-l)">
+      <span class="mc-ico">🏗️</span>
+      <div class="mc-title">Contratistas y proveedores</div>
+      <div class="mc-norm">EPC, servicios especializados, consultoras</div>
+      <div class="mc-desc">Necesitan demostrar cumplimiento normativo ante mandantes, gestionar la documentación de su personal en faena, registrar su siniestralidad anual para licitaciones y acceder temprano a proyectos próximos.</div>
+      <div class="mc-feats"><span class="feat-tag">Perfil ICE</span><span class="feat-tag">Onboarding</span><span class="feat-tag">Pipeline</span></div>
+    </div>
+    <div class="mc" style="border-top:3px solid #3E4A5C">
+      <span class="mc-ico">📐</span>
+      <div class="mc-title">Empresas de ingeniería</div>
+      <div class="mc-norm">Consultoras, oficinas técnicas, inspección fiscal</div>
+      <div class="mc-desc">Gestionan la verificación de proveedores en proyectos de sus clientes, producen reportes de compliance para el mandante y acceden a información de mercado para estrategia comercial.</div>
+      <div class="mc-feats"><span class="feat-tag">Analytics</span><span class="feat-tag">Reportes</span><span class="feat-tag">API</span></div>
+    </div>
+    <div class="mc" style="border-top:3px solid #6B7280">
+      <span class="mc-ico">🏛️</span>
+      <div class="mc-title">Organismos y mutualidades</div>
+      <div class="mc-norm">ACHS, Mutual CChC, ISL — roadmap</div>
+      <div class="mc-desc">En el roadmap: integración con organismos administradores para envío electrónico de DIAT/DIEP, consulta de tasas de cotización DS 67 y sincronización de historial de accidentes verificado.</div>
+      <div class="mc-feats"><span class="feat-tag">Integración OA</span><span class="feat-tag">DIAT/DIEP</span><span class="feat-tag">DS 67</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 3. ARQUITECTURA ──────────────────────── -->
+<section class="sec" id="s-arch">
+  <div class="sec-label">03 · Arquitectura técnica</div>
+  <h2 class="sec-h"><em>Stack</em> y despliegue</h2>
+  <div class="sec-rule"></div>
+  <p>BERISA se entrega en dos variantes de despliegue: la <strong>versión Docker</strong> para producción en infraestructura cloud, y la <strong>versión Standalone</strong> para instalación directa en cualquier máquina con Node.js 18+, sin dependencias externas.</p>
+  <div class="arch">
+    <div class="arch-row">
+      <div class="arch-label">Frontend</div>
+      <div class="arch-items">
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">HTML5 + Vanilla JS</span>
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">berisa-api.js (110+ métodos)</span>
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">18 páginas</span>
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">CSP protegida</span>
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">Notificaciones in-app</span>
+      </div>
+    </div>
+    <div class="arch-row">
+      <div class="arch-label">Backend API</div>
+      <div class="arch-items">
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">Node.js 20 + Express 4</span>
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">31 módulos de ruta</span>
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">JWT + Refresh Rotation</span>
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">Rate limiting</span>
+        <span class="arch-item" style="background:#FBF5E6;border-color:#8B691430;color:#8B6914">Swagger OpenAPI 3.0</span>
+      </div>
+    </div>
+    <div class="arch-row">
+      <div class="arch-label">Base de datos</div>
+      <div class="arch-items">
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">PostgreSQL 16</span>
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">76 tablas</span>
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">Particionamiento audit_logs</span>
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">JSONB para metadata flexible</span>
+        <span class="arch-item" style="background:#FBF5E6;border-color:#8B691430;color:#8B6914">Triggers auto score</span>
+      </div>
+    </div>
+    <div class="arch-row">
+      <div class="arch-label">Infraestructura</div>
+      <div class="arch-items">
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">Redis (cache + sesiones)</span>
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">MinIO (documentos S3)</span>
+        <span class="arch-item" style="background:#EEF0F7;border-color:#3E4A5C30;color:#3E4A5C">Nginx reverse proxy</span>
+        <span class="arch-item" style="background:#FBF5E6;border-color:#8B691430;color:#8B6914">Docker Compose</span>
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">Cron jobs HSE automáticos</span>
+      </div>
+    </div>
+    <div class="arch-row">
+      <div class="arch-label">Standalone</div>
+      <div class="arch-items">
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">PGlite (PostgreSQL WASM)</span>
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">In-memory cache</span>
+        <span class="arch-item" style="background:#EAF5F2;border-color:#1A5C5230;color:#1A5C52">Filesystem local</span>
+        <span class="arch-item" style="background:#FBF5E6;border-color:#8B691430;color:#8B6914">Sin Docker requerido</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 4. INTELIGENCIA COMERCIAL ─────────────── -->
+<section class="sec" id="s-inteligencia">
+  <div class="sec-label">04 · Módulo central</div>
+  <h2 class="sec-h">Inteligencia <em>comercial</em></h2>
+  <div class="sec-rule"></div>
+  <p class="lead">El núcleo de BERISA es el motor de inteligencia de mercado: un sistema que agrega, clasifica y contextualiza información de proyectos de infraestructura desde múltiples fuentes públicas y privadas para anticipar oportunidades comerciales antes que la competencia.</p>
+  <p>Los datos de proyectos provienen del <strong>Sistema de Evaluación de Impacto Ambiental (SEIA)</strong>, el portal de compras públicas <strong>Mercado Público</strong>, el <strong>MOP, MINVU y CNE</strong>, además de fuentes directas ingresadas por los propios usuarios. La actualización es automática vía scrapers programados que corren de forma asíncrona sin interrumpir el servicio.</p>
+  <h3 style="font-family:var(--fd);font-size:18px;margin:20px 0 10px;color:var(--ink)">Alertas de oportunidades</h3>
+  <p>El sistema de alertas permite configurar reglas con múltiples dimensiones de filtrado: sector, región geográfica, rango de inversión en MMUSD, tipología de obra, fase del proyecto (estudio, licitación, adjudicación, construcción) y ventana de oportunidad calculada automáticamente. Cuando un proyecto entra en los parámetros definidos, el usuario recibe una notificación in-app, email y, opcionalmente, integración con Slack o Teams via webhook.</p>
+  <p>La <em>ventana de oportunidad</em> es un indicador propietario de BERISA que clasifica cada proyecto en verde (acción inmediata), amarillo (preparación) o rojo (monitoreo) según la distancia a la apertura de licitación y el tiempo de preparación típico para el sector.</p>
+  <h3 style="font-family:var(--fd);font-size:18px;margin:20px 0 10px;color:var(--ink)">Pipeline Kanban</h3>
+  <p>El pipeline visual organiza las oportunidades comerciales en etapas personalizables (Prospecto → Contacto → Propuesta → Negociación → Adjudicado/Perdido). Cada oportunidad lleva valor estimado, probabilidad de cierre, responsable asignado y fecha límite. El sistema calcula el pipeline ponderado en tiempo real y proyecta el revenue esperado por período.</p>
+  <div class="flow">
+    <div class="fstep"><div class="fstep-n">Fuente</div><div class="fstep-t">SEIA / MOP / MercadoPúblico</div></div>
+    <div class="fstep"><div class="fstep-n">Procesamiento</div><div class="fstep-t">Scraper + clasificación automática</div></div>
+    <div class="fstep"><div class="fstep-n">Alerta</div><div class="fstep-t">Regla activa → notificación</div></div>
+    <div class="fstep"><div class="fstep-n">Pipeline</div><div class="fstep-t">Oportunidad en Kanban</div></div>
+    <div class="fstep"><div class="fstep-n">Acción</div><div class="fstep-t">Matching → propuesta → adjudicación</div></div>
+  </div>
+</section>
+
+<!-- ── 5. RED DE PROVEEDORES / ICE ────────────── -->
+<section class="sec" id="s-suppliers">
+  <div class="sec-label">05 · Homologación y marketplace</div>
+  <h2 class="sec-h">Red de proveedores <em>ICE</em></h2>
+  <div class="sec-rule"></div>
+  <p>El módulo de proveedores implementa el modelo <strong>ICE (Índice de Capacidad Empresarial)</strong> de homologación multinivel, compatible con los estándares de calificación de Codelco, BHP, SQM y las principales constructoras del mercado. Los proveedores se clasifican en cuatro niveles progresivos (Nivel 1 a 4) según la completitud y validez de su documentación.</p>
+  <table class="ftable">
+    <thead><tr><th>Nivel ICE</th><th>Descripción</th><th>Documentación requerida</th><th>Mandantes típicos</th></tr></thead>
+    <tbody>
+      <tr><td>★ Nivel 1 — Básico</td><td>Proveedor calificado</td><td>Constitución, RUT, nómina</td><td>Proyectos menores &lt;500 MUSD</td></tr>
+      <tr><td>★★ Nivel 2 — Estándar</td><td>Proveedor verificado</td><td>N1 + ISO 9001 + financieros</td><td>Proyectos medianos</td></tr>
+      <tr><td>★★★ Nivel 3 — Avanzado</td><td>Contratista calificado</td><td>N2 + ISO 45001 + HSE records</td><td>Proyectos mayores</td></tr>
+      <tr><td>★★★★ Nivel 4 — Estratégico</td><td>Socio estratégico</td><td>N3 + SICEP + historial verificado</td><td>EPC · Minería gran escala</td></tr>
+    </tbody>
+  </table>
+  <h3 style="font-family:var(--fd);font-size:18px;margin:20px 0 10px;color:var(--ink)">Score multidimensional</h3>
+  <p>Cada proveedor tiene un <strong>score_total</strong> calculado automáticamente a partir de seis dimensiones ponderadas: HSE/Seguridad (25%), Calidad (20%), Finanzas (20%), Medioambiente (15%), Desempeño (10%) y Documentación (10%). El score se actualiza en tiempo real: al registrar un accidente, score_hse baja automáticamente; al subir una ISO certificada, score_quality sube.</p>
+  <h3 style="font-family:var(--fd);font-size:18px;margin:20px 0 10px;color:var(--ink)">Motor de matching</h3>
+  <p>El algoritmo de matching compara las necesidades de una licitación (capacidades técnicas requeridas, nivel ICE mínimo, cobertura geográfica) contra todos los proveedores activos en la red y genera un ranking explicable con las razones de match y los risk flags detectados (ISO vencida, siniestralidad alta, tasa accidentabilidad sobre benchmark sectorial). Los resultados se cachean 5 minutos para reducir latencia.</p>
+</section>
+
+<!-- ── 6. CRM & PIPELINE ────────────────────── -->
+<section class="sec" id="s-crm">
+  <div class="sec-label">06 · Gestión comercial</div>
+  <h2 class="sec-h">CRM y <em>pipeline</em></h2>
+  <div class="sec-rule"></div>
+  <p>El CRM de BERISA está diseñado específicamente para el ciclo de ventas de infraestructura, que puede extenderse 12 a 36 meses desde el primer contacto hasta la adjudicación. Gestiona contactos, cuentas, actividades y documentos asociados al proceso de venta de cada oportunidad.</p>
+  <div class="mod-grid">
+    <div class="mc" style="border-top:3px solid var(--teal)">
+      <span class="mc-ico">👥</span>
+      <div class="mc-title">Gestión de contactos</div>
+      <div class="mc-desc">Fichas de contacto vinculadas a oportunidades y empresas. Historial de interacciones, notas, documentos adjuntos y seguimiento de actividades pendientes con recordatorios automáticos.</div>
+    </div>
+    <div class="mc" style="border-top:3px solid var(--gold-l)">
+      <span class="mc-ico">📊</span>
+      <div class="mc-title">Análisis de pipeline</div>
+      <div class="mc-desc">Pipeline ponderado por probabilidad, proyección de ingresos por período, análisis de tasa de conversión por etapa, tiempo promedio en cada fase y comparación vs períodos anteriores.</div>
+    </div>
+    <div class="mc" style="border-top:3px solid var(--teal)">
+      <span class="mc-ico">📋</span>
+      <div class="mc-title">Gestión RFQ</div>
+      <div class="mc-desc">Solicitudes de cotización con flujo completo: publicación, recepción de ofertas, comparación de proveedores, evaluación técnico-económica y adjudicación con registro trazable.</div>
+    </div>
+    <div class="mc" style="border-top:3px solid var(--gold-l)">
+      <span class="mc-ico">🏆</span>
+      <div class="mc-title">ROI Calculator</div>
+      <div class="mc-desc">Estimación del retorno sobre inversión de cada oportunidad comercial: costo de captura vs margen esperado, comparado con el histórico de proyectos similares adjudicados.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 7. PROCUREMENT ────────────────────────── -->
+<section class="sec" id="s-procurement">
+  <div class="sec-label">07 · Compras y subcontratos</div>
+  <h2 class="sec-h">Procurement y <em>compliance</em> DS 76</h2>
+  <div class="sec-rule"></div>
+  <p>El módulo de procurement gestiona el ciclo completo de compras: desde la orden de compra hasta la recepción conforme, incluyendo el control de subcontratistas bajo el régimen de responsabilidad solidaria de la <strong>Ley 20.123 y DS 76/2007</strong>.</p>
+  <div class="callout gold">
+    <div class="callout-ico">⚖️</div>
+    <div class="callout-body"><strong>Responsabilidad del mandante — DS 76/2007</strong>El mandante es solidariamente responsable por las obligaciones laborales y previsionales de los trabajadores de sus contratistas y subcontratistas en faena. BERISA automatiza la verificación de F30-1, certificados de antecedentes laborales y previsionales, acreditación de inducción y vigencia de documentos habilitantes para reducir la exposición legal del mandante.</div>
+  </div>
+  <p>El <strong>checklist de subcontratistas</strong> verifica automáticamente: inscripción en registros de contratistas, certificados previsionales vigentes (F30-1 PREVIRED), pólizas de seguro de accidentes, reglamento especial de contratistas firmado, programa de prevención del subcontratista y registro de personal ingresado a faena con su acreditación HSE.</p>
+  <p>El flujo de órdenes de compra soporta estados: Borrador → Emitida → Aceptada → En ejecución → Completada / Cancelada, con trazabilidad de cambios, notificaciones al proveedor y registro de hitos de pago.</p>
+</section>
+
+<!-- ── 8. MÓDULOS HSE ─────────────────────────── -->
+<section class="sec" id="s-hse">
+  <div class="sec-label">08 · Seguridad y salud ocupacional</div>
+  <h2 class="sec-h">Módulos <em>HSE</em></h2>
+  <div class="sec-rule"></div>
+  <p class="lead">BERISA implementa seis módulos de gestión HSE que cubren íntegramente la normativa chilena vigente para empresas del sector infraestructura: desde el registro de accidentes hasta la higiene ocupacional, pasando por la gestión de riesgos, permisos de trabajo y acreditación de personal.</p>
+  
+  <h3 style="font-family:var(--fd);font-size:20px;margin:20px 0 12px;color:var(--ink)">M-HSE-01 · Incidentes y siniestralidad</h3>
+  <p>Registro de accidentes del trabajo, enfermedades profesionales, incidentes de alto potencial y casi-accidentes según categorías de la <strong>Ley 16.744</strong>. Cada incidente tiene su propia metodología de investigación (5 porqués, árbol de causas, ICAM) con registro de causas raíz, factores contribuyentes y acciones correctivas trazables (CAPA).</p>
+  <p>Los KPIs de siniestralidad se calculan automáticamente al cierre de cada período según las fórmulas normativas del <strong>DS 67 de SUSESO</strong>: Tasa de Accidentabilidad (TA), Índice de Frecuencia (IF) e Índice de Gravedad (IG), comparados contra los benchmarks sectoriales actualizados anualmente por sector (construcción, minería, energía, infraestructura, servicios, transporte).</p>
+  <p>La numeración de DIAT (Denuncia Individual de Accidente del Trabajo) y DIEP (Denuncia Individual de Enfermedad Profesional) se genera automáticamente en el formato requerido por los organismos administradores: AT-2026-NNNN / EP-2026-NNNN.</p>
+
+  <h3 style="font-family:var(--fd);font-size:20px;margin:20px 0 12px;color:var(--ink)">M-HSE-02 · Prevención y riesgo DS 44</h3>
+  <p>Gestión del Sistema de Gestión de Seguridad y Salud en el Trabajo (SG-SST) según el <strong>DS 44/2024</strong> (vigente desde el 1 de febrero de 2025). El módulo incluye la Matriz de Identificación y Evaluación de Riesgos (IPER) con escala 5×5 de probabilidad × consecuencia, el Programa Anual de Prevención con seguimiento de cumplimiento, la gestión del Comité Paritario de Higiene y Seguridad (CPHS) con registro de sesiones y actas, y el módulo de inspecciones de seguridad con flujo de hallazgos y cierre.</p>
+
+  <h3 style="font-family:var(--fd);font-size:20px;margin:20px 0 12px;color:var(--ink)">M-HSE-03 · Acreditación de personal DS 76</h3>
+  <p>Control de acceso a faena para trabajadores propios y de subcontratistas. Registra inducción de seguridad obligatoria con firma digital del trabajador, licencias habilitantes (conductor, operador de maquinaria, trabajos en altura, trabajos eléctricos) con alertas de vencimiento a 60 y 30 días, exámenes médicos de aptitud según el perfil de riesgo del puesto y generación de código QR de acreditación para control en portería.</p>
+
+  <h3 style="font-family:var(--fd);font-size:20px;margin:20px 0 12px;color:var(--ink)">M-HSE-04 · Permisos de trabajo alto riesgo</h3>
+  <p>Flujo digital de emisión, aprobación y cierre de permisos de trabajo para actividades de alto riesgo según el <strong>DS 594</strong> y el <strong>Decreto 1/2024</strong>: trabajo en altura sobre 1.8m, espacios confinados, trabajo en caliente, trabajo eléctrico y excavaciones. Cada tipo de permiso tiene su checklist preoperacional específico que el supervisor y el trabajador deben completar antes de iniciar la actividad.</p>
+
+  <h3 style="font-family:var(--fd);font-size:20px;margin:20px 0 12px;color:var(--ink)">M-HSE-05 · Higiene ocupacional DS 594</h3>
+  <p>Monitoreo de agentes físico-químicos y biológicos contra los límites permisibles del <strong>DS 594/1999</strong> (NCh 432, NCh 434): ruido, vibraciones, polvo, material particulado PM10, sílice libre cristalizada, gases y vapores (CO, CO₂, solventes orgánicos), iluminancia, temperatura TGBH y radiación UV. Los resultados de cada muestreo se comparan automáticamente contra el límite legal y se clasifican en Conforme, Advertencia (≤120% del límite) o No conforme.</p>
+  <p>El módulo incluye también el inventario de sustancias peligrosas y RESPEL con clasificación NFPA, gestión de hojas de datos de seguridad (SDS), asignación y control de vencimiento de Equipos de Protección Personal (EPP) por trabajador, y el programa de vigilancia epidemiológica con seguimiento de exámenes médicos por agente de riesgo.</p>
+
+  <div class="callout teal">
+    <div class="callout-ico">⏰</div>
+    <div class="callout-body"><strong>Automatización normativa — Jobs programados</strong>BERISA ejecuta seis tareas automáticas diarias para el cumplimiento HSE: verificación de licencias próximas a vencer (aviso con 30 días de anticipación), detección de CAPA vencidas, generación de snapshots mensuales de siniestralidad, control de exámenes médicos pendientes, revisión de condiciones RCA vencidas y actualización del score ambiental de los proveedores. Todas estas alertas se notifican in-app y, si hay SMTP configurado, por email al responsable.</div>
+  </div>
+</section>
+
+<!-- ── 9. AMBIENTAL ──────────────────────────── -->
+<section class="sec" id="s-ambiental">
+  <div class="sec-label">09 · Medio ambiente</div>
+  <h2 class="sec-h">Gestión <em>ambiental</em></h2>
+  <div class="sec-rule"></div>
+  <p>El módulo ambiental gestiona el cumplimiento de las condiciones y compromisos de la Resolución de Calificación Ambiental (RCA) emitida por el Sistema de Evaluación de Impacto Ambiental (<strong>Ley 19.300</strong>), el control de residuos sólidos según el <strong>DS 148/2003</strong> (RESPEL) y el <strong>DS 8/2021</strong> (RCD), y el monitoreo ambiental de variables como ruido, polvo, calidad de agua y emisiones atmosféricas.</p>
+  <table class="ftable">
+    <thead><tr><th>Función</th><th>Normativa</th><th>Automatización</th></tr></thead>
+    <tbody>
+      <tr><td>Seguimiento condiciones RCA</td><td>Ley 19.300 · SEIA</td><td>Alertas de vencimiento y estado</td></tr>
+      <tr><td>Monitoreo ambiental</td><td>RCA específica · DS 594</td><td>Comparación vs límites y trending</td></tr>
+      <tr><td>Gestión RESPEL</td><td>DS 148/2003</td><td>Inventario + seguimiento disposición</td></tr>
+      <tr><td>Gestión RCD</td><td>DS 8/2021</td><td>Registro por tipo de residuo</td></tr>
+      <tr><td>Contingencias ambientales</td><td>Plan de manejo ambiental</td><td>Protocolo de respuesta + notificaciones</td></tr>
+      <tr><td>Score ambiental proveedor</td><td>ISO 14001</td><td>Auto-calculado desde cumplimiento RCA</td></tr>
+    </tbody>
+  </table>
+  <p>El <strong>score_env</strong> del proveedor se actualiza automáticamente cada día: el job nocturno calcula el porcentaje de condiciones RCA en estado Conforme vs Total y ajusta el score de 0 a 5. Este score influye en el matching del proveedor ante nuevos proyectos (ponderación del 15% en el score total).</p>
+</section>
+
+<!-- ── 10. ANALYTICS ─────────────────────────── -->
+<section class="sec" id="s-analytics">
+  <div class="sec-label">10 · Business intelligence</div>
+  <h2 class="sec-h">Analytics y <em>reportes</em></h2>
+  <div class="sec-rule"></div>
+  <p>El módulo de analytics consolida las métricas operacionales y de compliance en dashboards ejecutivos actualizados en tiempo real. Los reportes pueden exportarse en formato JSON para integración con sistemas de BI o en CSV con BOM para apertura directa en Excel.</p>
+  <div class="mod-grid">
+    <div class="mc">
+      <span class="mc-ico">📊</span>
+      <div class="mc-title">Dashboard ejecutivo</div>
+      <div class="mc-desc">KPIs de pipeline comercial, cobertura de mercado por sector, score promedio de proveedores, alertas activas y estado de cumplimiento HSE consolidado por organización.</div>
+    </div>
+    <div class="mc">
+      <span class="mc-ico">🛡️</span>
+      <div class="mc-title">Analytics HSE</div>
+      <div class="mc-desc">TA, IF, IG por período y sector. Evolución mensual de incidentes en 12 meses. Estado de CAPA por tipo, vencimiento y responsable. Comparativo vs benchmarks SUSESO.</div>
+    </div>
+    <div class="mc">
+      <span class="mc-ico">🏭</span>
+      <div class="mc-title">Ranking de proveedores</div>
+      <div class="mc-desc">Listado con score total y por dimensión, nivel ICE, historial de proyectos completados, tasa de puntualidad y risk flags activos. Exportable para comités de homologación.</div>
+    </div>
+    <div class="mc">
+      <span class="mc-ico">🌿</span>
+      <div class="mc-title">Compliance ambiental</div>
+      <div class="mc-desc">Estado de condiciones RCA por proyecto, alertas de vencimiento, historial de monitoreo ambiental y resumen de gestión de residuos para presentación a la SMA.</div>
+    </div>
+  </div>
+  <h3 style="font-family:var(--fd);font-size:18px;margin:20px 0 10px;color:var(--ink)">Tipos de reporte disponibles</h3>
+  <table class="ftable">
+    <thead><tr><th>Reporte</th><th>Contenido</th><th>Formato</th><th>Uso típico</th></tr></thead>
+    <tbody>
+      <tr><td>Siniestralidad HSE</td><td>TA/IF/IG por año, desgloses por severidad</td><td>JSON / CSV</td><td>DS 67 · Organismo administrador</td></tr>
+      <tr><td>Detalle incidentes</td><td>Listado completo con DIAT/DIEP</td><td>CSV</td><td>DT · Mutual · Auditorías</td></tr>
+      <tr><td>CAPA pendientes</td><td>Acciones correctivas abiertas y vencidas</td><td>JSON / CSV</td><td>Comité de seguridad · Auditorías</td></tr>
+      <tr><td>Acreditación de personal</td><td>Estado por trabajador y empresa</td><td>JSON / CSV</td><td>Control de acceso · DS 76</td></tr>
+      <tr><td>Compliance RCA ambiental</td><td>Condiciones por estado y vencimiento</td><td>JSON / CSV</td><td>SMA · Fiscalización</td></tr>
+      <tr><td>Resumen de mercado</td><td>Proyectos por sector y CAPEX</td><td>JSON / CSV</td><td>Estrategia comercial</td></tr>
+      <tr><td>Ranking proveedores</td><td>Scores, niveles ICE, risk flags</td><td>JSON / CSV</td><td>Comités de homologación</td></tr>
+      <tr><td>Pipeline exportado</td><td>Oportunidades por etapa y valor</td><td>CSV</td><td>Revisión gerencial</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ── 11. API E INTEGRACIONES ─────────────────── -->
+<section class="sec" id="s-api">
+  <div class="sec-label">11 · Ecosistema digital</div>
+  <h2 class="sec-h">API e <em>integraciones</em></h2>
+  <div class="sec-rule"></div>
+  <p>BERISA expone una API REST documentada en <strong>OpenAPI 3.0.3</strong>, accesible en <code style="font-family:var(--fm);background:var(--warm);padding:1px 6px;border-radius:4px;font-size:12px">/api/v1/docs/ui</code> (Swagger UI interactiva). Todos los endpoints requieren autenticación con Bearer JWT, excepto los de autenticación pública.</p>
+  <div class="callout gold">
+    <div class="callout-ico">🔑</div>
+    <div class="callout-body"><strong>API Keys para integración enterprise</strong>El plan Business y Enterprise permite crear API keys con scopes (lectura / escritura) y rate limits configurables (hasta 10.000 llamadas/día). Las API keys se firman con bcrypt y tienen fecha de expiración configurable. Un sistema de enforcement valida que las keys de solo lectura no puedan realizar operaciones de escritura (POST, PATCH, DELETE).</div>
+  </div>
+  <h3 style="font-family:var(--fd);font-size:18px;margin:20px 0 10px;color:var(--ink)">Integraciones disponibles</h3>
+  <table class="ftable">
+    <thead><tr><th>Sistema</th><th>Tipo</th><th>Función</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td>SEIA (Conama)</td><td>Scraper activo</td><td>Proyectos + estado de RCA</td><td><span class="dot" style="background:#1A5C52"></span> Disponible</td></tr>
+      <tr><td>Mercado Público</td><td>Scraper + API</td><td>Licitaciones activas</td><td><span class="dot" style="background:#1A5C52"></span> Disponible</td></tr>
+      <tr><td>Stripe</td><td>Webhook</td><td>Pagos y gestión de suscripción</td><td><span class="dot" style="background:#1A5C52"></span> Disponible</td></tr>
+      <tr><td>SMTP / SendGrid</td><td>Email</td><td>Alertas, notificaciones, onboarding</td><td><span class="dot" style="background:#1A5C52"></span> Disponible</td></tr>
+      <tr><td>SAP / Maximo</td><td>Webhook saliente</td><td>Eventos HSE → ERP cliente</td><td><span class="dot" style="background:#C9972B"></span> Roadmap</td></tr>
+      <tr><td>ACHS / Mutual CChC</td><td>API OA</td><td>DIAT/DIEP electrónico</td><td><span class="dot" style="background:#C9972B"></span> Roadmap</td></tr>
+      <tr><td>SICEP</td><td>API</td><td>Sincronización calificación</td><td><span class="dot" style="background:#C9972B"></span> Roadmap</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ── 12. ROLES ──────────────────────────────── -->
+<section class="sec" id="s-roles">
+  <div class="sec-label">12 · Gobernanza de acceso</div>
+  <h2 class="sec-h">Roles y <em>permisos</em></h2>
+  <div class="sec-rule"></div>
+  <p>BERISA implementa un modelo RBAC (Role-Based Access Control) con cuatro roles organizacionales y un superadmin global para la operación del SaaS:</p>
+  <table class="ftable">
+    <thead><tr><th>Rol</th><th>Descripción</th><th>Capacidades principales</th></tr></thead>
+    <tbody>
+      <tr><td>🔴 Admin</td><td>Administrador de organización</td><td>Acceso total a todos los módulos, gestión de usuarios, configuración de billing, export de datos</td></tr>
+      <tr><td>🟡 Manager</td><td>Gerente de área</td><td>Lectura y escritura en todos los módulos operacionales. No puede administrar usuarios ni billing</td></tr>
+      <tr><td>🔵 Analyst</td><td>Analista de inteligencia</td><td>Lectura completa, escritura en alertas y CRM. No puede acceder a configuración ni billing</td></tr>
+      <tr><td>⚪ Viewer</td><td>Consultor / invitado</td><td>Solo lectura de dashboards y reportes. Sin acceso a datos sensibles de proveedores</td></tr>
+      <tr><td>⭐ Superadmin</td><td>Operador BERISA</td><td>Gestión de tenants, creación de planes, acceso a logs y métricas del sistema</td></tr>
+    </tbody>
+  </table>
+  <p>Adicionalmente, el sistema registra todas las acciones en un <strong>audit log</strong> particionado por trimestre, que permite consultar qué usuario realizó cada operación, desde qué IP y en qué momento. Este registro es inmutable y sirve como evidencia ante auditorías externas o requerimientos regulatorios.</p>
+</section>
+
+<!-- ── 13. PLANES ─────────────────────────────── -->
+<section class="sec" id="s-planes">
+  <div class="sec-label">13 · Modelo comercial</div>
+  <h2 class="sec-h">Planes y <em>acceso</em></h2>
+  <div class="sec-rule"></div>
+  <p>BERISA opera bajo un modelo Freemium con cuatro planes. Todas las organizaciones inician con un trial de 14 días con acceso completo al plan Profesional, sin requerir tarjeta de crédito.</p>
+  <div class="plan-wrap">
+    <table class="plan-tbl">
+      <thead><tr>
+        <th style="text-align:left">Funcionalidad</th>
+        <th>Starter<br><span class="pname">Gratuito</span></th>
+        <th>Profesional<br><span class="pname">Mensual</span></th>
+        <th>Business<br><span class="pname">Mensual</span></th>
+        <th>Enterprise<br><span class="pname">Anual</span></th>
+      </tr></thead>
+      <tbody>
+        <tr><td>Inteligencia de proyectos</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Alertas de oportunidades</td><td>3 reglas</td><td>Ilimitadas</td><td>Ilimitadas</td><td>Ilimitadas</td></tr>
+        <tr><td>Directorio de proveedores</td><td>Solo lectura</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Matching ICE automático</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>CRM y Pipeline</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Procurement + RFQ</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Compliance DS 76</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>HSE Operacional (M01-M03)</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Gestión Ambiental RCA</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Permisos de Trabajo (M04)</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Higiene Ocupacional DS 594 (M05)</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+        <tr><td>API + integraciones</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Reportes normativos (DS 67 / SMA)</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Usuarios incluidos</td><td>1</td><td>5</td><td>20</td><td>Ilimitados</td></tr>
+        <tr><td>SLA y soporte</td><td>Self-service</td><td>Email</td><td>Chat + Email</td><td>CSM dedicado</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── 14. NORMATIVA ──────────────────────────── -->
+<section class="sec" id="s-normativa">
+  <div class="sec-label">14 · Marco regulatorio</div>
+  <h2 class="sec-h"><em>Normativas</em> integradas</h2>
+  <div class="sec-rule"></div>
+  <p>BERISA fue diseñado desde cero para cumplir con la normativa chilena vigente en materia de seguridad y salud ocupacional, medio ambiente y relaciones laborales en el sector de la construcción e infraestructura. Las siguientes normativas están activamente incorporadas en la lógica de negocio de la plataforma:</p>
+  <div style="margin:20px 0">
+    <div style="margin-bottom:18px">
+      <div style="font-family:var(--fd);font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px">Seguridad y Salud Ocupacional</div>
+      <span class="norma n-cl">Ley 16.744 — Accidentes del trabajo y enfermedades profesionales</span>
+      <span class="norma n-cl">DS 44/2024 — SG-SST (vigente desde 01/02/2025)</span>
+      <span class="norma n-cl">DS 67 — Estadísticas de siniestralidad (SUSESO)</span>
+      <span class="norma n-cl">DS 76/2007 — Empresas contratistas y subcontratistas</span>
+      <span class="norma n-cl">Ley 20.123 — Trabajo en régimen de subcontratación</span>
+      <span class="norma n-cl">DS 594/1999 — Condiciones sanitarias y ambientales</span>
+      <span class="norma n-cl">DS 132/2002 — Reglamento de seguridad minera</span>
+      <span class="norma n-cl">Decreto 1/2024 — Actualización permisos trabajo</span>
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-family:var(--fd);font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px">Medio Ambiente</div>
+      <span class="norma n-cl">Ley 19.300 — Bases del medio ambiente / SEIA</span>
+      <span class="norma n-cl">DS 148/2003 — Residuos peligrosos (RESPEL)</span>
+      <span class="norma n-cl">DS 8/2021 — Residuos de construcción y demolición (RCD)</span>
+    </div>
+    <div>
+      <div style="font-family:var(--fd);font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px">Estándares internacionales</div>
+      <span class="norma n-iso">ISO 45001:2018 — Seguridad y salud en el trabajo</span>
+      <span class="norma n-iso">ISO 14001:2015 — Gestión ambiental</span>
+      <span class="norma n-iso">ISO 9001:2015 — Gestión de calidad</span>
+      <span class="norma n-mu">NCh 432 — Prevención de riesgos</span>
+      <span class="norma n-mu">NCh 434 — Higiene industrial</span>
+    </div>
+  </div>
+  <div class="callout red">
+    <div class="callout-ico">⚠️</div>
+    <div class="callout-body"><strong>BERISA no reemplaza asesoría legal o técnica especializada</strong>La plataforma automatiza el seguimiento y registro del cumplimiento normativo, pero no constituye asesoría jurídica ni técnica. Las decisiones de gestión de riesgos, las investigaciones de accidentes y las presentaciones ante organismos reguladores deben contar con el respaldo de profesionales habilitados (expertos en prevención de riesgos, abogados laborales, ingenieros ambientales).</div>
+  </div>
+</section>
+
+<!-- ── 15. DESPLIEGUE ─────────────────────────── -->
+<section class="sec" id="s-deploy">
+  <div class="sec-label">15 · Opciones de instalación</div>
+  <h2 class="sec-h">Despliegue y <em>operación</em></h2>
+  <div class="sec-rule"></div>
+  <p>BERISA se entrega en tres variantes de instalación, adaptadas a diferentes contextos de uso y capacidades técnicas del cliente:</p>
+  <div class="mod-grid">
+    <div class="mc" style="border-top:3px solid var(--teal)">
+      <span class="mc-ico">🐳</span>
+      <div class="mc-title">Docker (producción)</div>
+      <div class="mc-norm">berisa_platform_v5.1.zip · 264 KB</div>
+      <div class="mc-desc">PostgreSQL 16 real, Redis para sesiones persistentes, MinIO para almacenamiento de documentos. Recomendado para producción con múltiples usuarios. Un comando de instalación: <code style="font-family:var(--fm);font-size:10px">./setup.sh</code></div>
+      <div class="mc-feats"><span class="feat-tag">Requiere Docker</span><span class="feat-tag">Sin límite de usuarios</span><span class="feat-tag">Alta disponibilidad</span></div>
+    </div>
+    <div class="mc" style="border-top:3px solid var(--gold-l)">
+      <span class="mc-ico">⚡</span>
+      <div class="mc-title">Standalone Node.js</div>
+      <div class="mc-norm">berisa_standalone_v5.1.zip · 304 KB</div>
+      <div class="mc-desc">PGlite (PostgreSQL WASM), cache en memoria, archivos locales. Instala en cualquier máquina con Node.js 18+. Primer arranque descarga dependencias (~30 segundos con internet).</div>
+      <div class="mc-feats"><span class="feat-tag">Sin Docker</span><span class="feat-tag">Node.js 18+</span><span class="feat-tag">Hasta ~20 usuarios</span></div>
+    </div>
+    <div class="mc" style="border-top:3px solid var(--slate)">
+      <span class="mc-ico">📦</span>
+      <div class="mc-title">Standalone bundled</div>
+      <div class="mc-norm">berisa_standalone_v5.1_bundled.zip · 18 MB</div>
+      <div class="mc-desc">Idéntico al Standalone pero con node_modules pre-incluidos. Funciona completamente offline desde el primer segundo. Ideal para redes industriales, demos o instalación sin acceso a internet.</div>
+      <div class="mc-feats"><span class="feat-tag">100% offline</span><span class="feat-tag">Sin internet requerido</span><span class="feat-tag">Demo inmediata</span></div>
+    </div>
+    <div class="mc" style="border-top:3px solid var(--teal)">
+      <span class="mc-ico">☁️</span>
+      <div class="mc-title">Cloud SaaS</div>
+      <div class="mc-norm">app.berisa.com (roadmap)</div>
+      <div class="mc-desc">Versión administrada en cloud con SSL, backups automáticos, actualizaciones sin downtime y SLA 99.9%. Multi-tenant con segregación de datos por organización. Facturación automática via Stripe.</div>
+      <div class="mc-feats"><span class="feat-tag">Sin instalación</span><span class="feat-tag">SLA 99.9%</span><span class="feat-tag">Roadmap 2026</span></div>
+    </div>
+  </div>
+  <h3 style="font-family:var(--fd);font-size:18px;margin:20px 0 10px;color:var(--ink)">Seguridad en producción</h3>
+  <p>BERISA implementa las siguientes medidas de seguridad en todas las variantes de despliegue: autenticación JWT con rotación de refresh tokens y detección de robo de sesión (token reuse detection), Content Security Policy (CSP) activa contra XSS, rate limiting en endpoints de autenticación (20 intentos / 15 minutos), validación de tipos MIME en uploads de documentos, soft delete con audit trail inmutable particionado, bcrypt cost factor 12 para passwords y API keys, y endpoints de health check para monitoreo externo.</p>
+</section>
+
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /doc -->
+
+<footer>
+  <b>BERISA Platform v5.1</b> · Documento descriptivo del producto · Chile / LatAm · Mayo 2026 · Confidencial
+</footer>
+
+<script>
+// Sidebar active on scroll
+const ids=['s-overview','s-market','s-arch','s-inteligencia','s-suppliers','s-crm','s-procurement','s-hse','s-ambiental','s-analytics','s-api','s-roles','s-planes','s-normativa','s-deploy'];
+const obs=new IntersectionObserver(es=>{
+  es.forEach(e=>{
+    if(e.isIntersecting){
+      document.querySelectorAll('.sb-a').forEach(a=>a.classList.remove('on'));
+      const id=e.target.id;
+      const a=document.querySelector(`.sb-a[href="#${id}"]`);
+      if(a)a.classList.add('on');
+    }
+  });
+},{threshold:.15,rootMargin:'-40px 0px -60% 0px'});
+ids.forEach(id=>{const el=document.getElementById(id);if(el)obs.observe(el);});
+</script>
+</body></html>

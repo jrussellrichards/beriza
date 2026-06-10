@@ -1,184 +1,1647 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  AlertTriangle, CheckCircle2, Clock, FileText, ShieldCheck, Upload, Users,
-  CreditCard, Search, Settings, Eye, XCircle, ClipboardCheck, Building2,
-  Scale, Lock, Activity, Plus, Filter
-} from "lucide-react";
+  HouseIcon as House,
+  BuildingsIcon as Buildings,
+  UsersIcon as Users,
+  ShieldCheckIcon as ShieldCheck,
+  ChartLineUpIcon as ChartLineUp,
+  FileTextIcon as FileText,
+  EyeIcon as Eye,
+  LockIcon as Lock,
+  BellIcon as Bell,
+  MagnifyingGlassIcon as MagnifyingGlass,
+  PlusIcon as Plus,
+  WarningIcon as Warning,
+  CheckCircleIcon as CheckCircle,
+  XCircleIcon as XCircle,
+  InfoIcon as Info,
+  TrashIcon as Trash,
+  HardHatIcon as HardHat,
+  LeafIcon as Leaf,
+  FactoryIcon as Factory,
+  CertificateIcon as Certificate,
+  ArrowsCounterClockwiseIcon as ArrowsCounterClockwise,
+  LightningIcon as Lightning,
+  AnchorIcon as Anchor,
+  CaretRightIcon as CaretRight,
+  SealCheckIcon as SealCheck,
+  CalendarBlankIcon as CalendarBlank,
+  MapPinIcon as MapPin,
+  HashIcon as Hash,
+  RobotIcon as Robot,
+  KeyIcon as Key,
+  CurrencyDollarIcon as CurrencyDollar,
+  HandshakeIcon as Handshake,
+  IdentificationCardIcon as IdentificationCard,
+  SirenIcon as Siren,
+  BiohazardIcon as Biohazard,
+  UserCircleIcon as UserCircle,
+  BriefcaseIcon as Briefcase,
+  MedalMilitaryIcon as MedalMilitary,
+  DropHalfIcon as DropHalf,
+  DetectiveIcon as Detective,
+  DatabaseIcon as Database
+} from "@phosphor-icons/react";
+import {
+  AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend
+} from "recharts";
 import "./styles.css";
 
-const today = new Date("2026-05-11T12:00:00");
+// ═══════════════════════════════════════════════════════════════════
+// DATA SEEDS — BERISA Business Model
+// ═══════════════════════════════════════════════════════════════════
 
-const tenant = { id: "tenant-berisa-demo", name: "Mandante Demo Minería Norte", country: "Chile" };
+const STAGES = ["Prospecto","Contacto","Propuesta","Negociación","Adjudicado","Cerrado"];
+const ICE_LABELS = { 1:"ICE-1 Sin Faena", 2:"ICE-2 Faena", 3:"ICE-3 Permanente", 4:"ICE-4 Crítico" };
 
-const documentTypes = [
-  { id: "vigencia_sociedad", name: "Certificado de vigencia de sociedad", family: "Societaria", criticality: "high", blocksPayment: true, blocksOperation: true, periodicity: "annual", appliesWhen: "Proveedor persona jurídica nacional o extranjero con equivalente legal." },
-  { id: "carpeta_tributaria", name: "Carpeta tributaria electrónica", family: "Tributaria", criticality: "medium", blocksPayment: false, blocksOperation: false, periodicity: "quarterly", appliesWhen: "Proveedor nacional con obligaciones tributarias en Chile." },
-  { id: "deuda_tgr", name: "Certificado de deuda TGR", family: "Tributaria", criticality: "medium", blocksPayment: false, blocksOperation: false, periodicity: "monthly", appliesWhen: "Proveedor nacional o entidad obligada a acreditar situación fiscal." },
-  { id: "f30_1", name: "F30-1 Cumplimiento laboral y previsional", family: "Laboral / Previsional", criticality: "high", blocksPayment: true, blocksOperation: false, periodicity: "monthly", appliesWhen: "Contratista o subcontratista con trabajadores asignados al contrato." },
-  { id: "nomina_trabajadores", name: "Nómina mensual de trabajadores", family: "Laboral", criticality: "high", blocksPayment: true, blocksOperation: true, periodicity: "monthly", appliesWhen: "Proveedor con personal en faena o instalaciones del mandante." },
-  { id: "seguro_rc", name: "Seguro de responsabilidad civil", family: "Seguros", criticality: "high", blocksPayment: true, blocksOperation: true, periodicity: "annual", appliesWhen: "Contrato con exposición operacional, patrimonial o a terceros." },
-  { id: "mutualidad", name: "Certificado mutualidad / ISL", family: "SST", criticality: "high", blocksPayment: true, blocksOperation: true, periodicity: "annual", appliesWhen: "Proveedor con trabajadores dependientes o presencia en faena." },
-  { id: "accidentabilidad", name: "Certificado accidentabilidad y siniestralidad", family: "SST", criticality: "medium", blocksPayment: false, blocksOperation: false, periodicity: "annual", appliesWhen: "Proveedor con actividades operacionales, faena o riesgo SST." },
-  { id: "ley_20393", name: "Declaración Ley 20.393 / compliance", family: "Compliance", criticality: "medium", blocksPayment: false, blocksOperation: false, periodicity: "annual", appliesWhen: "Todos los proveedores críticos o con relación contractual relevante." },
-  { id: "iso_45001", name: "ISO 45001 o sistema SST equivalente", family: "Certificaciones", criticality: "low", blocksPayment: false, blocksOperation: false, periodicity: "annual", appliesWhen: "Exigible si está definido en contrato o bases de licitación." },
+const seedOpportunities = [
+  { id:"op-001", name:"Parque Eólico Loa", source:"CNE/SEIA", capex:120, stage:"Propuesta",    region:"Antofagasta", mandante:"Enel Chile", priority:"Alta", services:["HSE","Ambiental"] },
+  { id:"op-002", name:"Puente Chacao II",  source:"MOP",      capex:85,  stage:"Negociación",  region:"Los Lagos",   mandante:"MOP",        priority:"Alta", services:["Obras Civiles","HSE"] },
+  { id:"op-003", name:"Mina Norte Amp.",   source:"SEIA",     capex:45,  stage:"Contacto",     region:"Atacama",     mandante:"Codelco",    priority:"Media",services:["Montaje","Ambiental"] },
+  { id:"op-004", name:"Planta GNL Quín",  source:"Mercado",  capex:200, stage:"Prospecto",    region:"Valparaíso",  mandante:"Enap",       priority:"Alta", services:["Ingeniería","HSE"] },
+  { id:"op-005", name:"Ruta 5 Sur Km760", source:"Conc.",    capex:180, stage:"Adjudicado",   region:"Coquimbo",    mandante:"Costanera",  priority:"Alta", services:["Obras Civiles"] },
+  { id:"op-006", name:"Planta Litio Ata", source:"SEIA",     capex:65,  stage:"Cerrado",      region:"Atacama",     mandante:"SQM",        priority:"Baja", services:["Ambiental","Legal"] },
 ];
 
-const vendorsSeed = [
+const seedVendors = [
+  { id:"v-001", name:"Constructora Andina SpA",          rut:"76.123.456-7", type:"Nacional", service:"Obras civiles y montaje", region:"Atacama",     iceLevel:4, score:88, compliance:"Conforme",   daysUntilExpiry:45,  workers:142, incidents:0 },
+  { id:"v-002", name:"Servicios Patagonia Ltda.",        rut:"77.222.333-4", type:"Nacional", service:"Mantención industrial",   region:"Los Lagos",   iceLevel:3, score:74, compliance:"Observado",  daysUntilExpiry:8,   workers:63,  incidents:1 },
+  { id:"v-003", name:"TechSupply Global Inc.",           rut:"EXT-998877",   type:"Extranjero",service:"Suministro sensores IoT", region:"RM",          iceLevel:2, score:82, compliance:"Conforme",   daysUntilExpiry:180, workers:0,   incidents:0 },
+  { id:"v-004", name:"Ingeniería Hidrológica Sur SpA",   rut:"77.888.222-1", type:"Nacional", service:"Estudios ambientales",    region:"Biobío",      iceLevel:1, score:91, compliance:"Conforme",   daysUntilExpiry:90,  workers:24,  incidents:0 },
+  { id:"v-005", name:"Montajes El Teniente Ltda.",       rut:"76.555.991-K", type:"Nacional", service:"Montaje mecánico pesado", region:"O'Higgins",   iceLevel:4, score:79, compliance:"No Conforme",daysUntilExpiry:0,   workers:210, incidents:3 },
+];
+
+const seedIncidents = [
+  { id:"inc-01", date:"2026-04-10", cat:"Leve",       desc:"Torcedura de tobillo en tránsito",             workers:1, daysLost:2,  code:"AT-2026-0032", vendor:"v-001" },
+  { id:"inc-02", date:"2026-05-02", cat:"Grave",      desc:"Fractura de radio en caída a nivel",           workers:1, daysLost:35, code:"AT-2026-0045", vendor:"v-002" },
+  { id:"inc-03", date:"2026-05-18", cat:"Leve",       desc:"Corte superficial con herramienta manual",     workers:1, daysLost:1,  code:"AT-2026-0051", vendor:"v-005" },
+  { id:"inc-04", date:"2026-06-01", cat:"Accidente",  desc:"Atrapamiento parcial en correa transportadora",workers:1, daysLost:60, code:"AT-2026-0064", vendor:"v-005" },
+];
+
+const seedRisks = [
+  { id:"r-1", prob:4, sev:4, name:"Caída de altura — montaje andamios",       control:"Arnés doble cabo + línea de vida certificada.", category:"Crítico" },
+  { id:"r-2", prob:2, sev:5, name:"Contacto con línea eléctrica subestación", control:"Protocolo LOTO + guantes dieléctricos.",         category:"Alto" },
+  { id:"r-3", prob:3, sev:2, name:"Exposición a ruido ocupacional molienda",  control:"Protección auditiva sobre 85 dBA.",             category:"Medio" },
+  { id:"r-4", prob:1, sev:4, name:"Fuga de combustible — estanque diésel",    control:"Kit antiderrame + bunding certificado.",         category:"Alto" },
+  { id:"r-5", prob:3, sev:3, name:"Golpe por materiales en manipulación",     control:"Procedimiento JHA + EPP manos.",                category:"Medio" },
+];
+
+const seedRca = [
+  { id:"rca-01", condition:"Monitoreo mensual nivel freático",           status:"Conforme",   date:"2026-05-15" },
+  { id:"rca-02", condition:"Barreras acústicas perimetrales",             status:"Observada",  date:"2026-05-20" },
+  { id:"rca-03", condition:"Informe semestral avifauna a SMA",           status:"Vencida",    date:"2026-04-30" },
+  { id:"rca-04", condition:"Reforestación compensatoria 2ha",            status:"Conforme",   date:"2026-06-01" },
+];
+
+const seedRespel = [
+  { id:"res-01", type:"Aceites lubricantes usados",     kg:350, center:"EcoValor Lampa",    cert:"C-998822", date:"2026-04-22" },
+  { id:"res-02", type:"Baterías plomo-ácido",           kg:120, center:"Recimat Calama",    cert:"C-998845", date:"2026-05-10" },
+  { id:"res-03", type:"Envases contaminados",           kg:85,  center:"Geocycle Concón",   cert:"C-998901", date:"2026-05-29" },
+];
+
+const seedAudit = [
+  { time:"09:14", actor:"admin@berisa.cl",      action:"Alta proveedor",   target:"Constructora Andina SpA",     role:"Admin" },
+  { time:"10:02", actor:"mandante1@enel.cl",    action:"Aprobación doc.",  target:"F30-1 Andina — Mar 2026",    role:"Mandante" },
+  { time:"11:30", actor:"vendor1@andina.cl",    action:"Subida documento", target:"Póliza resp. civil 2026",    role:"Proveedor" },
+  { time:"14:15", actor:"auditor@berisa.cl",    action:"Hallazgo creado",  target:"Patagonia — F30-1 vencido", role:"Auditor" },
+  { time:"15:48", actor:"mandante2@mop.cl",     action:"Filtro aplicado",  target:"Vista proveedores ICE-4",    role:"Mandante" },
+  { time:"16:20", actor:"admin@berisa.cl",      action:"Plan actualizado", target:"Plan Profesional → Business",role:"Admin" },
+];
+
+const trendData = [
+  { mes:"Ene", contratos:4, proveedores:8,  incidentes:2 },
+  { mes:"Feb", contratos:6, proveedores:11, incidentes:1 },
+  { mes:"Mar", contratos:5, proveedores:14, incidentes:3 },
+  { mes:"Abr", contratos:9, proveedores:14, incidentes:2 },
+  { mes:"May", contratos:11,proveedores:17, incidentes:4 },
+  { mes:"Jun", contratos:8, proveedores:18, incidentes:1 },
+];
+
+const compliancePie = [
+  { name:"Conforme",    value:63, color:"#22C55E" },
+  { name:"Observado",   value:22, color:"#E4B44A" },
+  { name:"No Conforme", value:15, color:"#E05252" },
+];
+
+const hseBar = [
+  { cat:"AT Leves",     val:3, fill:"#E4B44A" },
+  { cat:"AT Graves",    val:1, fill:"#E05252" },
+  { cat:"Acc. SEIA",   val:0, fill:"#22C55E" },
+  { cat:"NCR Abiertas", val:4, fill:"#3BBFAE" },
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+
+const fmt = (n) => new Intl.NumberFormat("es-CL").format(n);
+const mmusd = (v) => `US$ ${v}M`;
+const scoreColor = (s) => s >= 85 ? "#16A34A" : s >= 70 ? "#C9972B" : "#C53030";
+const complianceClass = (s) => s === "Conforme" ? "green" : s === "Observado" ? "yellow" : s === "No Conforme" ? "red" : "slate";
+const catClass = (c) => ({ "Leve":"yellow", "Grave":"red", "Accidente":"red", "Crítico":"red", "Alto":"yellow", "Medio":"teal" }[c] || "slate");
+const iceColor = (l) => ({ 1:"slate", 2:"blue", 3:"teal", 4:"yellow" }[l] || "slate");
+const stages = STAGES;
+
+// ═══════════════════════════════════════════════════════════════════
+// PLAN GATE (simulación de roles y planes)
+// ═══════════════════════════════════════════════════════════════════
+
+function PlanGate({ plan, required, children }) {
+  const rank = { Starter:1, Profesional:2, Business:3, Enterprise:4 };
+  const ok = (rank[plan] || 1) >= (rank[required] || 99);
+  if (ok) return children;
+  return (
+    <div style={{ position:"relative", minHeight:240 }}>
+      <div style={{ filter:"blur(3px)", pointerEvents:"none", userSelect:"none", opacity:0.4 }}>
+        {children}
+      </div>
+      <div className="plan-gate-overlay">
+        <div className="lock-panel">
+          <div className="lock-icon">
+            <Lock size={28} weight="duotone" />
+          </div>
+          <div className="lock-title">Plan {required} requerido</div>
+          <div className="lock-desc">
+            Esta funcionalidad está disponible desde el plan <strong>{required}</strong>.
+            Mejora tu suscripción para desbloquearla.
+          </div>
+          <button className="btn btn-gold" style={{ width:"100%" }}>
+            <Lightning size={15} weight="fill" /> Ver planes disponibles
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NAV CONFIG
+// ═══════════════════════════════════════════════════════════════════
+
+const ROLE_VIEWS = {
+  Mandante: [
+    { id:"dashboard",    label:"Dashboard",         icon:House,         group:"General" },
+    { id:"oportunidades",label:"Oportunidades",      icon:Handshake,     group:"General" },
+    { id:"proveedores",  label:"Directorio Proveedores",icon:Buildings,  group:"Contratistas" },
+    { id:"matching",     label:"Matching Engine",    icon:Robot,         group:"Contratistas", plan:"Profesional" },
+    { id:"hse",          label:"Gestión HSE",        icon:HardHat,       group:"Cumplimiento" },
+    { id:"ambiental",    label:"Cumplimiento Ambiental",icon:Leaf,        group:"Cumplimiento" },
+    { id:"riesgos",      label:"Mapa de Riesgos",    icon:Warning,       group:"Cumplimiento" },
+    { id:"auditoria",    label:"Auditoría",           icon:Detective,     group:"Plataforma" },
+  ],
+  Proveedor: [
+    { id:"dashboard",    label:"Dashboard",          icon:House,         group:"General" },
+    { id:"mi-perfil",    label:"Mi Perfil",          icon:IdentificationCard,group:"Mi Empresa" },
+    { id:"documentos",   label:"Mis Documentos",     icon:FileText,      group:"Mi Empresa" },
+    { id:"contratos",    label:"Mis Contratos",      icon:Briefcase,     group:"Operación" },
+    { id:"hse",          label:"Mis Incidentes HSE", icon:HardHat,       group:"Operación" },
+    { id:"cumplimiento", label:"Cumplimiento",        icon:ShieldCheck,   group:"Operación" },
+  ],
+  Admin: [
+    { id:"dashboard",    label:"Dashboard",          icon:House,         group:"General" },
+    { id:"mandantes",    label:"Mandantes",          icon:Buildings,     group:"CRM" },
+    { id:"proveedores",  label:"Proveedores",        icon:Users,         group:"CRM" },
+    { id:"planes",       label:"Planes SaaS",        icon:CurrencyDollar,group:"Monetización" },
+    { id:"api",          label:"API Keys",           icon:Key,           group:"Plataforma" },
+    { id:"auditoria",    label:"Auditoría Global",   icon:Database,      group:"Plataforma" },
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════════════════
+
+function Sidebar({ role, activeView, setView, plan }) {
+  const items = ROLE_VIEWS[role] || ROLE_VIEWS.Mandante;
+  const groups = [...new Set(items.map(i => i.group))];
+
+  return (
+    <nav className="sidebar">
+      <div className="sb-header">
+        <div className="sb-logo-row">
+          <div className="sb-logo-mark">
+            <Anchor size={16} weight="fill" color="white" />
+          </div>
+          <span className="sb-brand">BERISA</span>
+        </div>
+        <div className="sb-tagline">Plataforma de Cumplimiento<br/>para Infraestructura</div>
+      </div>
+
+      <div className="sb-nav">
+        {groups.map(group => (
+          <div key={group}>
+            <div className="sb-group-title">{group}</div>
+            {items.filter(i => i.group === group).map(item => {
+              const Icon = item.icon;
+              const locked = item.plan && ["Starter"].includes(plan) && item.plan !== "Starter";
+              return (
+                <div
+                  key={item.id}
+                  className={`sb-link ${activeView === item.id ? "active" : ""}`}
+                  onClick={() => !locked && setView(item.id)}
+                  style={locked ? { opacity: 0.45 } : {}}
+                >
+                  <Icon size={16} weight={activeView === item.id ? "fill" : "regular"} className="sb-ico" />
+                  <span style={{ flex:1 }}>{item.label}</span>
+                  {locked && <Lock size={11} weight="fill" style={{ color:"var(--c-gold-500)", opacity:0.8 }} />}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div className="sb-footer">
+        <div className="sb-status">
+          <div className="sb-status-dot" />
+          <span className="sb-status-label">Sistema operativo · v2.1.0</span>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TOPBAR
+// ═══════════════════════════════════════════════════════════════════
+
+function Topbar({ role, setRole, plan, setPlan, activeView, navItems }) {
+  const current = navItems?.find(i => i.id === activeView);
+  const pageTitle = current?.label || "Dashboard";
+
+  return (
+    <header className="topbar">
+      <div className="topbar-left">
+        <div className="topbar-breadcrumb">
+          <span>BERISA</span>
+          <CaretRight size={10} weight="bold" />
+          <span>{pageTitle}</span>
+        </div>
+      </div>
+
+      <div className="sim-bar">
+        <span className="sim-label">Simulador</span>
+        <div className="sim-divider" />
+        <div className="sim-item">
+          <span className="sim-item-label">Rol:</span>
+          <select className="sim-select" value={role} onChange={e => setRole(e.target.value)}>
+            <option>Mandante</option>
+            <option>Proveedor</option>
+            <option>Admin</option>
+          </select>
+        </div>
+        <div className="sim-item">
+          <span className="sim-item-label">Plan:</span>
+          <select className="sim-select" value={plan} onChange={e => setPlan(e.target.value)}>
+            <option>Starter</option>
+            <option>Profesional</option>
+            <option>Business</option>
+            <option>Enterprise</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <button className="btn btn-ghost btn-icon" title="Notificaciones">
+          <Bell size={17} weight="regular" />
+        </button>
+        <div style={{
+          width:30, height:30, borderRadius:"50%",
+          background:"linear-gradient(135deg, var(--c-teal-600), var(--c-teal-800))",
+          display:"flex", alignItems:"center", justifyContent:"center"
+        }}>
+          <UserCircle size={18} weight="fill" color="white" />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CUSTOM TOOLTIP for Recharts
+// ═══════════════════════════════════════════════════════════════════
+
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background:"var(--c-zinc-900)", border:"1px solid rgba(255,255,255,0.1)",
+      borderRadius:10, padding:"10px 14px", boxShadow:"var(--shadow-lg)", minWidth:140
+    }}>
+      <div style={{ fontFamily:"var(--ff-mono)", fontSize:10, color:"rgba(255,255,255,0.45)", textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>
+        {label}
+      </div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"white", fontWeight:600 }}>
+          <div style={{ width:8, height:8, borderRadius:"50%", background:p.color || p.fill }} />
+          {p.name}: {p.value}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewDashboard({ role }) {
+  const kpis = role === "Admin"
+    ? [
+        { label:"Mandantes Activos",   value:12,    suffix:"",    icon:Buildings,      color:"teal",  help:"7 activos este mes" },
+        { label:"Proveedores",         value:187,   suffix:"",    icon:Users,          color:"teal",  help:"43 nuevos en 30d" },
+        { label:"Contratos Activos",   value:94,    suffix:"",    icon:Briefcase,      color:"gold",  help:"12 por vencer" },
+        { label:"MRR",                 value:"$48K",suffix:"",    icon:CurrencyDollar, color:"green", help:"↑ 14% vs mes ant." },
+      ]
+    : role === "Proveedor"
+    ? [
+        { label:"ICE Nivel",           value:"ICE-3",suffix:"",   icon:MedalMilitary,  color:"teal",  help:"Permanente en faena" },
+        { label:"Score Cumplimiento",  value:82,    suffix:"%",   icon:ShieldCheck,    color:"green", help:"Por encima del umbral" },
+        { label:"Docs Vigentes",       value:14,    suffix:"/16", icon:FileText,       color:"gold",  help:"2 vencen en 8d" },
+        { label:"Incidentes 30d",      value:0,     suffix:"",    icon:HardHat,        color:"teal",  help:"Sin AT este período" },
+      ]
+    : [
+        { label:"Proveedores Activos", value:18,    suffix:"",    icon:Buildings,      color:"teal",  help:"3 con alertas" },
+        { label:"Cumplimiento Global", value:74,    suffix:"%",   icon:ShieldCheck,    color:"green", help:"↑4pp vs trimestre ant." },
+        { label:"Oportunidades",       value:6,     suffix:"",    icon:Handshake,      color:"gold",  help:"US$ 648M en cartera" },
+        { label:"Incidentes Activos",  value:4,     suffix:"",    icon:Siren,          color:"red",   help:"1 grave — 35 días perdidos" },
+      ];
+
+  return (
+    <div className="view-content">
+      <div className="section-head">
+        <div className="section-eyebrow">{role === "Admin" ? "Plataforma BERISA SaaS" : role === "Proveedor" ? "Mi Panel" : "Panel de Control"}</div>
+        <div className="section-title">Resumen Ejecutivo</div>
+        <div className="section-subtitle">Datos actualizados al {new Date().toLocaleDateString("es-CL", { day:"2-digit", month:"long", year:"numeric" })}</div>
+      </div>
+
+      {/* KPI Grid */}
+      <motion.div
+        className="kpi-grid mb-6"
+        initial="hidden"
+        animate="show"
+        variants={{ hidden:{opacity:0}, show:{ opacity:1, transition:{ staggerChildren:0.07 }} }}
+      >
+        {kpis.map(k => {
+          const Icon = k.icon;
+          return (
+            <motion.div
+              key={k.label}
+              className={`kpi-card kpi-${k.color}`}
+              variants={{ hidden:{ opacity:0, y:20 }, show:{ opacity:1, y:0, transition:{ type:"spring", stiffness:160 }} }}
+            >
+              <div className="kpi-icon-wrap"><Icon size={18} weight="duotone" /></div>
+              <div className="kpi-label">{k.label}</div>
+              <div className="kpi-value">{k.value}{k.suffix}</div>
+              <div className="kpi-helper">{k.help}</div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
+      {/* Charts Row */}
+      <div className="grid-2 mb-5">
+        <div className="card card-accent-teal">
+          <div className="card-head">
+            <div>
+              <div className="card-title">Tendencia de Actividad</div>
+              <div className="card-subtitle">Últimos 6 meses</div>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={190}>
+            <AreaChart data={trendData} margin={{ top:0, right:0, left:-20, bottom:0 }}>
+              <defs>
+                <linearGradient id="gTeal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#2A9D8E" stopOpacity={0.25}/>
+                  <stop offset="95%" stopColor="#2A9D8E" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#C9972B" stopOpacity={0.25}/>
+                  <stop offset="95%" stopColor="#C9972B" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+              <XAxis dataKey="mes" tick={{ fontSize:10, fontFamily:"var(--ff-mono)" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize:10, fontFamily:"var(--ff-mono)" }} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="contratos"   name="Contratos"   stroke="#2A9D8E" fill="url(#gTeal)" strokeWidth={2} dot={false} />
+              <Area type="monotone" dataKey="proveedores" name="Proveedores" stroke="#C9972B" fill="url(#gGold)" strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="card card-accent-gold">
+          <div className="card-head">
+            <div>
+              <div className="card-title">Estado de Cumplimiento</div>
+              <div className="card-subtitle">Distribución actual</div>
+            </div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:24 }}>
+            <ResponsiveContainer width={160} height={160}>
+              <PieChart>
+                <Pie data={compliancePie} cx="50%" cy="50%" innerRadius={48} outerRadius={70}
+                     dataKey="value" paddingAngle={3} startAngle={90} endAngle={-270}>
+                  {compliancePie.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div style={{ flex:1, display:"flex", flexDirection:"column", gap:10 }}>
+              {compliancePie.map(e => (
+                <div key={e.name} style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ width:8, height:8, borderRadius:"50%", background:e.color }} />
+                    <span style={{ fontSize:12, color:"var(--text-secondary)" }}>{e.name}</span>
+                  </div>
+                  <span style={{ fontFamily:"var(--ff-mono)", fontWeight:700, fontSize:13 }}>{e.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* HSE Bar */}
+      <div className="card card-accent-red mb-5">
+        <div className="card-head">
+          <div>
+            <div className="card-title">Indicadores HSE del Período</div>
+            <div className="card-subtitle">Accidentabilidad y no conformidades</div>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={150}>
+          <BarChart data={hseBar} margin={{ top:0, right:0, left:-20, bottom:0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" horizontal vertical={false} />
+            <XAxis dataKey="cat" tick={{ fontSize:10, fontFamily:"var(--ff-mono)" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize:10, fontFamily:"var(--ff-mono)" }} axisLine={false} tickLine={false} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="val" name="Cantidad" radius={[4,4,0,0]} maxBarSize={40}>
+              {hseBar.map((e, i) => <Cell key={i} fill={e.fill} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Audit tail */}
+      <div className="card">
+        <div className="card-head">
+          <div className="card-title">Actividad Reciente</div>
+          <button className="btn btn-ghost btn-sm"><Eye size={13}/> Ver auditoría completa</button>
+        </div>
+        <div className="audit-list">
+          {seedAudit.slice(0,4).map((a, i) => (
+            <div key={i} className="audit-item">
+              <span className="audit-time text-mono">{a.time}</span>
+              <span className="audit-actor">{a.actor.split("@")[0]}</span>
+              <span className="audit-action">{a.action}</span>
+              <span className="audit-target">{a.target}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: OPORTUNIDADES — Pipeline Kanban
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewOportunidades() {
+  const [opps, setOpps] = useState(seedOpportunities);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name:"", source:"", capex:"", stage:"Prospecto", region:"", mandante:"" });
+
+  const byStage = (s) => opps.filter(o => o.stage === s);
+
+  const advanceStage = (id) => setOpps(prev => prev.map(o => {
+    if (o.id !== id) return o;
+    const idx = stages.indexOf(o.stage);
+    return idx < stages.length - 1 ? { ...o, stage: stages[idx + 1] } : o;
+  }));
+
+  const addOpp = () => {
+    if (!form.name) return;
+    setOpps(prev => [...prev, { ...form, id:`op-${Date.now()}`, capex: Number(form.capex) || 0, services:[] }]);
+    setForm({ name:"", source:"", capex:"", stage:"Prospecto", region:"", mandante:"" });
+    setShowForm(false);
+  };
+
+  const totalCapex = opps.reduce((s, o) => s + (o.capex || 0), 0);
+
+  return (
+    <div className="view-content">
+      <div className="section-head" style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between" }}>
+        <div>
+          <div className="section-eyebrow">CRM de Proyectos</div>
+          <div className="section-title">Pipeline de Oportunidades</div>
+          <div className="section-subtitle">Cartera total: <strong>{mmusd(totalCapex)}</strong> en {opps.length} oportunidades</div>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+          <Plus size={14} weight="bold" /> Nueva Oportunidad
+        </button>
+      </div>
+
+      {/* Quick form */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity:0, height:0, marginBottom:0 }}
+            animate={{ opacity:1, height:"auto", marginBottom:20 }}
+            exit={{ opacity:0, height:0, marginBottom:0 }}
+            style={{ overflow:"hidden" }}
+          >
+            <div className="card card-accent-teal">
+              <div className="card-title" style={{ marginBottom:16 }}>Nueva Oportunidad</div>
+              <div className="grid-3" style={{ gap:12, marginBottom:12 }}>
+                <div className="form-group" style={{ marginBottom:0 }}>
+                  <label className="form-label">Proyecto *</label>
+                  <input className="form-input" value={form.name} onChange={e => setForm({...form, name:e.target.value})} placeholder="Nombre del proyecto" />
+                </div>
+                <div className="form-group" style={{ marginBottom:0 }}>
+                  <label className="form-label">Mandante</label>
+                  <input className="form-input" value={form.mandante} onChange={e => setForm({...form, mandante:e.target.value})} placeholder="Codelco, MOP..." />
+                </div>
+                <div className="form-group" style={{ marginBottom:0 }}>
+                  <label className="form-label">CAPEX (US$ M)</label>
+                  <input className="form-input" type="number" value={form.capex} onChange={e => setForm({...form, capex:e.target.value})} placeholder="e.g. 45" />
+                </div>
+                <div className="form-group" style={{ marginBottom:0 }}>
+                  <label className="form-label">Fuente</label>
+                  <select className="form-select" value={form.source} onChange={e => setForm({...form, source:e.target.value})}>
+                    <option value="">Seleccionar</option>
+                    <option>SEIA</option><option>MOP</option><option>Mercado Público</option><option>Privado</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom:0 }}>
+                  <label className="form-label">Región</label>
+                  <input className="form-input" value={form.region} onChange={e => setForm({...form, region:e.target.value})} placeholder="Antofagasta..." />
+                </div>
+                <div className="form-group" style={{ marginBottom:0 }}>
+                  <label className="form-label">Etapa Inicial</label>
+                  <select className="form-select" value={form.stage} onChange={e => setForm({...form, stage:e.target.value})}>
+                    {stages.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+                <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
+                <button className="btn btn-primary" onClick={addOpp}><Plus size={13}/> Agregar</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Kanban Board */}
+      <div className="kanban-wrap">
+        <div className="kanban-board">
+          {stages.map(stage => {
+            const cards = byStage(stage);
+            return (
+              <div key={stage} className="kanban-col">
+                <div className="kanban-col-header">
+                  <span className="kanban-col-title">{stage}</span>
+                  <span className="kanban-col-count">{cards.length}</span>
+                </div>
+                <div className="kanban-cards">
+                  {cards.map(o => (
+                    <motion.div key={o.id} layout className="kanban-card">
+                      <div className="kanban-card-name">{o.name}</div>
+                      <div style={{ fontSize:11, color:"var(--text-muted)", marginBottom:8 }}>
+                        {o.mandante} · {o.region}
+                      </div>
+                      <div className="kanban-card-meta">
+                        <span className="kanban-card-value">{mmusd(o.capex)}</span>
+                        {stage !== "Cerrado" && (
+                          <button className="kanban-advance-btn" onClick={() => advanceStage(o.id)} title="Avanzar etapa">
+                            <CaretRight size={10} weight="bold" />
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                  {cards.length === 0 && (
+                    <div style={{ textAlign:"center", padding:"20px 0", color:"var(--text-muted)", fontSize:11 }}>—</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: DIRECTORIO PROVEEDORES
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewProveedores({ role, plan }) {
+  const [vendors, setVendors] = useState(seedVendors);
+  const [selected, setSelected] = useState(null);
+  const [filter, setFilter] = useState({ ice:"", compliance:"", search:"" });
+  const [tab, setTab] = useState("lista");
+
+  const filtered = useMemo(() => vendors.filter(v => {
+    if (filter.ice && v.iceLevel !== Number(filter.ice)) return false;
+    if (filter.compliance && v.compliance !== filter.compliance) return false;
+    if (filter.search && !v.name.toLowerCase().includes(filter.search.toLowerCase()) &&
+        !v.rut.includes(filter.search)) return false;
+    return true;
+  }), [vendors, filter]);
+
+  const sel = vendors.find(v => v.id === selected);
+
+  const ScoreCat = ({ label, value }) => (
+    <div className="score-item">
+      <span className="score-label">{label}</span>
+      <div className="score-track"><div className="score-fill" style={{ width:`${value}%`, background:`linear-gradient(90deg, ${scoreColor(value)}, ${scoreColor(value)}80)` }} /></div>
+      <span className="score-val" style={{ color:scoreColor(value) }}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div className="view-content">
+      <div className="section-head">
+        <div className="section-eyebrow">Contratistas y Proveedores</div>
+        <div className="section-title">Directorio de Proveedores</div>
+        <div className="section-subtitle">Evaluación ICE, score de cumplimiento y documentación</div>
+      </div>
+
+      <div className="subtab-row">
+        {[{id:"lista",label:"Lista"},{id:"scorecard",label:"Scorecard ICE"},{id:"vencimientos",label:"Vencimientos"}].map(t => (
+          <button key={t.id} className={`subtab-btn ${tab===t.id?"active":""}`} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
+        <div style={{ position:"relative", flex:1, minWidth:200 }}>
+          <MagnifyingGlass size={14} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"var(--text-muted)" }} />
+          <input className="form-input" style={{ paddingLeft:30, width:"100%" }} placeholder="Buscar por nombre o RUT..." value={filter.search} onChange={e => setFilter({...filter,search:e.target.value})} />
+        </div>
+        <select className="form-select" style={{ width:160 }} value={filter.ice} onChange={e => setFilter({...filter,ice:e.target.value})}>
+          <option value="">Todos los ICE</option>
+          {[1,2,3,4].map(n => <option key={n} value={n}>{ICE_LABELS[n]}</option>)}
+        </select>
+        <select className="form-select" style={{ width:160 }} value={filter.compliance} onChange={e => setFilter({...filter,compliance:e.target.value})}>
+          <option value="">Todo Cumplimiento</option>
+          <option>Conforme</option><option>Observado</option><option>No Conforme</option>
+        </select>
+      </div>
+
+      {tab === "lista" && (
+        <div className={`grid-2-1 ${sel ? "" : ""}`} style={sel ? { display:"grid", gridTemplateColumns:"1fr 380px", gap:20 } : {}}>
+          <div className="card" style={{ padding:0 }}>
+            <div className="table-wrap" style={{ border:"none", borderRadius:"var(--r-lg)" }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Proveedor</th>
+                    <th>ICE</th>
+                    <th>Servicio</th>
+                    <th>Score</th>
+                    <th>Estado</th>
+                    <th>Vence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(v => (
+                    <tr key={v.id} onClick={() => setSelected(selected===v.id ? null : v.id)}
+                        style={{ cursor:"pointer", background: selected===v.id ? "var(--c-teal-50)" : "" }}>
+                      <td>
+                        <strong>{v.name}</strong>
+                        <small>{v.rut} · {v.type}</small>
+                      </td>
+                      <td><span className={`ice-badge ice-${v.iceLevel}`}>ICE-{v.iceLevel}</span></td>
+                      <td style={{ maxWidth:160, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{v.service}</td>
+                      <td>
+                        <span style={{ fontFamily:"var(--ff-mono)", fontWeight:700, fontSize:13, color:scoreColor(v.score) }}>{v.score}</span>
+                      </td>
+                      <td><span className={`pill ${complianceClass(v.compliance)}`}><span className="pill-dot"/>{v.compliance}</span></td>
+                      <td>
+                        <span style={{ fontFamily:"var(--ff-mono)", fontSize:11, color: v.daysUntilExpiry<=15 ? "var(--c-red-600)" : "var(--text-muted)" }}>
+                          {v.daysUntilExpiry === 0 ? "Vencido" : `${v.daysUntilExpiry}d`}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Detail Panel */}
+          <AnimatePresence>
+            {sel && (
+              <motion.div key={sel.id} initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:20 }}>
+                <div className="card card-accent-teal">
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+                    <div>
+                      <div style={{ fontFamily:"var(--ff-head)", fontSize:15, fontWeight:700 }}>{sel.name}</div>
+                      <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:3 }}>{sel.rut} · {sel.service}</div>
+                    </div>
+                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSelected(null)}><XCircle size={16}/></button>
+                  </div>
+                  <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+                    <span className={`ice-badge ice-${sel.iceLevel}`}>ICE-{sel.iceLevel}</span>
+                    <span className={`pill ${complianceClass(sel.compliance)}`}><span className="pill-dot"/>{sel.compliance}</span>
+                  </div>
+                  <div className="total-score-ring">
+                    <div style={{ fontSize:11, fontFamily:"var(--ff-mono)", color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:1, marginBottom:4 }}>Score Total</div>
+                    <div className="total-score-num" style={{ color:scoreColor(sel.score) }}>{sel.score}</div>
+                    <div style={{ fontSize:11, color:"var(--text-secondary)", marginTop:4 }}>/100</div>
+                  </div>
+                  <div className="score-list">
+                    <ScoreCat label="HSE" value={sel.score} />
+                    <ScoreCat label="Calidad" value={Math.max(0, sel.score - 5)} />
+                    <ScoreCat label="Financiero" value={Math.max(0, sel.score - 10)} />
+                    <ScoreCat label="Ambiental" value={Math.max(0, sel.score - 3)} />
+                    <ScoreCat label="Desempeño" value={Math.max(0, sel.score - 7)} />
+                    <ScoreCat label="Documental" value={Math.min(100, sel.score + 8)} />
+                  </div>
+                  {role === "Mandante" && (
+                    <div style={{ marginTop:16, display:"flex", gap:8 }}>
+                      <button className="btn btn-primary" style={{ flex:1, fontSize:12 }}><Eye size={13}/> Ver perfil completo</button>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {tab === "scorecard" && (
+        <PlanGate plan={plan} required="Profesional">
+          <div className="grid-3">
+            {filtered.map(v => (
+              <div key={v.id} className={`card card-accent-${iceColor(v.iceLevel)}`}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div style={{ fontWeight:700, fontSize:13, lineHeight:1.3 }}>{v.name}</div>
+                  <span className={`ice-badge ice-${v.iceLevel}`}>ICE-{v.iceLevel}</span>
+                </div>
+                <div style={{ fontFamily:"var(--ff-head)", fontSize:32, fontWeight:800, color:scoreColor(v.score), marginBottom:4 }}>
+                  {v.score}<span style={{ fontSize:14, fontFamily:"var(--ff-body)", color:"var(--text-muted)" }}>/100</span>
+                </div>
+                <div style={{ marginBottom:12 }}>
+                  <div className="score-track" style={{ height:8 }}>
+                    <div className="score-fill" style={{ width:`${v.score}%`, height:"100%", background:`linear-gradient(90deg, ${scoreColor(v.score)}, ${scoreColor(v.score)}60)` }} />
+                  </div>
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text-muted)" }}>
+                  <span><Users size={11}/> {v.workers} trabajadores</span>
+                  <span className={`pill ${complianceClass(v.compliance)}`} style={{ fontSize:10 }}><span className="pill-dot"/>{v.compliance}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </PlanGate>
+      )}
+
+      {tab === "vencimientos" && (
+        <div className="card" style={{ padding:0 }}>
+          <div className="table-wrap" style={{ border:"none" }}>
+            <table className="data-table">
+              <thead><tr><th>Proveedor</th><th>ICE</th><th>Días hasta Vencimiento</th><th>Estado</th></tr></thead>
+              <tbody>
+                {[...filtered].sort((a,b) => a.daysUntilExpiry - b.daysUntilExpiry).map(v => (
+                  <tr key={v.id}>
+                    <td><strong>{v.name}</strong><small>{v.rut}</small></td>
+                    <td><span className={`ice-badge ice-${v.iceLevel}`}>ICE-{v.iceLevel}</span></td>
+                    <td>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <div style={{ flex:1, maxWidth:200 }} className="score-track">
+                          <div className="score-fill" style={{
+                            width:`${Math.min(100, (v.daysUntilExpiry / 180) * 100)}%`,
+                            background: v.daysUntilExpiry <= 15 ? "var(--c-red-500)" : v.daysUntilExpiry <= 30 ? "var(--c-gold-500)" : "var(--c-teal-500)"
+                          }} />
+                        </div>
+                        <span style={{ fontFamily:"var(--ff-mono)", fontSize:12, fontWeight:700,
+                          color: v.daysUntilExpiry === 0 ? "var(--c-red-600)" : v.daysUntilExpiry <= 15 ? "var(--c-red-600)" : "var(--text-primary)" }}>
+                          {v.daysUntilExpiry === 0 ? "VENCIDO" : `${v.daysUntilExpiry}d`}
+                        </span>
+                      </div>
+                    </td>
+                    <td><span className={`pill ${complianceClass(v.compliance)}`}><span className="pill-dot"/>{v.compliance}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: MATCHING ENGINE
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewMatching({ plan }) {
+  const [query, setQuery] = useState({ service:"", region:"", iceMin:"1", capex:"" });
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const runMatch = () => {
+    setLoading(true);
+    setResults(null);
+    setTimeout(() => {
+      const scored = seedVendors
+        .filter(v => (!query.iceMin || v.iceLevel >= Number(query.iceMin)))
+        .map(v => ({
+          ...v,
+          matchPct: Math.min(100, Math.round(
+            (query.service ? (v.service.toLowerCase().includes(query.service.toLowerCase()) ? 30 : 0) : 20)
+            + (query.region ? (v.region.toLowerCase().includes(query.region.toLowerCase()) ? 25 : 5) : 15)
+            + v.score * 0.5
+          ))
+        }))
+        .sort((a,b) => b.matchPct - a.matchPct)
+        .slice(0, 5);
+      setResults(scored);
+      setLoading(false);
+    }, 1200);
+  };
+
+  return (
+    <div className="view-content">
+      <div className="section-head">
+        <div className="section-eyebrow">IA · Inteligencia Artificial</div>
+        <div className="section-title">Matching Engine de Proveedores</div>
+        <div className="section-subtitle">Algoritmo multicritério con scoring ICE, cumplimiento, experiencia sectorial y cercanía geográfica</div>
+      </div>
+
+      <PlanGate plan={plan} required="Profesional">
+        <div className="card card-accent-teal mb-5">
+          <div className="card-title" style={{ marginBottom:16 }}>Definir Requerimiento</div>
+          <div className="grid-2" style={{ gap:12, marginBottom:16 }}>
+            <div className="form-group" style={{ marginBottom:0 }}>
+              <label className="form-label">Tipo de Servicio</label>
+              <input className="form-input" placeholder="Obras civiles, montaje, sensores..." value={query.service} onChange={e => setQuery({...query, service:e.target.value})} />
+            </div>
+            <div className="form-group" style={{ marginBottom:0 }}>
+              <label className="form-label">Región de la Faena</label>
+              <input className="form-input" placeholder="Antofagasta, Atacama..." value={query.region} onChange={e => setQuery({...query, region:e.target.value})} />
+            </div>
+            <div className="form-group" style={{ marginBottom:0 }}>
+              <label className="form-label">ICE Mínimo Requerido</label>
+              <select className="form-select" value={query.iceMin} onChange={e => setQuery({...query, iceMin:e.target.value})}>
+                {[1,2,3,4].map(n => <option key={n} value={n}>{ICE_LABELS[n]}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom:0 }}>
+              <label className="form-label">CAPEX aprox. (US$ M)</label>
+              <input className="form-input" type="number" placeholder="45" value={query.capex} onChange={e => setQuery({...query, capex:e.target.value})} />
+            </div>
+          </div>
+          <button className="btn btn-primary" onClick={runMatch} disabled={loading} style={{ width:"100%" }}>
+            {loading
+              ? <><ArrowsCounterClockwise size={14} style={{ animation:"spin 0.8s linear infinite" }}/> Analizando con IA...</>
+              : <><Robot size={14} weight="fill"/> Ejecutar Matching</>
+            }
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {results && (
+            <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}>
+              <div className="section-head" style={{ marginBottom:12 }}>
+                <div className="section-eyebrow">Resultados</div>
+                <div className="section-title" style={{ fontSize:16 }}>{results.length} Proveedores Compatible{results.length!==1?"s":""}</div>
+              </div>
+              {results.map((v, i) => (
+                <div key={v.id} className="match-item">
+                  <div className="match-rank">#{i+1}</div>
+                  <div className="match-info">
+                    <div className="match-name">{v.name}</div>
+                    <div className="match-meta">
+                      <span><MapPin size={10}/> {v.region}</span>
+                      <span><Hash size={10}/> {v.rut}</span>
+                      <span>Score: {v.score}/100</span>
+                    </div>
+                    <div className="match-flags">
+                      <span className={`ice-badge ice-${v.iceLevel}`}>ICE-{v.iceLevel}</span>
+                      <span className={`pill ${complianceClass(v.compliance)}`}><span className="pill-dot"/>{v.compliance}</span>
+                    </div>
+                  </div>
+                  <div className="match-pct" style={{ color: v.matchPct>=80 ? "var(--c-green-500)" : v.matchPct>=60 ? "var(--c-gold-500)" : "var(--c-red-500)" }}>
+                    {v.matchPct}%
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </PlanGate>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: HSE
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewHSE({ role, plan }) {
+  const [incidents, setIncidents] = useState(seedIncidents);
+  const [tab, setTab] = useState("incidentes");
+  const [risks] = useState(seedRisks);
+  const [form, setForm] = useState({ date:"", cat:"Leve", desc:"", workers:1, code:"", vendor:"v-001" });
+  const [showForm, setShowForm] = useState(false);
+
+  const totalAT = incidents.length;
+  const gravesAT = incidents.filter(i => i.cat === "Grave" || i.cat === "Accidente").length;
+  const diasPerdidos = incidents.reduce((s,i) => s + i.daysLost, 0);
+  const tasa = totalAT > 0 ? ((gravesAT / (diasPerdidos || 1)) * 1000).toFixed(2) : "0.00";
+
+  const addIncident = () => {
+    if (!form.date || !form.desc) return;
+    setIncidents(prev => [...prev, { ...form, id:`inc-${Date.now()}`, daysLost: form.cat === "Grave" ? 30 : 2 }]);
+    setShowForm(false);
+  };
+
+  return (
+    <div className="view-content">
+      <div className="section-head">
+        <div className="section-eyebrow">Salud, Seguridad y Medioambiente</div>
+        <div className="section-title">Gestión HSE</div>
+      </div>
+
+      <div className="kpi-grid mb-6" style={{ gridTemplateColumns:"repeat(4,1fr)" }}>
+        {[
+          { label:"Total Accidentes", value:totalAT,   color:"gold", icon:HardHat },
+          { label:"AT Graves",        value:gravesAT,  color:gravesAT>0?"red":"green", icon:Siren },
+          { label:"Días Perdidos",    value:diasPerdidos, color:"zinc", icon:CalendarBlank },
+          { label:"Tasa de Siniestros",value:tasa,     color:"teal", icon:ChartLineUp },
+        ].map(k => {
+          const Icon = k.icon;
+          return (
+            <div key={k.label} className={`kpi-card kpi-${k.color}`}>
+              <div className="kpi-icon-wrap"><Icon size={18} weight="duotone"/></div>
+              <div className="kpi-label">{k.label}</div>
+              <div className="kpi-value">{k.value}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="subtab-row">
+        {[{id:"incidentes",label:"Registro de Incidentes"},{id:"riesgos",label:"Mapa de Riesgos"},{id:"entrenamiento",label:"Entrenamientos"}].map(t => (
+          <button key={t.id} className={`subtab-btn ${tab===t.id?"active":""}`} onClick={() => setTab(t.id)}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab === "incidentes" && (
+        <>
+          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:12 }}>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}><Plus size={13}/> Registrar Incidente</button>
+          </div>
+          <AnimatePresence>
+            {showForm && (
+              <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} style={{overflow:"hidden",marginBottom:16}}>
+                <div className="card card-accent-red">
+                  <div className="card-title" style={{marginBottom:12}}>Nuevo Incidente / AT</div>
+                  <div className="grid-2" style={{gap:10,marginBottom:10}}>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label className="form-label">Fecha</label>
+                      <input className="form-input" type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} />
+                    </div>
+                    <div className="form-group" style={{marginBottom:0}}>
+                      <label className="form-label">Categoría</label>
+                      <select className="form-select" value={form.cat} onChange={e=>setForm({...form,cat:e.target.value})}>
+                        <option>Leve</option><option>Grave</option><option>Accidente</option>
+                      </select>
+                    </div>
+                    <div className="form-group" style={{marginBottom:0,gridColumn:"1/-1"}}>
+                      <label className="form-label">Descripción</label>
+                      <textarea className="form-textarea" value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})} rows={2} placeholder="Describe el incidente..." />
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                    <button className="btn btn-secondary btn-sm" onClick={()=>setShowForm(false)}>Cancelar</button>
+                    <button className="btn btn-danger btn-sm" onClick={addIncident}><Plus size={12}/> Registrar</button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="card" style={{padding:0}}>
+            <div className="table-wrap" style={{border:"none"}}>
+              <table className="data-table">
+                <thead><tr><th>Código</th><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Días Perdidos</th></tr></thead>
+                <tbody>
+                  {incidents.map(i => (
+                    <tr key={i.id}>
+                      <td><span className="text-mono" style={{fontSize:11}}>{i.code}</span></td>
+                      <td>{i.date}</td>
+                      <td><span className={`pill ${catClass(i.cat)}`}><span className="pill-dot"/>{i.cat}</span></td>
+                      <td>{i.desc}</td>
+                      <td><span className="text-mono fw-700">{i.daysLost}d</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === "riesgos" && (
+        <div className="grid-2">
+          <div className="card card-accent-gold">
+            <div className="card-title" style={{marginBottom:4}}>Matriz de Riesgos 5×5</div>
+            <div className="card-subtitle" style={{marginBottom:16}}>Probabilidad × Severidad</div>
+            <div className="matrix-outer">
+              <div className="matrix-y-axis">Probabilidad ↑</div>
+              <div className="matrix-inner">
+                <div className="matrix-grid">
+                  {[5,4,3,2,1].map(prob => (
+                    <div key={prob} className="matrix-row">
+                      {[1,2,3,4,5].map(sev => {
+                        const score = prob * sev;
+                        const cls = score >= 20 ? "risk-crit" : score >= 12 ? "risk-high" : score >= 6 ? "risk-med" : "risk-low";
+                        const count = risks.filter(r => r.prob === prob && r.sev === sev).length;
+                        return (
+                          <div key={sev} className={`matrix-cell ${cls}`}>
+                            {score}
+                            {count > 0 && <span className="matrix-count">{count}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+                <div className="matrix-x-axis">{[1,2,3,4,5].map(s => <span key={s}>S{s}</span>)}</div>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-title" style={{marginBottom:12}}>Registro de Riesgos</div>
+            {risks.map(r => (
+              <div key={r.id} style={{borderBottom:"1px solid var(--border)", paddingBottom:10, marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                  <span style={{fontSize:12.5,fontWeight:600,color:"var(--text-primary)"}}>{r.name}</span>
+                  <span className={`pill ${catClass(r.category)}`} style={{fontSize:10}}><span className="pill-dot"/>{r.category}</span>
+                </div>
+                <div style={{fontSize:11,color:"var(--text-muted)"}}>P{r.prob} × S{r.sev} = <strong style={{color:"var(--text-primary)"}}>{r.prob*r.sev}</strong></div>
+                <div style={{fontSize:11,color:"var(--text-secondary)",marginTop:4}}>{r.control}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "entrenamiento" && (
+        <PlanGate plan={plan} required="Business">
+          <div className="card">
+            <div className="card-title" style={{marginBottom:12}}>Módulos de Entrenamiento Activos</div>
+            {[
+              {name:"Trabajo en Altura y Andamios",  workers:142, completed:130, due:"2026-07-15"},
+              {name:"Manejo Defensivo Vehículos Livianos",workers:80,completed:72, due:"2026-08-01"},
+              {name:"LOTO — Bloqueo y Etiquetado",   workers:60,  completed:60,  due:"2026-09-30"},
+            ].map(t => (
+              <div key={t.name} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:"1px solid var(--border)"}}>
+                <Certificate size={20} weight="duotone" color="var(--c-teal-600)" style={{flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,marginBottom:3}}>{t.name}</div>
+                  <div className="score-track"><div className="score-fill" style={{width:`${Math.round(t.completed/t.workers*100)}%`}}/></div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontFamily:"var(--ff-mono)",fontSize:12,fontWeight:700,color:"var(--c-teal-700)"}}>{t.completed}/{t.workers}</div>
+                  <div style={{fontSize:10,color:"var(--text-muted)"}}>Vence {t.due}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </PlanGate>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: CUMPLIMIENTO AMBIENTAL
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewAmbiental({ plan }) {
+  const [rca] = useState(seedRca);
+  const [respel] = useState(seedRespel);
+  const [tab, setTab] = useState("rca");
+  const [testVal, setTestVal] = useState("");
+  const [testResult, setTestResult] = useState(null);
+
+  const statusClass = (s) => s === "Conforme" ? "green" : s === "Observada" ? "yellow" : "red";
+
+  const testHygiene = () => {
+    const v = parseFloat(testVal);
+    if (isNaN(v)) { setTestResult(null); return; }
+    const limit = 85;
+    if (v <= limit * 0.7) setTestResult({ cls:"conforme", label:"Conforme", msg:`Valor ${v} dBA — por debajo del 70% del límite (${limit} dBA)` });
+    else if (v <= limit) setTestResult({ cls:"advertencia", label:"Advertencia", msg:`Valor ${v} dBA — entre 70% y 100% del límite (${limit} dBA)` });
+    else setTestResult({ cls:"no-conforme", label:"No Conforme", msg:`Valor ${v} dBA — SUPERA el límite de ${limit} dBA` });
+  };
+
+  return (
+    <div className="view-content">
+      <div className="section-head">
+        <div className="section-eyebrow">Medio Ambiente · RCA · RESPEL</div>
+        <div className="section-title">Cumplimiento Ambiental</div>
+      </div>
+
+      <div className="subtab-row">
+        {[{id:"rca",label:"Condiciones RCA"},{id:"respel",label:"Residuos Peligrosos"},{id:"higiene",label:"Higiene Ocupacional"}].map(t => (
+          <button key={t.id} className={`subtab-btn ${tab===t.id?"active":""}`} onClick={()=>setTab(t.id)}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab === "rca" && (
+        <div className="card" style={{padding:0}}>
+          <div className="table-wrap" style={{border:"none"}}>
+            <table className="data-table">
+              <thead><tr><th>Condición RCA</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr></thead>
+              <tbody>
+                {rca.map(r => (
+                  <tr key={r.id}>
+                    <td><strong>{r.condition}</strong></td>
+                    <td><span className={`pill ${statusClass(r.status)}`}><span className="pill-dot"/>{r.status}</span></td>
+                    <td><span className="text-mono fs-11">{r.date}</span></td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm btn-icon"><Eye size={13}/></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === "respel" && (
+        <>
+          <div className="kpi-grid mb-5" style={{gridTemplateColumns:"repeat(3,1fr)"}}>
+            {[
+              {label:"Manifiestos emitidos", value:respel.length, color:"teal", icon:FileText},
+              {label:"Total RESPEL (kg)",    value:respel.reduce((s,r)=>s+r.kg,0)+"kg", color:"gold", icon:Biohazard},
+              {label:"Gestores autorizados", value:3,  color:"green", icon:SealCheck},
+            ].map(k => {
+              const Icon = k.icon;
+              return (
+                <div key={k.label} className={`kpi-card kpi-${k.color}`}>
+                  <div className="kpi-icon-wrap"><Icon size={18} weight="duotone"/></div>
+                  <div className="kpi-label">{k.label}</div>
+                  <div className="kpi-value">{k.value}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="card" style={{padding:0}}>
+            <div className="table-wrap" style={{border:"none"}}>
+              <table className="data-table">
+                <thead><tr><th>Tipo de Residuo</th><th>Peso (kg)</th><th>Centro Autorizado</th><th>Certificado</th><th>Fecha</th></tr></thead>
+                <tbody>
+                  {respel.map(r => (
+                    <tr key={r.id}>
+                      <td><strong>{r.type}</strong></td>
+                      <td><span className="text-mono fw-700">{r.kg}</span></td>
+                      <td>{r.center}</td>
+                      <td><span className="api-key-mono">{r.cert}</span></td>
+                      <td><span className="text-mono fs-11">{r.date}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === "higiene" && (
+        <div className="grid-2">
+          <div className="card card-accent-teal">
+            <div className="card-title" style={{marginBottom:4}}>Calculadora de Higiene Ocupacional</div>
+            <div className="card-subtitle" style={{marginBottom:16}}>Ingresa el valor medido para verificar cumplimiento</div>
+            <div className="form-group">
+              <label className="form-label">Nivel de Ruido Medido (dBA)</label>
+              <div className="form-row">
+                <input className="form-input" type="number" placeholder="Ej: 88" value={testVal} onChange={e=>setTestVal(e.target.value)} />
+                <button className="btn btn-primary" onClick={testHygiene}><Lightning size={13} weight="fill"/> Evaluar</button>
+              </div>
+            </div>
+            <AnimatePresence mode="wait">
+              {testResult && (
+                <motion.div key={testResult.cls} initial={{opacity:0,scale:0.97}} animate={{opacity:1,scale:1}} exit={{opacity:0}}>
+                  <div className={`hygiene-display ${testResult.cls}`}>
+                    <div className="hygiene-number">{testVal} dBA</div>
+                    <span className={`pill ${testResult.cls==="conforme"?"green":testResult.cls==="advertencia"?"yellow":"red"}`} style={{fontSize:13}}>
+                      <span className="pill-dot"/>{testResult.label}
+                    </span>
+                    <div className="hygiene-limit" style={{textAlign:"center"}}>{testResult.msg}</div>
+                  </div>
+                </motion.div>
+              )}
+              {!testResult && (
+                <div className="hygiene-display empty">
+                  <DropHalf size={32} weight="duotone" style={{opacity:0.3, color:"var(--c-teal-600)"}} />
+                  <span className="hygiene-agent">Ingresa un valor para evaluar</span>
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
+          <div className="card">
+            <div className="card-title" style={{marginBottom:12}}>Umbrales de Referencia (DS 594)</div>
+            {[
+              {agent:"Ruido (8h)",       limit:"85 dBA", unit:"Leq"},
+              {agent:"Silice libre",     limit:"0.025 mg/m³", unit:"UVCE"},
+              {agent:"CO",               limit:"29 mg/m³", unit:"TWA"},
+              {agent:"Polvo inerte",     limit:"10 mg/m³", unit:"TWA"},
+              {agent:"Temperatura (TGBH)",limit:"29.5°C", unit:"Trabajo pesado"},
+            ].map(a => (
+              <div key={a.agent} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:600}}>{a.agent}</div>
+                  <div style={{fontSize:10,color:"var(--text-muted)"}}>{a.unit}</div>
+                </div>
+                <span className="api-key-mono">{a.limit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: AUDITORÍA
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewAuditoria({ role }) {
+  return (
+    <div className="view-content">
+      <div className="section-head">
+        <div className="section-eyebrow">Trazabilidad · Blockchain-ready</div>
+        <div className="section-title">Registro de Auditoría</div>
+        <div className="section-subtitle">Log inmutable de todas las acciones en la plataforma</div>
+      </div>
+
+      <div className="callout callout-teal" style={{marginTop:0}}>
+        <div className="callout-icon"><Info size={22} weight="duotone" color="var(--c-teal-600)"/></div>
+        <div className="callout-body">
+          <strong>Log inmutable SHA-256</strong>
+          Cada evento incluye hash SHA-256 encadenado con el evento anterior. Los registros no pueden ser modificados ni eliminados.
+        </div>
+      </div>
+
+      <div className="card" style={{padding:0}}>
+        <div className="table-wrap" style={{border:"none"}}>
+          <table className="data-table">
+            <thead><tr><th>Hora</th><th>Actor</th><th>Rol</th><th>Acción</th><th>Objeto</th></tr></thead>
+            <tbody>
+              {seedAudit.map((a, i) => (
+                <tr key={i}>
+                  <td><span className="text-mono fs-11">{a.time}</span></td>
+                  <td><strong>{a.actor}</strong></td>
+                  <td><span className={`pill ${a.role==="Admin"?"teal":a.role==="Mandante"?"blue":a.role==="Auditor"?"yellow":"slate"}`}>{a.role}</span></td>
+                  <td>{a.action}</td>
+                  <td style={{maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{a.target}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: PLANES SaaS (Admin)
+// ═══════════════════════════════════════════════════════════════════
+
+const PLANS_DEF = [
   {
-    id: "v-001", legalName: "Constructora Andina SpA", rut: "76.123.456-7", type: "Persona jurídica nacional", service: "Obras civiles y montaje", risk: "high", hasWorkers: true, hasSiteAccess: true, usesSubcontractors: true, contractId: "c-001", site: "Proyecto Mina Norte", amountCLP: 455000000,
-    documents: {
-      vigencia_sociedad: { status: "approved", expiry: "2026-12-31", period: "2026", version: 2 },
-      carpeta_tributaria: { status: "approved", expiry: "2026-07-31", period: "2026-Q2", version: 1 },
-      deuda_tgr: { status: "observed", expiry: "2026-05-31", period: "2026-05", version: 1, note: "Falta código verificador legible." },
-      f30_1: { status: "approved", expiry: "2026-05-31", period: "2026-04", version: 1 },
-      nomina_trabajadores: { status: "approved", expiry: "2026-05-31", period: "2026-04", version: 3 },
-      seguro_rc: { status: "approved", expiry: "2026-10-30", period: "2026", version: 1 },
-      mutualidad: { status: "approved", expiry: "2026-12-31", period: "2026", version: 1 },
-      accidentabilidad: { status: "approved", expiry: "2026-11-30", period: "2026", version: 1 },
-      ley_20393: { status: "pending", expiry: null, period: "2026", version: 0 },
-      iso_45001: { status: "approved", expiry: "2026-08-30", period: "2026", version: 1 },
-    }, findings: []
+    name:"Starter",
+    price:"$390",
+    color:"slate",
+    desc:"Para mandantes que inician con cumplimiento básico.",
+    features:["1 faena activa","Hasta 10 proveedores","Panel HSE básico","Exportación PDF"],
+    notIncluded:["Matching Engine","RCA ambiental","API externa","Multi-faena"]
   },
   {
-    id: "v-002", legalName: "Servicios Integrales Patagonia Ltda.", rut: "77.222.333-4", type: "Persona jurídica nacional", service: "Mantención industrial", risk: "medium", hasWorkers: true, hasSiteAccess: true, usesSubcontractors: false, contractId: "c-002", site: "Planta Sur", amountCLP: 128000000,
-    documents: {
-      vigencia_sociedad: { status: "approved", expiry: "2026-06-15", period: "2026", version: 1 },
-      carpeta_tributaria: { status: "approved", expiry: "2026-08-31", period: "2026-Q2", version: 1 },
-      deuda_tgr: { status: "approved", expiry: "2026-05-31", period: "2026-05", version: 1 },
-      f30_1: { status: "expired", expiry: "2026-04-30", period: "2026-03", version: 1, note: "Debe cargar período abril 2026." },
-      nomina_trabajadores: { status: "approved", expiry: "2026-05-31", period: "2026-04", version: 1 },
-      seguro_rc: { status: "approved", expiry: "2026-09-30", period: "2026", version: 1 },
-      mutualidad: { status: "approved", expiry: "2026-12-31", period: "2026", version: 1 },
-      accidentabilidad: { status: "approved", expiry: "2026-12-31", period: "2026", version: 1 },
-      ley_20393: { status: "approved", expiry: "2026-12-31", period: "2026", version: 1 },
-      iso_45001: { status: "not_required", expiry: null, period: null, version: 0 },
-    }, findings: [{ id: "h-001", severity: "high", title: "F30-1 vencido", status: "open" }]
+    name:"Profesional",
+    price:"$990",
+    color:"teal",
+    desc:"El plan más popular para empresas en crecimiento.",
+    features:["5 faenas activas","Proveedores ilimitados","Matching Engine IA","RCA ambiental","Score ICE automático","Soporte 48h"],
+    notIncluded:["Multi-mandante","API pública","SSO / SAML"],
+    popular:true
   },
   {
-    id: "v-003", legalName: "TechSupply Global Inc.", rut: "EXT-998877", type: "Proveedor extranjero", service: "Suministro de sensores IoT", risk: "low", hasWorkers: false, hasSiteAccess: false, usesSubcontractors: false, contractId: "c-003", site: "Sin presencia en faena", amountCLP: 68000000,
-    documents: {
-      vigencia_sociedad: { status: "approved", expiry: "2027-01-15", period: "2026", version: 1 },
-      carpeta_tributaria: { status: "not_required", expiry: null, period: null, version: 0 },
-      deuda_tgr: { status: "not_required", expiry: null, period: null, version: 0 },
-      f30_1: { status: "not_required", expiry: null, period: null, version: 0 },
-      nomina_trabajadores: { status: "not_required", expiry: null, period: null, version: 0 },
-      seguro_rc: { status: "approved", expiry: "2026-07-20", period: "2026", version: 1 },
-      mutualidad: { status: "not_required", expiry: null, period: null, version: 0 },
-      accidentabilidad: { status: "not_required", expiry: null, period: null, version: 0 },
-      ley_20393: { status: "approved", expiry: "2026-12-31", period: "2026", version: 1 },
-      iso_45001: { status: "not_required", expiry: null, period: null, version: 0 },
-    }, findings: []
-  }
+    name:"Business",
+    price:"$2,490",
+    color:"gold",
+    desc:"Para empresas con múltiples faenas y proyectos SEIA.",
+    features:["Faenas ilimitadas","Gestión multi-mandante","API pública documentada","Entrenamiento HSE IA","Firma electrónica","Soporte 24h"],
+    notIncluded:["Onpremise / SLA 99.9%"]
+  },
+  {
+    name:"Enterprise",
+    price:"Custom",
+    color:"zinc",
+    desc:"Despliegue dedicado para grandes grupos empresariales.",
+    features:["Todo Business incluido","SLA 99.9% contractual","SSO / SAML federado","Onpremise / híbrido","CSM dedicado","Auditoría blockchain"],
+    notIncluded:[]
+  },
 ];
 
-const paymentClaimsSeed = [
-  { id: "ep-001", vendorId: "v-001", contractId: "c-001", period: "2026-04", amountCLP: 84500000, technicalApproval: true, requestedAt: "2026-05-08" },
-  { id: "ep-002", vendorId: "v-002", contractId: "c-002", period: "2026-04", amountCLP: 22600000, technicalApproval: true, requestedAt: "2026-05-09" },
-  { id: "ep-003", vendorId: "v-003", contractId: "c-003", period: "2026-04", amountCLP: 18200000, technicalApproval: true, requestedAt: "2026-05-10" },
-];
+function ViewPlanes() {
+  return (
+    <div className="view-content">
+      <div className="section-head">
+        <div className="section-eyebrow">Monetización SaaS</div>
+        <div className="section-title">Planes de Suscripción</div>
+        <div className="section-subtitle">Modelo freemium multi-plan con upgrades in-app</div>
+      </div>
 
-const auditSeed = [
-  { id: 1, at: "2026-05-11 09:10", actor: "Sistema", action: "Recalculó cumplimiento", target: "Constructora Andina SpA" },
-  { id: 2, at: "2026-05-11 09:14", actor: "Auditor HSE", action: "Aprobó mutualidad", target: "Servicios Integrales Patagonia Ltda." },
-  { id: 3, at: "2026-05-11 10:02", actor: "Motor de pagos", action: "Bloqueó EP por F30-1 vencido", target: "EP-002" },
-  { id: 4, at: "2026-05-11 10:18", actor: "Proveedor", action: "Cargó carpeta tributaria", target: "Constructora Andina SpA" },
-  { id: 5, at: "2026-05-11 11:30", actor: "Administrador", action: "Actualizó regla de alerta a 15 días", target: "Matriz minería" },
-];
+      <div className="grid-2" style={{gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+        {PLANS_DEF.map(p => (
+          <div key={p.name} className={`card ${p.popular?"card-accent-teal":""}`}
+               style={p.popular ? {boxShadow:"var(--shadow-teal)"} : {}}>
+            {p.popular && (
+              <div style={{background:"var(--c-teal-700)",color:"white",fontSize:10,fontWeight:700,fontFamily:"var(--ff-mono)",
+                letterSpacing:1,textTransform:"uppercase",padding:"3px 10px",borderRadius:"var(--r-full)",
+                display:"inline-block",marginBottom:10}}>Más popular</div>
+            )}
+            <div style={{fontFamily:"var(--ff-head)",fontSize:16,fontWeight:800,color:"var(--text-primary)",marginBottom:3}}>{p.name}</div>
+            <div style={{fontFamily:"var(--ff-head)",fontSize:28,fontWeight:800,color:"var(--c-teal-700)",marginBottom:6}}>
+              {p.price}<span style={{fontSize:13,fontFamily:"var(--ff-body)",color:"var(--text-muted)",fontWeight:400}}>{p.price!=="Custom"?"/mes":""}</span>
+            </div>
+            <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:16,lineHeight:1.5}}>{p.desc}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+              {p.features.map(f => (
+                <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+                  <CheckCircle size={13} weight="fill" color="var(--c-green-500)"/>{f}
+                </div>
+              ))}
+              {p.notIncluded.map(f => (
+                <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text-muted)"}}>
+                  <XCircle size={13} weight="regular" color="var(--c-zinc-300)"/>{f}
+                </div>
+              ))}
+            </div>
+            <button className={`btn ${p.popular?"btn-primary":"btn-secondary"}`} style={{width:"100%",fontSize:12}}>
+              {p.price==="Custom"?"Contactar ventas":"Seleccionar plan"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-function currency(value) { return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(value); }
-function daysTo(expiry) { if (!expiry) return null; const d = new Date(`${expiry}T12:00:00`); return Math.ceil((d.getTime() - today.getTime()) / 86400000); }
-function isRequired(vendor, docType) {
-  if (docType.id === "f30_1" || docType.id === "nomina_trabajadores") return vendor.hasWorkers;
-  if (docType.id === "mutualidad" || docType.id === "accidentabilidad" || docType.id === "iso_45001") return vendor.hasSiteAccess || vendor.risk === "high";
-  if (docType.id === "carpeta_tributaria" || docType.id === "deuda_tgr") return vendor.type !== "Proveedor extranjero";
-  return true;
-}
-function labelForStatus(status) { return ({ approved: "Aprobado", pending: "Pendiente", observed: "Observado", rejected: "Rechazado", expired: "Vencido", not_required: "No requerido", uploaded: "Cargado", review: "En revisión" }[status] || status); }
-function evaluateVendor(vendor) {
-  const rows = documentTypes.filter((d) => isRequired(vendor, d)).map((docType) => {
-    const doc = vendor.documents[docType.id] || { status: "pending", expiry: null, version: 0 };
-    const left = daysTo(doc.expiry);
-    const expiredByDate = left !== null && left < 0;
-    const status = expiredByDate && doc.status === "approved" ? "expired" : doc.status;
-    return { docType, doc: { ...doc, status }, daysLeft: left };
-  });
-  const highFailures = rows.filter((r) => r.docType.criticality === "high" && ["pending", "expired", "rejected", "observed"].includes(r.doc.status));
-  const mediumFailures = rows.filter((r) => r.docType.criticality === "medium" && ["pending", "expired", "rejected", "observed"].includes(r.doc.status));
-  const warnings = rows.filter((r) => r.daysLeft !== null && r.daysLeft >= 0 && r.daysLeft <= 15);
-  const openCriticalFindings = vendor.findings.filter((f) => f.status === "open" && f.severity === "high");
-  let status = "approved";
-  if (highFailures.length > 0 || openCriticalFindings.length > 0) status = "blocked";
-  else if (mediumFailures.length > 0 || warnings.length > 0) status = "conditional";
-  const approvedCount = rows.filter((r) => r.doc.status === "approved").length;
-  const compliance = rows.length === 0 ? 100 : Math.round((approvedCount / rows.length) * 100);
-  const riskScore = Math.min(100, (vendor.risk === "high" ? 35 : vendor.risk === "medium" ? 20 : 8) + (vendor.hasWorkers ? 15 : 0) + (vendor.hasSiteAccess ? 15 : 0) + highFailures.length * 12 + mediumFailures.length * 6 + openCriticalFindings.length * 15);
-  return { status, rows, highFailures, mediumFailures, warnings, compliance, riskScore, openCriticalFindings };
-}
-function evaluatePayment(payment, vendors) {
-  const vendor = vendors.find((v) => v.id === payment.vendorId);
-  const assessment = evaluateVendor(vendor);
-  const blockers = [];
-  const conditionals = [];
-  if (!payment.technicalApproval) blockers.push("Servicio sin recepción conforme técnica.");
-  if (assessment.status === "blocked") blockers.push("Proveedor bloqueado por incumplimientos críticos.");
-  assessment.rows.forEach(({ docType, doc }) => {
-    if (docType.blocksPayment && ["pending", "expired", "rejected", "observed"].includes(doc.status)) blockers.push(`${docType.name}: ${labelForStatus(doc.status)}.`);
-    else if (!docType.blocksPayment && ["pending", "expired", "rejected", "observed"].includes(doc.status)) conditionals.push(`${docType.name}: ${labelForStatus(doc.status)}.`);
-  });
-  if (assessment.openCriticalFindings.length > 0) blockers.push("Hallazgo crítico abierto.");
-  if (blockers.length > 0) return { decision: "blocked", blockers, conditionals, vendor };
-  if (conditionals.length > 0) return { decision: "conditional", blockers, conditionals, vendor };
-  return { decision: "released", blockers, conditionals, vendor };
-}
-function statusClasses(status) { return ({ approved: "green", released: "green", conditional: "yellow", blocked: "red", pending: "gray", observed: "yellow", rejected: "red", expired: "red", not_required: "gray" }[status] || "gray"); }
-function StatusPill({ status, children }) { return <span className={`pill ${statusClasses(status)}`}>{children || labelForStatus(status)}</span>; }
-function MetricCard({ icon: Icon, label, value, helper }) { return <div className="card metric"><div><p className="muted small">{label}</p><p className="metric-value">{value}</p>{helper && <p className="muted mini">{helper}</p>}</div><div className="iconbox"><Icon size={22} /></div></div>; }
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: API KEYS (Admin)
+// ═══════════════════════════════════════════════════════════════════
 
-function Sidebar({ role, setRole, view, setView }) {
-  const menu = [
-    { id: "dashboard", label: "Mandante", icon: Building2 }, { id: "supplier", label: "Proveedor", icon: Upload },
-    { id: "payments", label: "Estados de pago", icon: CreditCard }, { id: "audit", label: "Auditoría", icon: ClipboardCheck }, { id: "admin", label: "Administrador", icon: Settings }
+function ViewApiKeys() {
+  const [keys, setKeys] = useState([
+    { id:"k-1", name:"Codelco Integration v2",    key:"brsa_live_ck9xP...rT3q", created:"2026-01-15", lastUsed:"Hace 2h",  active:true },
+    { id:"k-2", name:"MOP Data Sync",             key:"brsa_live_mX7aQ...k9Lm", created:"2026-03-08", lastUsed:"Hace 1d",  active:true },
+    { id:"k-3", name:"Testing — Sandbox Enel",    key:"brsa_test_zZ3nW...p2Ks", created:"2026-05-20", lastUsed:"Hace 5d",  active:false },
+  ]);
+
+  const toggle = (id) => setKeys(prev => prev.map(k => k.id===id ? {...k,active:!k.active} : k));
+
+  return (
+    <div className="view-content">
+      <div className="section-head" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div>
+          <div className="section-eyebrow">Plataforma API</div>
+          <div className="section-title">API Keys & Integraciones</div>
+          <div className="section-subtitle">REST API v2 — autenticación Bearer token</div>
+        </div>
+        <button className="btn btn-primary"><Plus size={14}/> Nueva API Key</button>
+      </div>
+
+      <div className="callout callout-gold">
+        <div className="callout-icon"><Warning size={22} weight="duotone" color="var(--c-gold-600)"/></div>
+        <div className="callout-body">
+          <strong>Seguridad de Claves</strong>
+          Las claves sólo se muestran completas una vez al crearlas. Guárdalas en un gestor de secretos (Vault, AWS Secrets Manager).
+        </div>
+      </div>
+
+      {keys.map(k => (
+        <div key={k.id} className="api-key-item">
+          <Key size={18} weight="duotone" color="var(--c-teal-600)" style={{flexShrink:0}}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:600,marginBottom:3}}>{k.name}</div>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+              <span className="api-key-mono">{k.key}</span>
+              <span style={{fontSize:11,color:"var(--text-muted)"}}>Creada {k.created}</span>
+              <span style={{fontSize:11,color:"var(--text-muted)"}}>Usada {k.lastUsed}</span>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span className={`pill ${k.active?"green":"slate"}`}><span className="pill-dot"/>{k.active?"Activa":"Inactiva"}</span>
+            <button className="btn btn-secondary btn-sm" onClick={() => toggle(k.id)}>{k.active?"Desactivar":"Activar"}</button>
+            <button className="btn btn-ghost btn-icon btn-sm"><Trash size={14}/></button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: MI PERFIL (Proveedor)
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewMiPerfil() {
+  const v = seedVendors[0];
+  return (
+    <div className="view-content">
+      <div className="section-head">
+        <div className="section-eyebrow">Perfil Corporativo</div>
+        <div className="section-title">Mi Empresa</div>
+      </div>
+      <div className="grid-2-1">
+        <div className="card card-accent-teal">
+          <div style={{display:"flex",gap:16,marginBottom:20}}>
+            <div style={{width:56,height:56,borderRadius:"var(--r-lg)",background:"linear-gradient(135deg,var(--c-teal-600),var(--c-teal-800))",
+              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Factory size={26} weight="fill" color="white"/>
+            </div>
+            <div>
+              <div style={{fontFamily:"var(--ff-head)",fontSize:18,fontWeight:700}}>{v.name}</div>
+              <div style={{fontSize:12,color:"var(--text-muted)",marginTop:3}}>RUT {v.rut} · {v.type}</div>
+              <div style={{display:"flex",gap:8,marginTop:8}}>
+                <span className={`ice-badge ice-${v.iceLevel}`}>ICE-{v.iceLevel}</span>
+                <span className={`pill ${complianceClass(v.compliance)}`}><span className="pill-dot"/>{v.compliance}</span>
+              </div>
+            </div>
+          </div>
+          <div className="divider"/>
+          {[
+            {label:"Servicio principal",  value:v.service},
+            {label:"Región de operación", value:v.region},
+            {label:"Trabajadores activos",value:`${v.workers}`},
+            {label:"Score de cumplimiento",value:`${v.score}/100`},
+          ].map(f => (
+            <div key={f.label} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)",fontSize:13}}>
+              <span style={{color:"var(--text-muted)"}}>{f.label}</span>
+              <strong>{f.value}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="card">
+          <div className="card-title" style={{marginBottom:12}}>Score Detallado</div>
+          <div className="total-score-ring" style={{marginBottom:16}}>
+            <div style={{fontSize:10,fontFamily:"var(--ff-mono)",color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Score Total</div>
+            <div className="total-score-num">{v.score}</div>
+            <div style={{fontSize:11,color:"var(--text-secondary)",marginTop:4}}>/100</div>
+          </div>
+          <div className="score-list">
+            {[["HSE",v.score],["Calidad",v.score-5],["Financiero",v.score-10],["Ambiental",v.score-3]].map(([l,s]) => (
+              <div key={l} className="score-item">
+                <span className="score-label">{l}</span>
+                <div className="score-track"><div className="score-fill" style={{width:`${s}%`}}/></div>
+                <span className="score-val">{s}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VIEW: MANDANTES (Admin)
+// ═══════════════════════════════════════════════════════════════════
+
+function ViewMandantes() {
+  const mandantes = [
+    { name:"Codelco División Norte", rut:"61.704.000-1", sector:"Minería", faenas:4, vendors:42, plan:"Enterprise", mrr:8500 },
+    { name:"MOP Dirección de Vialidad",rut:"61.000.500-6", sector:"Infraestructura",faenas:7,vendors:63, plan:"Business", mrr:2490 },
+    { name:"Enap Refinería Biobío",  rut:"70.240.000-2", sector:"Energía",  faenas:2,vendors:21, plan:"Profesional",mrr:990  },
+    { name:"SQM Litio",              rut:"93.007.000-9", sector:"Minería",  faenas:3,vendors:35, plan:"Business",  mrr:2490 },
+    { name:"Enel Chile",             rut:"94.271.000-3", sector:"Energía",  faenas:5,vendors:58, plan:"Enterprise", mrr:8500 },
   ];
-  return <aside className="sidebar"><div className="brand"><div className="logo"><ShieldCheck size={22}/></div><div><h1>Berisa</h1><p>Compliance 360</p></div></div><div className="rolebox"><p>Rol activo</p><select value={role} onChange={(e) => setRole(e.target.value)}><option>Mandante</option><option>Proveedor</option><option>Auditor</option><option>Administrador</option></select></div><nav>{menu.map((item)=>{ const Icon=item.icon; return <button key={item.id} onClick={()=>setView(item.id)} className={view===item.id ? "active" : ""}><Icon size={18}/>{item.label}</button>;})}</nav><div className="tenant"><p>Ambiente</p><strong>{tenant.name}</strong><span>SaaS multiempresa · Demo funcional</span></div></aside>;
+  const totalMrr = mandantes.reduce((s,m) => s+m.mrr, 0);
+
+  return (
+    <div className="view-content">
+      <div className="section-head" style={{display:"flex",justifyContent:"space-between"}}>
+        <div>
+          <div className="section-eyebrow">CRM Mandantes</div>
+          <div className="section-title">Clientes (Mandantes)</div>
+          <div className="section-subtitle">MRR total: <strong>${fmt(totalMrr)} USD/mes</strong></div>
+        </div>
+        <button className="btn btn-primary"><Plus size={14}/> Nuevo Mandante</button>
+      </div>
+      <div className="card" style={{padding:0}}>
+        <div className="table-wrap" style={{border:"none"}}>
+          <table className="data-table">
+            <thead><tr><th>Mandante</th><th>Sector</th><th>Faenas</th><th>Proveedores</th><th>Plan</th><th>MRR (USD)</th></tr></thead>
+            <tbody>
+              {mandantes.map(m => (
+                <tr key={m.name}>
+                  <td><strong>{m.name}</strong><small>{m.rut}</small></td>
+                  <td><span className="pill teal">{m.sector}</span></td>
+                  <td><span className="text-mono fw-700">{m.faenas}</span></td>
+                  <td><span className="text-mono fw-700">{m.vendors}</span></td>
+                  <td><span className={`pill ${m.plan==="Enterprise"?"gold":m.plan==="Business"?"teal":"blue"}`}>{m.plan}</span></td>
+                  <td><span className="text-mono fw-700" style={{color:"var(--c-green-700)"}}>${fmt(m.mrr)}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
-function Topbar({ search, setSearch, view }) {
-  const titles = { dashboard: "Torre de control del mandante", supplier: "Portal autogestionado del proveedor", payments: "Motor de estados de pago", audit: "Auditoría y trazabilidad", admin: "Administración del módulo" };
-  return <header className="topbar"><div><p className="overline">Berisa Compliance 360</p><h2>{titles[view]}</h2></div><div className="searchrow"><div className="search"><Search size={18}/><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Buscar proveedor, RUT, contrato..." /></div><button className="primary"><Plus size={16}/>Nuevo</button></div></header>;
-}
-function DashboardMandante({ vendors, payments, setSelectedVendorId }) {
-  const assessments = vendors.map((v)=>({vendor:v, ...evaluateVendor(v)}));
-  const paymentEvals = payments.map((p)=>({p, ...evaluatePayment(p, vendors)}));
-  const blocked = assessments.filter((a)=>a.status==="blocked").length;
-  const conditional = assessments.filter((a)=>a.status==="conditional").length;
-  const approved = assessments.filter((a)=>a.status==="approved").length;
-  const blockedPayments = paymentEvals.filter((r)=>r.decision==="blocked");
-  const retainedAmount = blockedPayments.reduce((sum, e)=>sum+e.p.amountCLP,0);
-  return <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="content"><div className="grid four"><MetricCard icon={Users} label="Proveedores" value={vendors.length} helper={`${approved} aprobados · ${conditional} condicionados · ${blocked} bloqueados`} /><MetricCard icon={FileText} label="Documentos críticos observados" value={assessments.reduce((s,a)=>s+a.highFailures.length,0)} helper="Bloquean operación o pago según regla"/><MetricCard icon={CreditCard} label="Estados de pago bloqueados" value={blockedPayments.length} helper={`Monto referencial: ${currency(retainedAmount)}`}/><MetricCard icon={Activity} label="Riesgo promedio" value={`${Math.round(assessments.reduce((s,a)=>s+a.riskScore,0)/assessments.length)}`} helper="Score 0 a 100"/></div><div className="grid main"><div className="card table-card"><div className="card-head"><div><h3>Proveedores por cumplimiento</h3><p>Vista ejecutiva para toma de decisiones.</p></div><button className="secondary"><Filter size={16}/>Filtrar</button></div><table><thead><tr><th>Proveedor</th><th>Servicio</th><th>Cumplimiento</th><th>Riesgo</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{assessments.map((a)=><tr key={a.vendor.id}><td><strong>{a.vendor.legalName}</strong><span>{a.vendor.rut} · {a.vendor.site}</span></td><td>{a.vendor.service}</td><td><div className="bar"><i style={{width:`${a.compliance}%`}}></i></div><span>{a.compliance}%</span></td><td><strong>{a.riskScore}/100</strong></td><td><StatusPill status={a.status}>{a.status==="approved"?"Aprobado":a.status==="conditional"?"Condicionado":"Bloqueado"}</StatusPill></td><td><button className="secondary" onClick={()=>setSelectedVendorId(a.vendor.id)}><Eye size={15}/>Ver</button></td></tr>)}</tbody></table></div><div className="card"><h3>Alertas críticas</h3><div className="alerts">{assessments.flatMap((a)=>a.highFailures.map((f)=>({vendor:a.vendor,f}))).slice(0,6).map((item,i)=><div className="alert red" key={i}><AlertTriangle size={18}/><div><strong>{item.f.docType.name}</strong><span>{item.vendor.legalName} · {labelForStatus(item.f.doc.status)}</span></div></div>)}{assessments.every((a)=>a.highFailures.length===0)&&<p className="muted">No existen alertas críticas.</p>}</div></div></div></motion.div>;
-}
-function SupplierPortal({ vendor, onUploadDemo }) {
-  const assessment = evaluateVendor(vendor);
-  return <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="content"><div className="card hero"><div><p className="muted">Portal proveedor</p><h3>{vendor.legalName}</h3><p className="muted">{vendor.rut} · {vendor.type} · {vendor.service}</p></div><StatusPill status={assessment.status}>{assessment.status==="approved"?"Proveedor aprobado":assessment.status==="conditional"?"Proveedor condicionado":"Proveedor bloqueado"}</StatusPill><div className="grid three stats"><div><span>Cumplimiento documental</span><strong>{assessment.compliance}%</strong></div><div><span>Riesgo</span><strong>{assessment.riskScore}/100</strong></div><div><span>Acciones pendientes</span><strong>{assessment.highFailures.length+assessment.mediumFailures.length}</strong></div></div></div><div className="card"><div className="card-head"><div><h3>Checklist documental inteligente</h3><p>Solo se muestran documentos aplicables según perfil, contrato y faena.</p></div><button className="primary" onClick={onUploadDemo}><Upload size={16}/>Simular carga</button></div><div className="doc-grid">{assessment.rows.map(({docType,doc,daysLeft})=><div className="doc" key={docType.id}><div className="doc-top"><div><strong>{docType.name}</strong><span>{docType.family} · {docType.periodicity}</span></div><StatusPill status={doc.status}/></div><p>{docType.appliesWhen}</p><div className="doc-foot"><span>Vence: {doc.expiry||"No cargado"}</span><span>{daysLeft===null?"—":daysLeft<0?`${Math.abs(daysLeft)} días vencido`:`${daysLeft} días`}</span></div>{doc.note&&<div className="note">{doc.note}</div>}</div>)}</div></div></motion.div>;
-}
-function PaymentsView({ payments, vendors }) {
-  const evaluations = payments.map((p)=>({payment:p, ...evaluatePayment(p, vendors)}));
-  return <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="content"><div className="grid three"><MetricCard icon={CheckCircle2} label="Liberados" value={evaluations.filter((e)=>e.decision==="released").length} helper="Cumplen reglas críticas"/><MetricCard icon={Clock} label="Condicionados" value={evaluations.filter((e)=>e.decision==="conditional").length} helper="Faltas no críticas"/><MetricCard icon={XCircle} label="Bloqueados" value={evaluations.filter((e)=>e.decision==="blocked").length} helper="Incumplimiento crítico"/></div><div className="card"><div className="card-head left"><h3>Evaluación automática de estados de pago</h3><p>El motor evalúa proveedor, contrato, recepción conforme, documentos críticos, F30-1, seguros, permisos y hallazgos.</p></div><div className="payments">{evaluations.map((e)=><div className="payment" key={e.payment.id}><div className="payment-head"><div><strong>{e.payment.id} · {e.vendor.legalName}</strong><span>Contrato {e.payment.contractId} · Período {e.payment.period} · {currency(e.payment.amountCLP)}</span></div><StatusPill status={e.decision}>{e.decision==="released"?"Liberado automático":e.decision==="conditional"?"Liberado condicionado":"Bloqueado"}</StatusPill></div>{e.blockers.length>0&&<div className="reason red"><strong>Motivos de bloqueo</strong><ul>{e.blockers.map((b,i)=><li key={i}>{b}</li>)}</ul></div>}{e.conditionals.length>0&&e.blockers.length===0&&<div className="reason yellow"><strong>Condiciones pendientes</strong><ul>{e.conditionals.map((b,i)=><li key={i}>{b}</li>)}</ul></div>}{e.blockers.length===0&&e.conditionals.length===0&&<div className="reason green">Pago liberado: no existen incumplimientos críticos ni condiciones pendientes.</div>}</div>)}</div></div></motion.div>;
-}
-function AuditView({ vendors }) { return <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="content"><div className="grid four"><MetricCard icon={ClipboardCheck} label="Eventos auditables" value={auditSeed.length} helper="Bitácora append-only"/><MetricCard icon={AlertTriangle} label="Hallazgos abiertos" value={vendors.flatMap((v)=>v.findings).filter((f)=>f.status==="open").length} helper="Priorizados por severidad"/><MetricCard icon={Lock} label="Excepciones" value="0" helper="Sin excepciones activas"/><MetricCard icon={Scale} label="Pagos auditables" value="3" helper="Con decisión trazable"/></div><div className="card"><div className="card-head left"><h3>Bitácora de auditoría</h3><p>Registro de acciones críticas, reglas aplicadas y evidencia de decisión.</p></div>{auditSeed.map((item)=><div className="audit" key={item.id}><div className="iconbox"><ClipboardCheck size={18}/></div><div><strong>{item.action}</strong><p>{item.actor} · {item.target}</p><span>{item.at}</span></div></div>)}</div></motion.div>; }
-function AdminView() { return <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="content"><div className="grid four"><MetricCard icon={Building2} label="Mandantes" value="1" helper="Ambiente demo"/><MetricCard icon={FileText} label="Tipos documentales" value={documentTypes.length} helper="Catálogo activo"/><MetricCard icon={ShieldCheck} label="Reglas activas" value="5" helper="Parametrizables"/><MetricCard icon={Lock} label="Seguridad" value="MFA" helper="RBAC + logs"/></div><div className="grid two"><div className="card"><h3>Catálogo documental</h3><div className="list">{documentTypes.map((d)=><div className="listitem" key={d.id}><div><strong>{d.name}</strong><span>{d.family} · Criticidad {d.criticality}</span></div><StatusPill status={d.blocksPayment?"blocked":"approved"}>{d.blocksPayment?"Bloquea pago":"No bloquea pago"}</StatusPill></div>)}</div></div><div className="card"><h3>Reglas base del motor</h3><div className="rules">{["Si proveedor tiene trabajadores asignados, exigir F30-1 mensual.","Si documento crítico está vencido, bloquear estado de pago.","Si documento vence en 15 días, notificar al proveedor.","Si hay observación no crítica, permitir liberación condicionada.","Si se confirma falsedad documental, suspender proveedor."].map((rule,i)=><div key={i}>{rule}</div>)}</div></div></div></motion.div>; }
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════════
 
 function App() {
-  const [vendors, setVendors] = useState(vendorsSeed);
-  const [payments] = useState(paymentClaimsSeed);
-  const [view, setView] = useState("dashboard");
   const [role, setRole] = useState("Mandante");
-  const [search, setSearch] = useState("");
-  const [selectedVendorId, setSelectedVendorId] = useState("v-001");
-  const filteredVendors = useMemo(()=>{ const q=search.trim().toLowerCase(); if(!q) return vendors; return vendors.filter((v)=>[v.legalName,v.rut,v.service,v.site,v.contractId].join(" ").toLowerCase().includes(q)); },[vendors,search]);
-  const selectedVendor = vendors.find((v)=>v.id===selectedVendorId)||vendors[0];
-  function onUploadDemo(){ setVendors((prev)=>prev.map((v)=> v.id!==selectedVendor.id ? v : { ...v, documents: { ...v.documents, ley_20393: { status:"approved", expiry:"2026-12-31", period:"2026", version:(v.documents.ley_20393?.version||0)+1 }, deuda_tgr: v.documents.deuda_tgr?.status==="observed" ? { status:"approved", expiry:"2026-05-31", period:"2026-05", version:2 } : v.documents.deuda_tgr } })); }
-  return <div className="app"><Sidebar role={role} setRole={setRole} view={view} setView={setView}/><main><Topbar search={search} setSearch={setSearch} view={view}/>{view==="dashboard"&&<DashboardMandante vendors={filteredVendors} payments={payments} setSelectedVendorId={(id)=>{setSelectedVendorId(id);setView("supplier");}}/>}{view==="supplier"&&<SupplierPortal vendor={selectedVendor} onUploadDemo={onUploadDemo}/>} {view==="payments"&&<PaymentsView payments={payments} vendors={vendors}/>} {view==="audit"&&<AuditView vendors={vendors}/>} {view==="admin"&&<AdminView/>}</main></div>;
+  const [plan, setPlan] = useState("Profesional");
+  const [activeView, setActiveView] = useState("dashboard");
+
+  // Reset to dashboard when role changes
+  useEffect(() => { setActiveView("dashboard"); }, [role]);
+
+  const navItems = ROLE_VIEWS[role] || ROLE_VIEWS.Mandante;
+
+  const renderView = () => {
+    const props = { role, plan };
+    switch (activeView) {
+      case "dashboard":      return <ViewDashboard {...props} />;
+      case "oportunidades":  return <ViewOportunidades {...props} />;
+      case "proveedores":    return <ViewProveedores {...props} />;
+      case "matching":       return <ViewMatching {...props} />;
+      case "hse":            return <ViewHSE {...props} />;
+      case "ambiental":      return <ViewAmbiental {...props} />;
+      case "riesgos":        return <ViewHSE {...props} />;
+      case "auditoria":      return <ViewAuditoria {...props} />;
+      case "mi-perfil":      return <ViewMiPerfil {...props} />;
+      case "documentos":     return <ViewProveedores {...props} />;
+      case "contratos":      return <ViewOportunidades {...props} />;
+      case "cumplimiento":   return <ViewAmbiental {...props} />;
+      case "mandantes":      return <ViewMandantes {...props} />;
+      case "planes":         return <ViewPlanes {...props} />;
+      case "api":            return <ViewApiKeys {...props} />;
+      default:               return <ViewDashboard {...props} />;
+    }
+  };
+
+  return (
+    <div className="app-frame">
+      <Sidebar
+        role={role}
+        activeView={activeView}
+        setView={setActiveView}
+        plan={plan}
+      />
+      <div className="main-container">
+        <Topbar
+          role={role} setRole={setRole}
+          plan={plan} setPlan={setPlan}
+          activeView={activeView}
+          navItems={navItems}
+        />
+        <div className="view-scroll">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${role}-${activeView}`}
+              initial={{ opacity:0, y:8 }}
+              animate={{ opacity:1, y:0 }}
+              exit={{ opacity:0, y:-8 }}
+              transition={{ duration:0.2, ease:"easeOut" }}
+            >
+              {renderView()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// MOUNT
+// ═══════════════════════════════════════════════════════════════════
 createRoot(document.getElementById("root")).render(<App />);

@@ -9,13 +9,14 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "typescript": "latest",
+    "framer-motion": "latest",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "framer-motion": "latest",
-    "lucide-react": "latest"
-  },
-  "devDependencies": {}
+    "recharts": "^2.15.4",
+    "typescript": "latest",
+    "vite": "latest"
+  }
 }
