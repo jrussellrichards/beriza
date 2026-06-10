@@ -16,9 +16,26 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
             cd /root/beriza
-            git pull origin main
+
+            # Force sync with remote — avoids divergent branch errors
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Build new image
             docker build -t beriza-app .
-            docker stop beriza-app
-            docker rm beriza-app
+
+            # Stop and remove existing container if it exists
+            docker stop beriza-app || true
+            docker rm beriza-app || true
+
+            # Kill any container occupying port 3002 (handles port-already-allocated)
+            CONFLICT=$(docker ps -q --filter "publish=3002") || true
+            if [ -n "$CONFLICT" ]; then
+              docker stop $CONFLICT || true
+              docker rm $CONFLICT || true
+            fi
+
+            # Launch new container
             docker run -d --name beriza-app --restart always -p 3002:80 beriza-app
