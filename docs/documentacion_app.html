@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BERISA - Sistema de Acreditación de Contratistas con IA</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React y ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babel para compilar JSX en el cliente -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons para componentes visuales modernos -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- DATA DEL FLUJO DE NEGOCIO ---
+        const businessRoles = [
+            { id: 'berisa', name: 'BERISA Admin', desc: 'Administra el catálogo global de pilares y requisitos. Onboarding de nuevos mandantes.', icon: 'Shield', badgeColor: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
+            { id: 'mandante', name: 'Administrador Mandante (HSE)', desc: 'Configura sus pilares, invita contratistas y visualiza el estado granular de cumplimiento. Aprueba excepciones justificadas desde su portal.', icon: 'Building', badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+            { id: 'contratista', name: 'Contratista / Prevencionista', desc: 'Registra la empresa, agrega trabajadores, sube documentos y corrige brechas detectadas por la IA.', icon: 'User', badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+            { id: 'ia', name: 'Sistema / Agente IA', desc: 'Clasifica documentos, extrae campos clave, evalúa reglas por nivel (empresa y trabajador) y genera resultados auditables 24/7.', icon: 'Cpu', badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20' }
+        ];
+
+        const businessStages = [
+            { id: 'setup', title: '0. Invitación y Setup', desc: 'El mandante configura sus pilares, requisitos y reglas, luego invita al contratista' },
+            { id: 'carga', title: '1. Registro y Carga', desc: 'El contratista registra empresa, trabajadores y sube documentos por nivel' },
+            { id: 'preauditoria', title: '2. Auditoría Automática IA', desc: 'El sistema extrae, clasifica y valida cada documento contra las reglas del mandante' },
+            { id: 'resolucion', title: '3. Resolución de Brechas', desc: 'El contratista corrige y el mandante aprueba excepciones desde su portal' },
+            { id: 'resultado', title: '4. Resultado Granular', desc: 'Dashboard de cumplimiento por pilar y trabajador visible para el mandante' }
+        ];
+
+        const businessFlowTasks = [
+            // Etapa 0 — setup previo a cualquier carga
+            {
+                id: 'B0',
+                title: 'BERISA configura el Catálogo Global de Pilares',
+                roleId: 'berisa',
+                stageId: 'setup',
+                summary: 'BERISA Admin crea y mantiene el catálogo global: pilares, subpilares y requisitos documentales disponibles para todos los mandantes.',
+                objective: 'El catálogo define qué puede existir en el sistema. Incluye los pilares estándar (Legal/Laboral, HSE, Compliance) y los adicionales que BERISA habilita según la industria del mandante (Ambiental, Tecnológico, Maquinaria, etc.). Ningún mandante puede crear pilares por su cuenta — solo selecciona del catálogo. Esto garantiza consistencia entre clientes y permite que BERISA evolucione el catálogo de forma centralizada.',
+                inputs: 'Análisis de la industria del mandante → decisión de BERISA sobre qué pilares y requisitos habilitar.',
+                outputs: 'Catálogo global actualizado con los pilares y requisitos disponibles para ese tipo de mandante.',
+                sla: 'Previo al onboarding del mandante (una vez por tipo de industria)',
+                risk: 'Si BERISA no crea un pilar en el catálogo, el mandante no puede exigirlo. El catálogo es responsabilidad exclusiva de BERISA.',
+                nextStep: 'El mandante selecciona y parametriza sus pilares (B0b)'
+            },
+            {
+                id: 'B0b',
+                title: 'El Mandante activa y parametriza sus Pilares',
+                roleId: 'mandante',
+                stageId: 'setup',
+                summary: 'El mandante selecciona del catálogo global qué pilares le aplican y configura sus parámetros propios: vigencia máxima, umbrales, obligatoriedad.',
+                objective: 'Cada mandante tiene su propio perfil de exigencia. Uno puede activar solo Legal + HSE básico; otro puede activar Legal + HSE + Compliance + Ambiental con reglas más estrictas. Esta configuración queda guardada y se aplica automáticamente a todos los contratistas que ese mandante invite — no se reconfigura por cada contratista.',
+                inputs: 'Selección de pilares/requisitos del catálogo global + parámetros: vigencia_max_dias, umbral_deuda_max, es_obligatorio.',
+                outputs: 'Perfil de requisitos persistido en mandante_requisito_config. Base para generar el checklist de cada contratista.',
+                sla: '15 a 30 minutos (configuración inicial, una sola vez)',
+                risk: 'Si el mandante activa pilares sin configurar parámetros, el sistema usa valores por defecto que pueden no reflejar sus exigencias reales.',
+                nextStep: 'Invitar al Contratista (B0c)'
+            },
+            {
+                id: 'B0c',
+                title: 'El Mandante invita al Contratista',
+                roleId: 'mandante',
+                stageId: 'setup',
+                summary: 'El mandante ingresa el RUT y email del contratista. El sistema crea el vínculo y envía la invitación. El contratista verá el checklist derivado de la configuración de pilares del mandante.',
+                objective: 'La invitación es el disparador del proceso para el contratista. Al aceptarla, el contratista ve exactamente qué documentos debe presentar ante ese mandante específico — incluyendo los pilares adicionales que el mandante haya activado. No hay ambigüedad desde el primer momento.',
+                inputs: 'RUT + razón social + email del prevencionista.',
+                outputs: 'EmpresaContratista creada en estado EN_PROCESO, link de activación enviado, checklist disponible en el portal del contratista.',
+                sla: '2 minutos',
+                risk: 'Sin invitación formal, el contratista no puede acreditarse ante ese mandante.',
+                nextStep: 'El contratista activa su cuenta y revisa su checklist (B1)'
+            },
+            // Etapa 1 — contratista sube documentos
+            {
+                id: 'B1',
+                title: 'Registro de Empresa y Documentos Corporativos',
+                roleId: 'contratista',
+                stageId: 'carga',
+                summary: 'El prevencionista registra la empresa contratista y sube los documentos a nivel corporativo.',
+                objective: 'Completar el perfil legal y de compliance de la empresa: F30, F30-1, vigencia de sociedad, RIOHS y declaración jurada. Estos documentos aplican a todos los proyectos del mismo mandante.',
+                inputs: 'Formulario web con RUT empresa + PDFs de documentos corporativos.',
+                outputs: 'Empresa registrada en plataforma con documentos en estado "Pendiente de Análisis".',
+                sla: '10 a 20 minutos (proceso del usuario)',
+                risk: 'Sin documentos corporativos válidos, ningún trabajador de la empresa puede ser acreditado — bloqueo en cascada.',
+                nextStep: 'Registro de Trabajadores (B2)'
+            },
+            {
+                id: 'B2',
+                title: 'Registro de Trabajadores y Documentos Individuales',
+                roleId: 'contratista',
+                stageId: 'carga',
+                summary: 'El prevencionista agrega cada trabajador por RUT y sube sus documentos individuales.',
+                objective: 'Registrar contrato de trabajo, liquidación de sueldo, examen médico de aptitud, DAS/inducción y entrega de EPP para cada persona. Un trabajador acreditado puede reutilizarse en futuras obras sin volver a subir documentos vigentes.',
+                inputs: 'RUT del trabajador + PDFs de documentos individuales por persona.',
+                outputs: 'Trabajadores registrados con documentos en estado "Pendiente de Análisis" por cada pilar.',
+                sla: '5 minutos por trabajador (ingreso manual, sin Excel en MVP)',
+                risk: 'Documentos individuales faltantes o vencidos generan responsabilidad solidaria directa para el mandante ante accidentes.',
+                nextStep: 'Auditoría Automática IA (B3)'
+            },
+            // Etapa 2
+            {
+                id: 'B3',
+                title: 'Clasificación y Extracción Automática',
+                roleId: 'ia',
+                stageId: 'preauditoria',
+                summary: 'El sistema convierte cada PDF a imagen, verifica que sea el documento correcto y extrae los campos clave.',
+                objective: 'Primero clasificar visualmente que el PDF corresponde al tipo solicitado (evitar fraude o error). Luego extraer en JSON los campos críticos: RUT, fechas de vigencia, montos, firmas.',
+                inputs: 'PDFs almacenados en S3, procesados por un Vision LLM con prompt estructurado.',
+                outputs: 'JSON validado por Pydantic con todos los campos del documento. Si la confianza de clasificación es baja, pasa a revisión humana.',
+                sla: '< 20 segundos por documento',
+                risk: 'Elimina el fraude documental (subir un PDF incorrecto para evadir un requisito) y los errores de lectura manual en grillas numéricas.',
+                nextStep: 'Validación de Reglas por Nivel (B4)'
+            },
+            {
+                id: 'B4',
+                title: 'Validación de Reglas por Nivel',
+                roleId: 'ia',
+                stageId: 'preauditoria',
+                summary: 'El motor de reglas evalúa cada documento extraído contra los requisitos configurados por el mandante.',
+                objective: 'Comparar los campos del JSON contra las reglas del mandante (ej: deuda ≤ umbral, certificado emitido hace ≤ 30 días, sin multas vigentes). La decisión es matemática y determinista — nunca la toma el LLM.',
+                inputs: 'JSON extraído por el Vision LLM + reglas configuradas en mandante_requisito_config.',
+                outputs: 'Estado por documento: APROBADO o OBSERVADO con mensaje de brecha exacto (ej: "F30-1 con 2 multas vigentes — límite: 0"). Resultado consolidado por pilar y por trabajador.',
+                sla: '< 5 segundos por documento',
+                risk: 'Garantiza que las reglas del mandante se aplican de forma uniforme — sin criterio subjetivo ni omisiones humanas.',
+                nextStep: 'Si hay brechas: Corrección por Contratista (B5). Si todo aprueba: Resultado Final (B7).'
+            },
+            // Etapa 3
+            {
+                id: 'B5',
+                title: 'Corrección de Brechas',
+                roleId: 'contratista',
+                stageId: 'resolucion',
+                summary: 'El prevencionista ve exactamente qué documentos fallaron, por qué, y sube la versión corregida.',
+                objective: 'El portal muestra cada brecha con lenguaje claro (no códigos de error): qué documento falló, qué campo no cumple y qué debe hacer para corregirlo. El sistema re-audita automáticamente al recibir el nuevo documento.',
+                inputs: 'Listado de brechas con descripción exacta generado por la IA en el portal del contratista.',
+                outputs: 'Nuevo PDF cargado en estado "Re-enviado" que dispara una nueva auditoría automática del documento específico.',
+                sla: 'Depende del contratista — el sistema envía recordatorios automáticos a las 24h y 48h.',
+                risk: 'El feedback preciso reduce las iteraciones de corrección — un contratista que entiende exactamente qué corregir no necesita llamar a soporte.',
+                nextStep: 'Aprobación de Excepción por Mandante (B6) o re-auditoría automática (B3)'
+            },
+            {
+                id: 'B6',
+                title: 'Aprobación de Excepción por Mandante',
+                roleId: 'mandante',
+                stageId: 'resolucion',
+                summary: 'El administrador HSE del mandante interviene para aprobar casos que las reglas no pueden resolver automáticamente.',
+                objective: 'Algunos casos requieren juicio humano: representantes con escrituras complejas, pagos en proceso de acreditación bancaria, situaciones de fuerza mayor. El mandante aprueba o rechaza con justificación escrita que queda en la bitácora.',
+                inputs: 'Panel de excepciones en el portal del mandante con el detalle del documento y la brecha detectada.',
+                outputs: 'Aprobación o rechazo manual con justificación registrada. Trazabilidad completa de quién aprobó, cuándo y por qué.',
+                sla: '2 a 4 horas laborables',
+                risk: 'Sin este paso, casos legítimos quedan bloqueados indefinidamente. La trazabilidad protege al mandante si la excepción se cuestiona en una auditoría posterior.',
+                nextStep: 'Resultado Final (B7)'
+            },
+            // Etapa 4
+            {
+                id: 'B7',
+                title: 'Dashboard Granular de Cumplimiento',
+                roleId: 'mandante',
+                stageId: 'resultado',
+                summary: 'El mandante ve en tiempo real el estado de cumplimiento de cada empresa, pilar y trabajador.',
+                objective: 'No solo saber si una empresa "cumple o no" — sino ver exactamente en qué pilar falla, qué trabajador tiene brechas y cuáles son. El mandante toma decisiones informadas: puede aprobar excepciones, bloquear el acceso o exigir corrección antes de una fecha.',
+                inputs: 'Resultados consolidados de todos los documentos evaluados por el sistema.',
+                outputs: 'Vista por empresa → pilares → trabajadores con estado (✅/❌) y descripción de cada brecha. Certificado PDF descargable para empresas con cumplimiento total.',
+                sla: 'Tiempo real (actualización automática al aprobar cualquier documento)',
+                risk: 'La visibilidad granular elimina la incertidumbre del mandante y reduce las llamadas y emails entre partes — todo el estado está en el portal.',
+                nextStep: 'Monitoreo continuo de vencimientos (Fase 2)'
+            },
+            {
+                id: 'B8',
+                title: 'Notificación de Resultado al Contratista',
+                roleId: 'ia',
+                stageId: 'resultado',
+                summary: 'El sistema notifica al prevencionista el resultado final y las brechas pendientes si las hay.',
+                objective: 'El contratista no debe entrar al portal para saber si está acreditado — recibe un email/notificación con el estado consolidado, el detalle de brechas y un link directo a la corrección.',
+                inputs: 'Resultado final de auditoría de todos los pilares.',
+                outputs: 'Email/notificación con estado ACREDITADO o resumen de brechas pendientes con links de acción directa.',
+                sla: '< 1 minuto tras completar la evaluación',
+                risk: 'Sin notificación proactiva, el contratista no sabe que está bloqueado hasta que su trabajador no puede entrar a la obra.',
+                nextStep: 'Certificado de Acreditación (B9)'
+            },
+            {
+                id: 'B9',
+                title: 'Certificado de Acreditación y Acceso a la Obra',
+                roleId: 'contratista',
+                stageId: 'resultado',
+                summary: 'El contratista recibe su certificado digital de acreditación y sus trabajadores quedan habilitados para ingresar a la obra.',
+                objective: 'La acreditación no es un estado interno — tiene un efecto concreto: los trabajadores acreditados pueden ingresar a la faena. El certificado PDF es descargable, tiene fecha de vigencia (determinada por el documento que vence primero) y puede presentarse en portería. Si un documento vence, la acreditación se revoca automáticamente (Fase 2: alertas proactivas antes del vencimiento).',
+                inputs: 'Estado ACREDITADA en contratistas_mandantes + documentos todos en estado 4 (Aprobado).',
+                outputs: 'Certificado PDF con QR verificable, fecha de vigencia del conjunto, listado de trabajadores habilitados por pilar.',
+                sla: 'Generación instantánea al alcanzar estado ACREDITADA',
+                risk: 'Si la vigencia no se monitorea, un documento puede vencer silenciosamente y la empresa queda operando sin acreditación válida — responsabilidad solidaria del mandante ante un accidente.',
+                nextStep: 'Monitoreo de vencimientos (Fase 2) — alertas automáticas antes de que expire cualquier documento del conjunto'
+            }
+        ];
+
+        // --- DATA DE LOS PILARES ---
+        const pillarsData = [
+            {
+                id: 'legal',
+                title: 'Pilar 1: Riesgo Legal y Laboral',
+                icon: 'ShieldAlert',
+                color: 'border-amber-500 text-amber-400 bg-amber-950/20',
+                badge: 'Crítico / Previsional',
+                subpillars: [
+                    {
+                        name: '1.1 Cumplimiento Previsional de la Empresa',
+                        docs: [
+                            { code: 'F30-1', name: 'Certificado de Antecedentes Laborales', desc: 'Emite Dirección del Trabajo. Valida deudas y multas.', keyFields: ['RUT_Empresa', 'Numero_Multas', 'Monto_Deuda_Total', 'Fecha_Emision'] },
+                            { code: 'F30', name: 'Declaración y Pago de Cotizaciones', desc: 'Comprobante de pago previsional de todos los trabajadores.', keyFields: ['Periodo_Tributario', 'Total_Imponible', 'Monto_Pagado', 'Numero_Trabajadores'] }
+                        ]
+                    },
+                    {
+                        name: '1.2 Relación Contractual del Personal',
+                        docs: [
+                            { code: 'CONTRATO', name: 'Contrato de Trabajo', desc: 'Firmado por ambas partes, especifica faena/obra y vigencia.', keyFields: ['RUT_Trabajador', 'RUT_Empleador', 'Fecha_Inicio', 'Fecha_Termino', 'Cargo'] },
+                            { code: 'LIQ_SUELDO', name: 'Liquidación de Sueldo', desc: 'Mes inmediatamente anterior, con firma o comprobante de pago.', keyFields: ['RUT_Trabajador', 'Mes_Liquidacion', 'Sueldo_Liquido', 'Firma_Recibido'] }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'operacional',
+                title: 'Pilar 2: Riesgo Operacional e Higiene/Seguridad (HSE)',
+                icon: 'HardHat',
+                color: 'border-sky-500 text-sky-400 bg-sky-950/20',
+                badge: 'Salud y Seguridad',
+                subpillars: [
+                    {
+                        name: '2.1 Gestión Preventiva Corporativa',
+                        docs: [
+                            { code: 'MIPER', name: 'Matriz de Identificación de Riesgos', desc: 'Análisis de riesgos específico para el proyecto.', keyFields: ['Fecha_Aprobacion', 'Codigo_Proyecto', 'Firma_Experto_Prevencion'] },
+                            { code: 'RIOHS', name: 'Reglamento Interno (RIOHS)', desc: 'Copia depositada en el Ministerio de Salud / DT.', keyFields: ['Fecha_Deposito', 'RUT_Empresa', 'Timbre_Recepcion'] }
+                        ]
+                    },
+                    {
+                        name: '2.2 Aptitud y Capacitación Laboral',
+                        docs: [
+                            { code: 'DAS', name: 'Derecho a Saber / Inducción', desc: 'Charla obligatoria de riesgos específicos del cargo en la obra.', keyFields: ['RUT_Trabajador', 'Fecha_Charla', 'Relator_RUT', 'Firma_Trabajador'] },
+                            { code: 'EXAM_MED', name: 'Examen de Aptitud Médica', desc: 'Examen ocupacional vigente (Altura, espacios confinados, etc.)', keyFields: ['RUT_Trabajador', 'Tipo_Examen', 'Vigencia_Hasta', 'Resultado_Apto'] },
+                            { code: 'EPP', name: 'Entrega de EPP', desc: 'Registro de entrega de elementos de protección personal.', keyFields: ['RUT_Trabajador', 'Fecha_Entrega', 'Detalle_Equipos'] }
+                        ]
+                    },
+                    {
+                        name: '2.3 Maquinaria y Equipos Críticos',
+                        docs: [
+                            { code: 'CHECK_MAQ', name: 'Check-list de Ingreso Técnico', desc: '⏳ Fase 2 — No MVP. Complica el modelo de datos y el onboarding inicial. Se incorpora cuando el flujo de personas esté validado.', keyFields: ['Patente_ID', 'Fecha_Revision', 'Aprobado_Mecanico', 'Vencimiento_Revision'] }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'compliance',
+                title: 'Pilar 3: Compliance y Salud Financiera',
+                icon: 'Briefcase',
+                color: 'border-emerald-500 text-emerald-400 bg-emerald-950/20',
+                badge: 'Finanzas y Prevención de Delitos',
+                subpillars: [
+                    {
+                        name: '3.1 Solvencia Financiera',
+                        docs: [
+                            { code: 'CARP_TRIB', name: 'Carpeta Tributaria Electrónica', desc: 'Carpeta para solicitar créditos del SII para análisis financiero.', keyFields: ['RUT_Empresa', 'Codigo_Verificacion', 'IVA_12_Meses', 'Patrimonio_Neto'] },
+                            { code: 'VIG_SOCIEDAD', name: 'Certificado de Vigencia de Sociedad', desc: 'Registro de comercio que acredita personería jurídica.', keyFields: ['Razon_Social', 'RUT_Representante', 'Fecha_Registro'] }
+                        ]
+                    },
+                    {
+                        name: '3.2 Compliance y KYC',
+                        docs: [
+                            { code: 'DJ_CONFLICTO', name: 'Declaración Jurada de Interés', desc: 'Garantía de no poseer conflictos de interés con el mandante.', keyFields: ['RUT_Representante', 'Fecha_Firma', 'Declaracion_No_Conflicto'] }
+                        ]
+                    }
+                ]
+            },
+        ];
+
+        // --- DATA DEL PIPELINE DE IA ---
+        const pipelineSteps = [
+            {
+                id: 'upload',
+                title: '1. Ingesta & Carga',
+                actor: 'Contratista',
+                desc: 'Arrastra un PDF en el portal web.',
+                tech: 'S3 Storage / FastAPI Multipart Upload',
+                color: 'from-amber-600/30 to-amber-950/20 border-amber-600',
+                icon: 'Upload',
+                details: {
+                    title: 'Procesamiento de Ingesta',
+                    body: 'El frontend valida el tamaño (<15MB) y la extensión (.pdf, .jpg). Genera un ID de transacción documental único y envía un webhook al backend en FastAPI.',
+                    code: `POST /api/v1/acreditacion/upload
+Content-Type: multipart/form-data
+Payload: { "requisito_documental_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d", "contractor_id": "88" }`
+                }
+            },
+            {
+                id: 'classification',
+                title: '2. Clasificación Visual',
+                actor: 'Agente de IA (Vision)',
+                desc: 'Valida que el archivo subido corresponda al tipo solicitado.',
+                tech: 'Vision LLM (por definir) / Clasificador de Layouts',
+                color: 'from-blue-600/30 to-blue-950/20 border-blue-600',
+                icon: 'Eye',
+                details: {
+                    title: 'Clasificador de Layouts',
+                    body: 'Para evitar fraudes (ej. subir una hoja en blanco o receta médica para evadir el F30-1), el modelo visualiza el layout completo. Si la probabilidad del tipo de documento es menor a 90%, lo rechaza inmediatamente.',
+                    code: `# Prompt del Agente Clasificador
+SYSTEM_PROMPT = """Analiza la primera página de este documento. Clasifícalo únicamente como uno de los siguientes: [F30-1, F30, CONTRATO_TRABAJO, EXAMEN_MEDICO, OTRO]. Si es 'OTRO', detalla la razón del rechazo."""`
+                }
+            },
+            {
+                id: 'parser',
+                title: '3. Extracción de Campos con Vision LLM',
+                actor: 'Agente de IA (Vision)',
+                desc: 'El PDF se convierte a imagen y el modelo de visión extrae directamente los campos clave.',
+                tech: 'Vision LLM (por definir) / PDF-to-Image',
+                color: 'from-purple-600/30 to-purple-950/20 border-purple-600',
+                icon: 'Cpu',
+                details: {
+                    title: 'Extracción directa vía Vision LLM',
+                    body: 'En lugar de un parser dedicado, se convierte cada página del PDF a imagen y se le pasa al modelo de visión con un prompt estructurado. El modelo devuelve directamente los campos en JSON, manejando tablas y layouts complejos de forma nativa. Más simple de mantener y sin dependencias de librerías adicionales.',
+                    code: `# Pseudocódigo — modelo de visión por definir
+pages = pdf_to_images("documento_contratista.pdf")
+
+response = vision_llm.extract(
+    images=pages,
+    prompt="Extrae del documento: RUT empresa, número de multas vigentes, monto deuda total, fecha de emisión. Responde SOLO en JSON.",
+    output_schema=CertificadoF301  # Pydantic valida el resultado
+)`
+                }
+            },
+            {
+                id: 'extractor',
+                title: '4. Estructuración con Pydantic',
+                actor: 'Agente Extractor (LLM)',
+                desc: 'Transforma el texto plano en variables estructuradas exactas.',
+                tech: 'LLM Function Calling / Structured Outputs',
+                color: 'from-emerald-600/30 to-emerald-950/20 border-emerald-600',
+                icon: 'FileJson',
+                details: {
+                    title: 'Esquema de Validación Pydantic',
+                    body: 'Forzamos al LLM a devolver un esquema estructurado estricto. Si falta una variable clave o el formato es incorrecto, el parser de Pydantic gatilla una re-evaluación del prompt.',
+                    code: `from pydantic import BaseModel, Field, field_validator
+from typing import Optional
+
+class CertificadoF301(BaseModel):
+    rut_empresa: str = Field(description="RUT de la empresa evaluada en formato XX.XXX.XXX-X")
+    numero_multas_vigentes: int = Field(description="Cantidad total de multas laborales no resueltas")
+    monto_deuda_total: float = Field(description="Monto consolidado adeudado en pesos chilenos")
+    fecha_emision: str = Field(description="Fecha de emisión del certificado (ISO YYYY-MM-DD)")
+
+    @field_validator("rut_empresa")
+    def valida_rut(cls, v):
+        # Validador de dígito verificador y guión
+        return sanitizar_rut(v)`
+                }
+            },
+            {
+                id: 'rules',
+                title: '5. Validación con Reglas Hardcodeadas',
+                actor: 'Motor de Reglas (Código)',
+                desc: 'Evalúa la aprobación de forma matemática y determinista con lógica directa en código.',
+                tech: 'Lógica de negocio en código / MVP',
+                color: 'from-pink-600/30 to-pink-950/20 border-pink-600',
+                icon: 'Sliders',
+                details: {
+                    title: 'Reglas deterministas en código (MVP)',
+                    body: 'Las decisiones de aprobación NUNCA se dejan al criterio libre de un LLM. En MVP las reglas van directamente en código — más fácil de debuggear y cambiar que un motor JSON externo. Cuando haya múltiples mandantes con reglas distintas, se migra a un motor configurable.',
+                    code: `def validar_f30_1(datos: CertificadoF301) -> ResultadoValidacion:
+    errores = []
+
+    if datos.numero_multas_vigentes > 0:
+        errores.append(f"Presenta {datos.numero_multas_vigentes} multa(s) vigente(s) en la DT.")
+
+    if datos.monto_deuda_total > 1000:
+        errores.append(f"Deuda previsional de \${datos.monto_deuda_total:,.0f} supera el límite permitido.")
+
+    if datos.dias_desde_emision > 30:
+        errores.append(f"Certificado emitido hace {datos.dias_desde_emision} días — máximo permitido: 30.")
+
+    return ResultadoValidacion(
+        aprobado=len(errores) == 0,
+        estado=4 if not errores else 3,
+        observaciones=errores
+    )`
+                }
+            },
+            {
+                id: 'states',
+                title: '6. Actualización de Estado',
+                actor: 'Core ERP / API',
+                desc: 'Modifica el estado en el portal (Aprobado o Rechazado).',
+                tech: 'Postgres State Machine / Webhooks',
+                color: 'from-teal-600/30 to-teal-950/20 border-teal-600',
+                icon: 'CheckCircle',
+                details: {
+                    title: 'Transición de Estados y Notificaciones',
+                    body: 'Si pasa las reglas, se actualiza a Estado 4 (Aprobado). Si falla, pasa a Estado 3 (Observado) y la IA genera un correo automatizado detallando la subsanación.',
+                    code: `UPDATE documentos
+SET estado = 3,
+    mensaje_brecha = 'El certificado F30-1 presenta 2 multas vigentes no resueltas por la DT.'
+WHERE id = :document_id;
+-- Si todos los pilares pasan, actualiza contratistas_mandantes.estado_acreditacion = 'ACREDITADA'
+-- y gatilla la notificación por email al contratista.`
+                }
+            }
+        ];
+
+        // --- DATA DEL MODELO RELACIONAL (ERD) ---
+        const erdTables = [
+            {
+                name: 'mandantes',
+                icon: 'Building',
+                color: 'border-amber-500 bg-amber-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID único del mandante (tenant)' },
+                    { name: 'razon_social', type: 'VARCHAR(255)', desc: 'Nombre legal de la empresa mandante' },
+                    { name: 'rut', type: 'VARCHAR(12)', desc: 'RUT del mandante (único)' },
+                    { name: 'slug', type: 'VARCHAR(100)', desc: 'Identificador único para URLs (ej: codelco-norte)' },
+                    { name: 'activo', type: 'BOOLEAN', desc: 'Si el mandante está habilitado en la plataforma' },
+                    { name: 'created_at', type: 'TIMESTAMP', desc: 'Fecha de registro en la plataforma' }
+                ]
+            },
+            {
+                name: 'mandante_requisito_config',
+                icon: 'Sliders',
+                color: 'border-orange-500 bg-orange-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID de la configuración' },
+                    { name: 'mandante_id', type: 'UUID (FK)', desc: 'Relación con mandantes.id' },
+                    { name: 'requisito_documental_id', type: 'UUID (FK)', desc: 'Relación con requisitos_documentales.id' },
+                    { name: 'es_obligatorio', type: 'BOOLEAN', desc: 'Si este requisito es bloqueante para este mandante' },
+                    { name: 'vigencia_max_dias', type: 'INT', desc: 'Días máx de antigüedad que acepta este mandante (ej: 30)' },
+                    { name: 'umbral_deuda_max', type: 'NUMERIC(12,2)', desc: 'Monto máximo de deuda aceptado — configurable por mandante' }
+                ]
+            },
+            {
+                name: 'pilares',
+                icon: 'ShieldAlert',
+                color: 'border-amber-500 bg-amber-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID único del pilar' },
+                    { name: 'codigo', type: 'VARCHAR(50)', desc: 'LEGAL | HSE | COMPLIANCE' },
+                    { name: 'nombre', type: 'VARCHAR(255)', desc: 'Nombre del pilar de gobernanza' },
+                    { name: 'descripcion', type: 'TEXT', desc: 'Descripción del alcance del pilar' },
+                    { name: 'orden', type: 'INT', desc: 'Orden de presentación en el dashboard' }
+                ]
+            },
+            {
+                name: 'subpilares',
+                icon: 'Sliders',
+                color: 'border-sky-500 bg-sky-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID único del subpilar' },
+                    { name: 'pilar_id', type: 'UUID (FK)', desc: 'Relación con pilares.id' },
+                    { name: 'codigo', type: 'VARCHAR(50)', desc: 'Ej: PREVISIONAL, CAPACITACION' },
+                    { name: 'nombre', type: 'VARCHAR(255)', desc: 'Nombre descriptivo del subpilar' },
+                    { name: 'orden', type: 'INT', desc: 'Orden de presentación dentro del pilar' }
+                ]
+            },
+            {
+                name: 'requisitos_documentales',
+                icon: 'FileJson',
+                color: 'border-emerald-500 bg-emerald-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID único del requisito' },
+                    { name: 'subpilar_id', type: 'UUID (FK)', desc: 'Relación con subpilares.id' },
+                    { name: 'codigo', type: 'VARCHAR(50)', desc: 'Ej: F30_1, MIPER, EXAM_MED (único)' },
+                    { name: 'nombre', type: 'VARCHAR(255)', desc: 'Nombre del documento requerido' },
+                    { name: 'entidad_tipo', type: 'VARCHAR(20)', desc: 'EMPRESA | TRABAJADOR — a quién aplica el documento' },
+                    { name: 'descripcion', type: 'TEXT', desc: 'Descripción del documento y su propósito' }
+                ]
+            },
+            {
+                name: 'documentos',
+                icon: 'FileText',
+                color: 'border-purple-500 bg-purple-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID único del documento físico' },
+                    { name: 'requisito_id', type: 'UUID (FK)', desc: 'Relación con requisitos_documentales.id' },
+                    { name: 'mandante_id', type: 'UUID (FK)', desc: 'Relación con mandantes.id — scope del análisis' },
+                    { name: 'empresa_id', type: 'UUID (FK, nullable)', desc: 'Empresa dueña — XOR con trabajador_id' },
+                    { name: 'trabajador_id', type: 'UUID (FK, nullable)', desc: 'Trabajador dueño — XOR con empresa_id' },
+                    { name: 'estado', type: 'INT', desc: '1=Enviado | 2=En Análisis | 3=Observado | 4=Aprobado' },
+                    { name: 'archivo_url', type: 'VARCHAR(512)', desc: 'Key en storage (local o S3) — nunca URL firmada' },
+                    { name: 'campos_extraidos', type: 'JSON', desc: 'Campos extraídos por el Vision LLM, validados con Pydantic' },
+                    { name: 'mensaje_brecha', type: 'TEXT', desc: 'Descripción exacta del motivo de rechazo en lenguaje claro' },
+                    { name: 'fecha_vigencia_hasta', type: 'DATE', desc: 'Vigencia extraída del documento por la IA' },
+                    { name: 'frecuencia_renovacion_dias', type: 'INT', desc: 'Periodicidad de renovación (para alertas en Fase 2)' },
+                    { name: 'aprobado_por_excepcion', type: 'BOOLEAN', desc: 'True si el mandante_admin aprobó manualmente' },
+                    { name: 'justificacion_excepcion', type: 'TEXT', desc: 'Razón escrita por el mandante al aprobar la excepción' },
+                    { name: 'aprobado_por_usuario_id', type: 'UUID (FK)', desc: 'Usuario que aprobó la excepción (trazabilidad)' },
+                    { name: 'aprobado_en', type: 'TIMESTAMP', desc: 'Fecha y hora de la aprobación por excepción' }
+                ]
+            },
+            {
+                name: 'empresas_contratistas',
+                icon: 'Building',
+                color: 'border-blue-500 bg-blue-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID de la empresa contratista' },
+                    { name: 'rut', type: 'VARCHAR(12)', desc: 'RUT legal de la empresa (único)' },
+                    { name: 'razon_social', type: 'VARCHAR(255)', desc: 'Nombre legal de la sociedad' },
+                    { name: 'giro', type: 'VARCHAR(255)', desc: 'Rubro o actividad económica principal' }
+                ]
+            },
+            {
+                name: 'contratistas_mandantes',
+                icon: 'Sliders',
+                color: 'border-indigo-500 bg-indigo-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID del vínculo' },
+                    { name: 'contratista_id', type: 'UUID (FK)', desc: 'Relación con empresas_contratistas.id' },
+                    { name: 'mandante_id', type: 'UUID (FK)', desc: 'Relación con mandantes.id' },
+                    { name: 'estado_acreditacion', type: 'VARCHAR(20)', desc: 'PENDIENTE | EN_PROCESO | ACREDITADA | BLOQUEADA — por mandante' }
+                ]
+            },
+            {
+                name: 'trabajadores',
+                icon: 'User',
+                color: 'border-teal-500 bg-teal-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID del trabajador' },
+                    { name: 'empresa_id', type: 'UUID (FK)', desc: 'Relación con empresas_contratistas.id' },
+                    { name: 'rut', type: 'VARCHAR(12)', desc: 'Cédula de identidad' },
+                    { name: 'nombre_completo', type: 'VARCHAR(255)', desc: 'Nombre completo del colaborador' },
+                    { name: 'cargo', type: 'VARCHAR(255)', desc: 'Cargo o función en la obra' },
+                    { name: 'activo', type: 'BOOLEAN', desc: 'False = desvinculado, no aparece en el dashboard' }
+                ]
+            },
+            {
+                name: 'usuarios',
+                icon: 'User',
+                color: 'border-rose-500 bg-rose-950/20',
+                fields: [
+                    { name: 'id', type: 'UUID (PK)', desc: 'ID del usuario' },
+                    { name: 'email', type: 'VARCHAR(255)', desc: 'Email de acceso (único en la plataforma)' },
+                    { name: 'nombre', type: 'VARCHAR(255)', desc: 'Nombre completo del usuario' },
+                    { name: 'password_hash', type: 'VARCHAR(255)', desc: 'Hash bcrypt de la contraseña' },
+                    { name: 'rol', type: 'VARCHAR(30)', desc: 'berisa_admin | mandante_admin | contratista_admin | prevencionista' },
+                    { name: 'activo', type: 'BOOLEAN', desc: 'False = cuenta invitada pendiente de activación' },
+                    { name: 'mandante_id', type: 'UUID (FK, nullable)', desc: 'Si pertenece a un mandante — XOR con contratista_id' },
+                    { name: 'contratista_id', type: 'UUID (FK, nullable)', desc: 'Si pertenece a un contratista — XOR con mandante_id' }
+                ]
+            }
+        ];
+
+        // --- DATA DE ESTADOS DE DOCUMENTO ---
+        const documentStates = [
+            {
+                id: 1, name: 'Enviado', color: 'bg-slate-500', border: 'border-slate-500',
+                what: 'El contratista acaba de subir el PDF al portal. El sistema lo recibió pero aún no lo ha procesado.',
+                who: 'Contratista',
+                next: 'El sistema toma el documento automáticamente para análisis → Estado 2'
+            },
+            {
+                id: 2, name: 'En Análisis', color: 'bg-blue-500', border: 'border-blue-500',
+                what: 'La IA está procesando el documento: primero verifica que el PDF corresponde al tipo solicitado (ej: que un F30-1 sea realmente un F30-1), luego extrae los campos clave (RUT, fechas, montos, firmas).',
+                who: 'Sistema IA',
+                next: 'Si los campos extraídos cumplen las reglas del mandante → Estado 4 (Aprobado). Si no cumplen o el documento no es legible → Estado 3 (Observado) con mensaje exacto'
+            },
+            {
+                id: 3, name: 'Observado', color: 'bg-rose-500', border: 'border-rose-500',
+                what: 'El documento fue rechazado. Puede ser porque no cumple las reglas del mandante (ej: deuda mayor al umbral, certificado vencido) o porque la IA no pudo leerlo bien (PDF escaneado ilegible). En ambos casos el sistema indica exactamente qué falló.',
+                who: 'Sistema IA',
+                next: 'El contratista corrige y re-sube → vuelve a Estado 1 → 2 → 3 (si sigue fallando) o → 4 (si ya cumple)'
+            },
+            {
+                id: 4, name: 'Aprobado', color: 'bg-emerald-500', border: 'border-emerald-500',
+                what: 'El documento cumple todos los requisitos configurados por el mandante. Queda registrado como válido con su fecha de vigencia. Si el mandante aprobó una excepción manualmente, también llega a este estado con la justificación registrada.',
+                who: 'Sistema IA / Mandante (excepción)',
+                next: 'Documento vigente y trazable. Cuando venza, el sistema alerta al contratista para renovarlo (Fase 2)'
+            },
+        ];
+
+        // --- DATA DE ROLES Y PERMISOS ---
+        const userRoles = [
+            {
+                role: 'BERISA Admin',
+                icon: 'ShieldAlert',
+                color: 'border-amber-500 bg-amber-950/20 text-amber-400',
+                desc: 'Superadministrador de la plataforma. Gestiona mandantes, configuraciones y accesos.',
+                permissions: [
+                    'Crear y configurar mandantes (requisitos, reglas, umbrales)',
+                    'Invitar contratistas a la plataforma (por email)',
+                    'Ver todas las acreditaciones de todos los mandantes',
+                    'Gestionar planes y facturación de contratistas',
+                    'Acceso total de lectura/escritura en la plataforma',
+                ]
+            },
+            {
+                role: 'Mandante Admin (HSE)',
+                icon: 'Building',
+                color: 'border-purple-500 bg-purple-950/20 text-purple-400',
+                desc: 'Administrador del mandante. Visualiza y gestiona la acreditación de sus contratistas.',
+                permissions: [
+                    'Ver dashboard granular: empresa → pilares → trabajadores',
+                    'Aprobar excepciones con justificación escrita (trazable)',
+                    'Descargar certificados de contratistas acreditados',
+                    'Ver historial de auditorías y cambios de estado',
+                    'Invitar usuarios adicionales de su misma empresa',
+                ]
+            },
+            {
+                role: 'Contratista Admin',
+                icon: 'User',
+                color: 'border-sky-500 bg-sky-950/20 text-sky-400',
+                desc: 'Responsable principal de la empresa contratista. Gestiona el proceso de acreditación completo.',
+                permissions: [
+                    'Registrar y editar perfil de la empresa',
+                    'Agregar, editar y desactivar trabajadores',
+                    'Subir documentos corporativos e individuales',
+                    'Ver estado de acreditación y brechas en detalle',
+                    'Invitar prevencionistas adicionales de su empresa',
+                ]
+            },
+            {
+                role: 'Prevencionista',
+                icon: 'HardHat',
+                color: 'border-teal-500 bg-teal-950/20 text-teal-400',
+                desc: 'Usuario operativo del contratista. Ejecuta la carga documental del día a día.',
+                permissions: [
+                    'Agregar trabajadores (sin poder eliminarlos)',
+                    'Subir y actualizar documentos por trabajador y empresa',
+                    'Ver estado de brechas y feedback de la IA',
+                    'Recibir notificaciones del sistema',
+                ]
+            },
+        ];
+
+        // --- DATA DE ONBOARDING ---
+        const onboardingSteps = [
+            {
+                id: 'O1',
+                actor: 'BERISA Admin',
+                actorColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                title: 'Alta y Configuración del Mandante',
+                desc: 'BERISA crea el mandante en la plataforma y configura sus requisitos: qué pilares exige, qué documentos son obligatorios, con qué vigencias máximas y umbrales de deuda.',
+                output: 'Mandante activo con reglas configuradas. Sin este paso, ningún contratista puede acreditarse ante ese mandante.',
+            },
+            {
+                id: 'O2',
+                actor: 'BERISA Admin',
+                actorColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                title: 'Invitación al Contratista',
+                desc: 'BERISA envía un email de invitación al RUT y correo de la empresa contratista. El link incluye un token único asociado al mandante correspondiente — el contratista sabe desde el primer clic para qué mandante se está acreditando.',
+                output: 'Email enviado con link de activación (expira en 72 horas).',
+            },
+            {
+                id: 'O3',
+                actor: 'Contratista',
+                actorColor: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+                title: 'Activación de Cuenta',
+                desc: 'El contratista hace clic en el link, crea su contraseña y completa el perfil básico: RUT empresa, razón social y datos de contacto del prevencionista responsable.',
+                output: 'Cuenta activa. Empresa registrada en plataforma como Contratista Admin.',
+            },
+            {
+                id: 'O4',
+                actor: 'Contratista',
+                actorColor: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+                title: 'Inicio del Proceso de Acreditación',
+                desc: 'El sistema muestra el checklist completo de requisitos del mandante: qué documentos corporativos necesita y qué documentos individuales necesita cada trabajador. El contratista sabe exactamente qué tiene que hacer sin leer un manual.',
+                output: 'Proceso de acreditación iniciado → flujo de negocio B1.',
+            },
+        ];
+
+        // --- DATA DASHBOARD CONTRATISTA ---
+        const contratistaDashboard = [
+            {
+                section: 'Estado General de Acreditación',
+                icon: 'CheckCircle',
+                color: 'border-emerald-500 bg-emerald-950/20 text-emerald-400',
+                desc: 'Resumen visual del estado global de la empresa ante cada mandante al que está postulando.',
+                items: [
+                    'Indicador global por mandante: ACREDITADO / EN PROCESO / CON BRECHAS',
+                    'Porcentaje de cumplimiento por pilar (Pilar 1, 2, 3)',
+                    'Cantidad de documentos aprobados vs pendientes vs observados',
+                ]
+            },
+            {
+                section: 'Documentos Corporativos',
+                icon: 'Briefcase',
+                color: 'border-sky-500 bg-sky-950/20 text-sky-400',
+                desc: 'Vista de todos los documentos a nivel empresa con su estado actual.',
+                items: [
+                    'Lista de documentos requeridos por el mandante (F30, F30-1, RIOHS, etc.)',
+                    'Estado de cada documento (Enviado / En Análisis / Observado / Aprobado)',
+                    'Botón de carga o re-carga por documento',
+                    'Mensaje exacto de la brecha si está Observado',
+                ]
+            },
+            {
+                section: 'Trabajadores',
+                icon: 'User',
+                color: 'border-amber-500 bg-amber-950/20 text-amber-400',
+                desc: 'Lista de trabajadores registrados con su estado de acreditación individual.',
+                items: [
+                    'Tabla de trabajadores con nombre, RUT y estado global (✅ / ❌)',
+                    'Al hacer clic en un trabajador: detalle de sus documentos por pilar',
+                    'Acceso rápido para agregar nuevo trabajador',
+                    'Indicador de qué documentos le faltan o están observados por persona',
+                ]
+            },
+            {
+                section: 'Brechas Pendientes',
+                icon: 'ShieldAlert',
+                color: 'border-rose-500 bg-rose-950/20 text-rose-400',
+                desc: 'Vista consolidada de todo lo que falta o falló, para que el prevencionista sepa exactamente qué hacer.',
+                items: [
+                    'Lista priorizada de brechas activas (empresa + trabajadores)',
+                    'Descripción exacta de cada brecha en lenguaje claro (no códigos de error)',
+                    'Link directo al documento a corregir desde cada brecha',
+                    'Sin esta vista, el prevencionista tiene que revisar uno por uno',
+                ]
+            },
+        ];
+
+        // --- DATA VENCIMIENTOS (FASE 2) ---
+        const vencimientosNota = [
+            {
+                titulo: 'Qué es un vencimiento',
+                desc: 'Un documento Aprobado tiene una fecha de vigencia (ej: el F30 vence cada mes, un examen médico puede durar 12 meses). Cuando esa fecha pasa, el documento deja de ser válido aunque haya sido aprobado.'
+            },
+            {
+                titulo: 'Por qué es crítico',
+                desc: 'Sin gestión de vencimientos, un contratista puede estar acreditado hoy y bloqueado mañana sin saberlo. El mandante tampoco lo sabe hasta que lo revisa manualmente. Esto genera conflictos en terreno.'
+            },
+            {
+                titulo: 'Diseño de base de datos hoy (para no rediseñar en Fase 2)',
+                desc: 'La tabla documentos ya incluye desde el inicio: fecha_vigencia_hasta (extraída por la IA del documento) y frecuencia_renovacion_dias. La vigencia_max_dias y umbral_deuda_max viven en mandante_requisito_config para que cada mandante configure sus propias reglas. Con estos campos, la alerta de vencimiento es solo un cron job.'
+            },
+            {
+                titulo: 'Comportamiento en Fase 2',
+                desc: 'El sistema enviará notificaciones al contratista a los 30, 15 y 7 días antes del vencimiento. Si el documento vence sin renovación, el estado vuelve automáticamente a "Enviado" (Estado 1) forzando una nueva carga. El mandante ve el cambio en tiempo real en su dashboard.'
+            },
+        ];
+
+        // --- DATA ARQUITECTURA ---
+        const architectureData = {
+            layers: [
+                {
+                    id: 'presentation', label: 'Capa de Presentación', color: 'amber',
+                    arrow: 'HTTPS / REST JSON',
+                    boxes: [
+                        { title: 'Portal Contratista', sub: 'Registro, carga de docs, estado de brechas', tags: ['Next.js 15', 'React', 'Shadcn/UI'] },
+                        { title: 'Portal Mandante', sub: 'Dashboard granular por empresa / pilar / trabajador', tags: ['Next.js 15', 'React', 'Tailwind'] },
+                        { title: 'Panel BERISA Admin', sub: 'Gestión de mandantes, contratistas e invitaciones', tags: ['Next.js 15', 'React', 'Shadcn/UI'] },
+                    ]
+                },
+                {
+                    id: 'application', label: 'Capa de Aplicación (API)', color: 'sky',
+                    arrow: 'Llamadas internas',
+                    boxes: [
+                        { title: 'FastAPI — Routers', sub: 'Recibe el PDF, lo guarda en storage y encola la tarea. Responde inmediatamente sin esperar la IA.', tags: ['/acreditacion', '/documentos', '/mandantes', '/usuarios', '/trabajadores'], flex: 2 },
+                        { title: 'Auth / Middleware', sub: 'JWT · Roles · Rate limit · Logs de auditoría por tenant', tags: ['JWT', 'RBAC', 'Multi-tenant'], flex: 1 },
+                    ]
+                },
+                {
+                    id: 'domain', label: 'Capa de Dominio (Lógica de Negocio)', color: 'purple',
+                    arrow: 'Encola tarea de procesamiento IA',
+                    boxes: [
+                        { title: 'AcreditacionService', sub: 'Orquesta el flujo completo y consolida resultado por empresa y trabajador' },
+                        { title: 'DocumentoService', sub: 'Gestiona estados (1→4), lanza tarea IA a la cola' },
+                        { title: 'ReglasService', sub: 'Evalúa campos contra config del mandante. Determinista, sin IA.' },
+                        { title: 'NotificacionService', sub: 'Emails de resultado, brechas y recordatorios' },
+                    ]
+                },
+            ],
+            queue: {
+                label: 'Cola de Procesamiento Asíncrono',
+                sublabel: 'PDF recibido → tarea encolada → worker procesa en background → resultado guardado en PostgreSQL',
+                steps: [
+                    { title: 'FastAPI', sub: 'Encola tarea', color: '#38bdf8' },
+                    { title: 'Redis', sub: 'Broker (RAM)', color: '#f87171' },
+                    { title: 'Celery Worker', sub: 'Procesa con IA', color: '#a78bfa' },
+                    { title: 'PostgreSQL', sub: 'Guarda resultado', color: '#34d399' },
+                ]
+            },
+            envs: {
+                dev: {
+                    label: '🖥️ Desarrollo local',
+                    boxes: [
+                        { title: 'Pipeline IA', sub: 'Vision LLM real vía API key', tags: ['Vision LLM', 'Pydantic'] },
+                        { title: 'PostgreSQL + Redis', sub: 'Ambos en Docker Compose local', tags: ['Docker'] },
+                        { title: 'Storage local', sub: 'Carpeta /uploads/ en el proyecto', tags: ['FILE_STORAGE=local'] },
+                    ]
+                },
+                prod: {
+                    label: '🚀 Producción (Hetzner)',
+                    boxes: [
+                        { title: 'Pipeline IA', sub: 'Mismo código. Celery workers en Hetzner.', tags: ['Vision LLM', 'Celery'] },
+                        { title: 'PostgreSQL + Redis', sub: 'En Hetzner con Docker Compose', tags: ['Hetzner', 'Alembic'] },
+                        { title: 'Object Storage', sub: 'Hetzner Object Storage. Compatible S3.', tags: ['FILE_STORAGE=s3'] },
+                    ]
+                }
+            },
+            deploy: [
+                { title: 'Vercel', sub: 'Frontend Next.js. Preview automático por branch.' },
+                { title: 'Hetzner', sub: 'FastAPI + Celery + Redis + PostgreSQL + Object Storage. Docker Compose.' },
+            ]
+        };
+
+        const colorMap = {
+            amber:   { box: 'bg-amber-500/10 border-amber-500/30', title: 'text-amber-400' },
+            sky:     { box: 'bg-sky-500/10 border-sky-500/30',     title: 'text-sky-400' },
+            purple:  { box: 'bg-purple-500/10 border-purple-500/30', title: 'text-purple-400' },
+            emerald: { box: 'bg-emerald-500/10 border-emerald-500/30', title: 'text-emerald-400' },
+            slate:   { box: 'bg-slate-700/20 border-slate-700/40',  title: 'text-slate-400' },
+        };
+
+        // --- COMPONENTE PRINCIPAL ---
+        function CanvasDashboard() {
+            const [activeTab, setActiveTab] = useState('business'); // Por defecto abre 'business' ahora
+            const [selectedElement, setSelectedElement] = useState(null);
+
+            // Efecto para autoseleccionar el primer elemento según la pestaña activa
+            useEffect(() => {
+                if (activeTab === 'pillars') {
+                    setSelectedElement(pillarsData[0].subpillars[0].docs[0]);
+                } else if (activeTab === 'pipeline') {
+                    setSelectedElement(pipelineSteps[1]); // Agente Clasificador
+                } else if (activeTab === 'erd') {
+                    setSelectedElement(erdTables[3]); // subpilares
+                } else if (activeTab === 'business') {
+                    setSelectedElement(businessFlowTasks[1]); // Carga Documental por defecto
+                }
+            }, [activeTab]);
+
+            // Función auxiliar para renderizar iconos de Lucide dinámicamente
+            const renderIcon = (iconName, className) => {
+                switch(iconName) {
+                    case 'ShieldAlert': return <span className={className}>🛡️</span>;
+                    case 'HardHat': return <span className={className}>👷</span>;
+                    case 'Briefcase': return <span className={className}>💼</span>;
+                    case 'Database': return <span className={className}>💾</span>;
+                    case 'Upload': return <span className={className}>📤</span>;
+                    case 'Eye': return <span className={className}>👁️</span>;
+                    case 'Cpu': return <span className={className}>⚙️</span>;
+                    case 'FileJson': return <span className={className}>📄</span>;
+                    case 'Sliders': return <span className={className}>🎛️</span>;
+                    case 'CheckCircle': return <span className={className}>✅</span>;
+                    case 'Building': return <span className={className}>🏢</span>;
+                    case 'User': return <span className={className}>👤</span>;
+                    case 'FileText': return <span className={className}>📝</span>;
+                    case 'History': return <span className={className}>⏳</span>;
+                    case 'Clock': return <span className={className}>⏱️</span>;
+                    default: return <span className={className}>📁</span>;
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-screen w-full">
+                    {/* TOPBAR */}
+                    <header className="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-500 text-slate-950 rounded-lg font-bold text-xl tracking-tight">AI</div>
+                            <div>
+                                <h1 className="text-lg font-semibold tracking-tight">BERISA — Plataforma de Acreditación de Contratistas con IA</h1>
+                                <p className="text-xs text-slate-400">Automatización del proceso de validación documental para empresas contratistas en la industria de la construcción</p>
+                            </div>
+                        </div>
+                        {/* Selector de Modos */}
+                        <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-1 overflow-x-auto max-w-full">
+                            <button 
+                                onClick={() => setActiveTab('business')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'business' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                🏢 Flujo de Negocio (Swimlanes)
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('pillars')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'pillars' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                🗺️ 3 Pilares GRC
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('pipeline')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'pipeline' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                ⚙️ Pipeline IA (Técnico)
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('erd')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'erd' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                💾 Base de Datos (ERD)
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('reference')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'reference' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                📋 Referencia MVP
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('architecture')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'architecture' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                🏗️ Arquitectura
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('dev')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'dev' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                            >
+                                🛠️ Desarrollo Local
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* MAIN SPLIT WORKSPACE */}
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* INTERACTIVE WORKSPACE (LEFT) */}
+                        <div className="flex-1 overflow-y-auto p-6 bg-slate-950/40 relative">
+                            
+                            {/* PESTAÑA NUEVA: FLUJO DE NEGOCIO (SWIMLANES) */}
+                            {activeTab === 'business' && (
+                                <div className="space-y-6 max-w-6xl mx-auto pb-12">
+                                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+                                        <span className="text-xl">📊</span>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-200 mb-1">Mapa del Proceso de Negocio con IA (Swimlanes):</p>
+                                            <p className="text-xs text-slate-300">
+                                                Este modelo muestra cómo cooperan los contratistas, la Inteligencia Artificial y tu equipo HSE del mandante en cada etapa. Haz clic sobre cualquier tarea para desplegar el KPI de impacto operativo y la mitigación del riesgo en el panel derecho.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* MATRIZ DE CARRIL DE PROCESO (SWIMLANES) */}
+                                    <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/80 shadow-2xl">
+                                        
+                                        {/* CABECERA DE ETAPAS */}
+                                        <div className="grid bg-slate-900 border-b border-slate-800 py-3 text-center" style={{gridTemplateColumns: '160px repeat(5, 1fr)'}}>
+                                            <div className="text-left pl-4 text-xs font-bold text-slate-400 uppercase tracking-wider my-auto">
+                                                Roles operacionales
+                                            </div>
+                                            {businessStages.map((stage) => (
+                                                <div key={stage.id} className="text-center border-l border-slate-800 px-2">
+                                                    <span className="text-xs font-bold text-amber-400 block tracking-tight">{stage.title}</span>
+                                                    <span className="text-[10px] text-slate-500 block truncate">{stage.desc}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* FILAS DE ROLES (SWIMLANES) */}
+                                        <div className="divide-y divide-slate-800">
+                                            {businessRoles.map((role) => (
+                                                <div key={role.id} className="grid min-h-[120px] items-stretch" style={{gridTemplateColumns: '160px repeat(5, 1fr)'}}>
+
+                                                    {/* Encabezado del Carril del Rol */}
+                                                    <div className="p-4 bg-slate-900/40 flex flex-col justify-center space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            {renderIcon(role.icon, "text-lg text-amber-500")}
+                                                            <span className="text-sm font-bold text-slate-200 leading-tight">{role.name}</span>
+                                                        </div>
+                                                        <span className="text-xs text-slate-400 font-light leading-snug">{role.desc}</span>
+                                                    </div>
+
+                                                    {/* Celdas de las Etapas correspondientes al Rol */}
+                                                    {businessStages.map((stage) => {
+                                                        // Filtramos las tareas que pertenecen a esta celda (Rol x Etapa)
+                                                        const tasks = businessFlowTasks.filter(t => t.roleId === role.id && t.stageId === stage.id);
+                                                        
+                                                        return (
+                                                            <div key={stage.id} className="p-3 border-l border-slate-800/80 bg-slate-950/20 flex flex-col justify-center gap-2 relative">
+                                                                {tasks.length > 0 ? (
+                                                                    tasks.map((task) => (
+                                                                        <button
+                                                                            key={task.id}
+                                                                            onClick={() => setSelectedElement(task)}
+                                                                            className={`w-full text-left p-3 rounded-xl border transition-all relative ${selectedElement?.id === task.id ? 'bg-amber-500 border-amber-300 text-slate-950 font-semibold shadow-lg scale-105 z-10' : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-200'}`}
+                                                                        >
+                                                                            <div className="text-[9px] font-mono tracking-widest opacity-80 uppercase font-bold mb-1">ID: {task.id}</div>
+                                                                            <h5 className="text-xs leading-tight font-bold">{task.title}</h5>
+                                                                            <p className={`text-[10px] mt-1 line-clamp-2 ${selectedElement?.id === task.id ? 'text-slate-900 font-normal' : 'text-slate-400 font-light'}`}>
+                                                                                {task.summary}
+                                                                            </p>
+                                                                        </button>
+                                                                    ))
+                                                                ) : (
+                                                                    <div className="flex items-center justify-center h-full">
+                                                                        <div className="w-full h-1 border-t-2 border-dashed border-slate-800/60"></div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* COMPARATIVO DE EFICIENCIA OPERATIVA (ROI) */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                                        <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-xl space-y-4">
+                                            <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-2">⏱️ Impacto de SLA (Tiempos de Procesamiento)</h4>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <div className="flex justify-between text-xs text-slate-400 mb-1">
+                                                        <span>Auditoría Tradicional Humana</span>
+                                                        <span className="font-semibold text-slate-300">24 a 48 Horas</span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                                        <div className="bg-rose-500 h-full w-[90%]"></div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between text-xs text-amber-400 mb-1">
+                                                        <span>Auditoría Automatizada con Agentes de IA</span>
+                                                        <span className="font-semibold">Menos de 20 Segundos</span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                                        <div className="bg-amber-500 h-full w-[2%]"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p className="text-[11px] text-slate-400">
+                                                * El Agente de IA procesa la ingesta de forma inmediata, lo que permite liberar el ingreso del personal subcontratado en minutos, evitando detenciones operativas en la faena por trámites pendientes.
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-xl space-y-4">
+                                            <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-2">🛡️ Mitigación de Responsabilidad Solidaria</h4>
+                                            <div className="text-xs text-slate-300 space-y-2">
+                                                <div className="flex gap-2">
+                                                    <span className="text-emerald-500 font-bold">✓</span>
+                                                    <p><strong>Cero Brechas Legales:</strong> El software audita de forma infalible el RUT de la empresa contra el del certificado laboral, blindando al mandante ante juicios laborales de terceros.</p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <span className="text-emerald-500 font-bold">✓</span>
+                                                    <p><strong>Firma y Vigencia Estricta:</strong> Los contratos y exámenes son validados de forma matemática, garantizando el cumplimiento HSE al 100%.</p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <span className="text-emerald-500 font-bold">✓</span>
+                                                    <p><strong>Resultado Auditable:</strong> Cada decisión queda registrada con fecha, versión de reglas y documentos evaluados — trazabilidad total ante fiscalizaciones.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PESTAÑA 2: 4 PILARES Y REQUISITOS */}
+                            {activeTab === 'pillars' && (
+                                <div className="space-y-8 max-w-5xl mx-auto">
+                                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+                                        <span className="text-xl">💡</span>
+                                        <p className="text-sm text-slate-300">
+                                            <strong>Matriz de Riesgo y Requisitos:</strong> Selecciona cualquier documento para ver el esquema de datos que la Inteligencia Artificial debe extraer e indexar automáticamente en el backend.
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {pillarsData.map((p) => (
+                                            <div key={p.id} className={`border rounded-xl p-5 ${p.color} flex flex-col justify-between space-y-4`}>
+                                                <div>
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <span className="text-xs uppercase font-semibold px-2 py-0.5 rounded bg-slate-900 border border-slate-700/50">{p.badge}</span>
+                                                        {renderIcon(p.icon, "text-2xl")}
+                                                    </div>
+                                                    <h3 className="text-base font-bold mb-4 text-slate-100">{p.title}</h3>
+                                                    
+                                                    <div className="space-y-4">
+                                                        {p.subpillars.map((sub, i) => (
+                                                            <div key={i} className="space-y-2">
+                                                                <h4 className="text-xs font-semibold text-slate-400 border-b border-slate-800 pb-1">{sub.name}</h4>
+                                                                <div className="grid grid-cols-1 gap-2">
+                                                                    {sub.docs.map((doc) => (
+                                                                        <button
+                                                                            key={doc.code}
+                                                                            onClick={() => setSelectedElement(doc)}
+                                                                            className={`w-full text-left p-2.5 rounded-lg border transition-all flex justify-between items-center ${selectedElement?.code === doc.code ? 'bg-amber-500 border-amber-400 text-slate-950 font-medium' : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-300'}`}
+                                                                        >
+                                                                            <div>
+                                                                                <span className="text-xs block opacity-75 font-semibold">{doc.code}</span>
+                                                                                <span className="text-sm">{doc.name}</span>
+                                                                            </div>
+                                                                            <span className="text-xs opacity-75">🔬 Analizar</span>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PESTAÑA 3: PIPELINE DE IA (EL FLUJO TÉCNICO) */}
+                            {activeTab === 'pipeline' && (
+                                <div className="max-w-5xl mx-auto space-y-8">
+                                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
+                                        <span className="text-xl">🛠️</span>
+                                        <p className="text-sm text-slate-300">
+                                            <strong>Pipeline de IA en Tiempo Real (2026):</strong> Así procesa la arquitectura cada PDF. Selecciona cada paso para auditar el código fuente, prompt del modelo de lenguaje o las reglas de transición automatizadas.
+                                        </p>
+                                    </div>
+                                    
+                                    {/* DIAGRAMA DE FLUJO INTERACTIVO */}
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {pipelineSteps.map((step, index) => (
+                                            <div key={step.id} className="flex flex-col md:flex-row items-stretch gap-4">
+                                                {/* Caja del Paso */}
+                                                <button
+                                                    onClick={() => setSelectedElement(step)}
+                                                    className={`flex-1 text-left p-5 rounded-xl border bg-gradient-to-r transition-all duration-200 flex justify-between items-center ${step.color} ${selectedElement?.id === step.id ? 'ring-2 ring-amber-500 scale-[1.01]' : 'opacity-85 hover:opacity-100'}`}
+                                                >
+                                                    <div className="flex gap-4 items-center">
+                                                        <div className="p-3 rounded-lg bg-slate-900 border border-slate-700">
+                                                            {renderIcon(step.icon, "text-xl text-amber-400")}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs text-slate-400 font-mono tracking-wider">{step.actor}</div>
+                                                            <h4 className="text-base font-bold text-slate-100">{step.title}</h4>
+                                                            <p className="text-sm text-slate-300 mt-1">{step.desc}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-xs font-mono bg-slate-900/80 px-2 py-1 rounded text-slate-400 border border-slate-800">{step.tech}</span>
+                                                    </div>
+                                                </button>
+                                                
+                                                {/* Flecha de conexión (excepto último paso) */}
+                                                {index < pipelineSteps.length - 1 && (
+                                                    <div className="flex md:flex-col items-center justify-center p-2 text-amber-500">
+                                                        <span className="hidden md:block text-2xl">↓</span>
+                                                        <span className="md:hidden text-2xl">→</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PESTAÑA 4: DIAGRAMA ENTIDAD-RELACIÓN */}
+                            {activeTab === 'erd' && (
+                                <div className="max-w-5xl mx-auto space-y-6">
+                                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 flex items-start gap-3">
+                                        <span className="text-xl">🗄️</span>
+                                        <p className="text-sm text-slate-300">
+                                            <strong>Esquema Relacional PostgreSQL (Gobernanza Completa):</strong> Los requisitos documentales y los pilares ahora están completamente modelados en el motor relacional. 
+                                            Esto permite consultas estructuradas de cumplimiento de GRC y escalabilidad dinámica del software.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {erdTables.map((table) => (
+                                            <button
+                                                key={table.name}
+                                                onClick={() => setSelectedElement(table)}
+                                                className={`text-left border rounded-xl overflow-hidden transition-all duration-200 ${selectedElement?.name === table.name ? 'ring-2 ring-amber-500' : 'opacity-85 hover:opacity-100'} ${table.color}`}
+                                            >
+                                                {/* Nombre Tabla */}
+                                                <div className="bg-slate-900/80 p-3 border-b border-slate-800 flex justify-between items-center">
+                                                    <span className="font-mono text-sm font-bold text-slate-200 flex items-center gap-2">
+                                                        {renderIcon(table.icon, "text-sm text-amber-400")}
+                                                        {table.name}
+                                                    </span>
+                                                    <span className="text-xs text-slate-500">PostgreSQL Table</span>
+                                                </div>
+                                                {/* Atributos */}
+                                                <div className="p-3 divide-y divide-slate-800/50">
+                                                    {table.fields.map((f, i) => (
+                                                        <div key={i} className="py-2 flex justify-between items-center text-xs">
+                                                            <div className="font-mono">
+                                                                <span className="text-slate-200 font-semibold">{f.name}</span>
+                                                                <span className="text-slate-500 ml-2">({f.type})</span>
+                                                            </div>
+                                                            <span className="text-slate-400 text-right">{f.desc}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PESTAÑA 5: REFERENCIA MVP */}
+                            {activeTab === 'reference' && (
+                                <div className="max-w-5xl mx-auto space-y-12 pb-12">
+
+                                    {/* SECCIÓN 1: ESTADOS DEL DOCUMENTO */}
+                                    <div className="space-y-4">
+                                        <div className="bg-slate-500/10 border border-slate-500/20 rounded-xl p-4 flex items-start gap-3">
+                                            <span className="text-xl">📄</span>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-200 mb-1">Estados del Documento</p>
+                                                <p className="text-xs text-slate-400">Cada documento cargado en la plataforma transita por estos estados. El sistema actualiza el estado automáticamente tras cada análisis. El mandante y el contratista ven el estado en tiempo real.</p>
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-800"></div>
+                                            <div className="space-y-4">
+                                                {documentStates.map((state) => (
+                                                    <div key={state.id} className="flex gap-4 items-start pl-2">
+                                                        <div className={`w-10 h-10 rounded-full ${state.color} flex items-center justify-center text-white font-bold text-sm shrink-0 z-10 border-4 border-slate-950`}>
+                                                            {state.id}
+                                                        </div>
+                                                        <div className={`flex-1 border ${state.border} bg-slate-950/80 rounded-xl p-4 space-y-2`}>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="font-bold text-slate-100">{state.name}</span>
+                                                                <span className="text-xs bg-slate-800 px-2 py-0.5 rounded text-slate-400">Responsable: {state.who}</span>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Qué significa</p>
+                                                                <p className="text-xs text-slate-300 leading-relaxed">{state.what}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Qué pasa después</p>
+                                                                <p className="text-xs text-amber-400 font-medium">➔ {state.next}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SECCIÓN 2: ROLES Y PERMISOS */}
+                                    <div className="space-y-4">
+                                        <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 flex items-start gap-3">
+                                            <span className="text-xl">👥</span>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-200 mb-1">Roles y Permisos de Usuario</p>
+                                                <p className="text-xs text-slate-400">La plataforma tiene 4 roles. Cada usuario pertenece a uno y su vista y acciones están limitadas a sus permisos.</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {userRoles.map((r) => (
+                                                <div key={r.role} className={`border rounded-xl p-5 space-y-3 ${r.color}`}>
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            {renderIcon(r.icon, 'text-lg')}
+                                                            <span className="font-bold text-slate-100">{r.role}</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-400">{r.desc}</p>
+                                                    </div>
+                                                    <ul className="space-y-1.5">
+                                                        {r.permissions.map((p, i) => (
+                                                            <li key={i} className="flex gap-2 text-xs text-slate-300">
+                                                                <span className="text-emerald-400 shrink-0">✓</span>
+                                                                {p}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* SECCIÓN 3: ONBOARDING */}
+                                    <div className="space-y-4">
+                                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+                                            <span className="text-xl">🚀</span>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-200 mb-1">Onboarding de Nuevo Contratista</p>
+                                                <p className="text-xs text-slate-400">BERISA controla quién entra a la plataforma. Los contratistas no se auto-registran — son invitados por BERISA, asociados a un mandante específico desde el primer momento.</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {onboardingSteps.map((step, index) => (
+                                                <div key={step.id} className="flex gap-4 items-stretch">
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-amber-400 shrink-0">{step.id}</div>
+                                                        {index < onboardingSteps.length - 1 && <div className="w-0.5 flex-1 bg-slate-800 my-1"></div>}
+                                                    </div>
+                                                    <div className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-2 mb-1">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="font-bold text-slate-100 text-sm">{step.title}</span>
+                                                            <span className={`text-xs px-2 py-0.5 rounded border font-medium ${step.actorColor}`}>{step.actor}</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-300 leading-relaxed">{step.desc}</p>
+                                                        <p className="text-xs text-emerald-400 font-medium">→ {step.output}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* SECCIÓN 4: DASHBOARD DEL CONTRATISTA */}
+                                    <div className="space-y-4">
+                                        <div className="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 flex items-start gap-3">
+                                            <span className="text-xl">🖥️</span>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-200 mb-1">Dashboard del Contratista — Qué ve</p>
+                                                <p className="text-xs text-slate-400">El portal del contratista tiene 4 secciones. El objetivo es que el prevencionista sepa en todo momento qué falta, qué está mal y qué hacer — sin necesidad de llamar a nadie.</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {contratistaDashboard.map((section) => (
+                                                <div key={section.section} className={`border rounded-xl p-5 space-y-3 ${section.color}`}>
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            {renderIcon(section.icon, 'text-lg')}
+                                                            <span className="font-bold text-slate-100 text-sm">{section.section}</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-400">{section.desc}</p>
+                                                    </div>
+                                                    <ul className="space-y-1.5">
+                                                        {section.items.map((item, i) => (
+                                                            <li key={i} className="flex gap-2 text-xs text-slate-300">
+                                                                <span className="text-amber-400 shrink-0">→</span>
+                                                                {item}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* SECCIÓN 5: VENCIMIENTOS (FASE 2) */}
+                                    <div className="space-y-4">
+                                        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-start gap-3">
+                                            <span className="text-xl">⏳</span>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-200 mb-1">Vencimientos de Documentos — Fase 2 <span className="text-rose-400 font-normal">(no MVP, pero diseñar la BD desde hoy)</span></p>
+                                                <p className="text-xs text-slate-400">Los documentos aprobados tienen fecha de vigencia. Sin gestión de vencimientos, un contratista acreditado hoy puede quedar bloqueado mañana sin que nadie lo sepa.</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {vencimientosNota.map((nota, i) => (
+                                                <div key={i} className="border border-slate-700 bg-slate-950/80 rounded-xl p-4 space-y-1">
+                                                    <p className="text-sm font-bold text-slate-200">{nota.titulo}</p>
+                                                    <p className="text-xs text-slate-400 leading-relaxed">{nota.desc}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                </div>
+                            )}
+
+                            {/* PESTAÑA 6: ARQUITECTURA */}
+                            {activeTab === 'architecture' && (
+                                <div className="max-w-4xl mx-auto space-y-6 pb-12">
+
+                                    {/* Capas principales */}
+                                    {architectureData.layers.map((layer, li) => (
+                                        <div key={layer.id} className="space-y-3">
+                                            <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 pl-1">{layer.label}</p>
+                                            <div className="flex gap-3">
+                                                {layer.boxes.map((box, bi) => (
+                                                    <div key={bi} className={`border rounded-xl p-4 space-y-2 flex-1 ${colorMap[layer.color].box}`} style={box.flex ? {flex: box.flex} : {}}>
+                                                        <p className={`text-sm font-bold ${colorMap[layer.color].title}`}>{box.title}</p>
+                                                        <p className="text-xs text-slate-400 leading-relaxed">{box.sub}</p>
+                                                        {box.tags && (
+                                                            <div className="flex flex-wrap gap-1 pt-1">
+                                                                {box.tags.map((t, ti) => (
+                                                                    <span key={ti} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400">{t}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="text-center space-y-0.5">
+                                                <div className="text-slate-700 text-xl">↓</div>
+                                                <p className="text-[10px] text-slate-600 tracking-wide">{layer.arrow}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* Cola asíncrona */}
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 pl-1">{architectureData.queue.label}</p>
+                                        <p className="text-[10px] text-slate-600 text-center mb-2">{architectureData.queue.sublabel}</p>
+                                        <div className="flex items-center border border-red-500/20 bg-red-500/5 rounded-xl p-4 gap-2">
+                                            {architectureData.queue.steps.map((step, i) => (
+                                                <React.Fragment key={i}>
+                                                    <div className="flex-1 text-center">
+                                                        <p className="text-sm font-bold" style={{color: step.color}}>{step.title}</p>
+                                                        <p className="text-[10px] text-slate-500 mt-1">{step.sub}</p>
+                                                    </div>
+                                                    {i < architectureData.queue.steps.length - 1 && (
+                                                        <span className="text-red-500/50 text-lg flex-shrink-0">→</span>
+                                                    )}
+                                                </React.Fragment>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="text-center space-y-0.5">
+                                        <div className="text-slate-700 text-xl">↓</div>
+                                        <p className="text-[10px] text-slate-600 tracking-wide">Infraestructura según entorno</p>
+                                    </div>
+
+                                    {/* Entornos dev / prod */}
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 pl-1">Capa de Infraestructura — según entorno</p>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {['dev', 'prod'].map((env) => {
+                                                const e = architectureData.envs[env];
+                                                const isDev = env === 'dev';
+                                                return (
+                                                    <div key={env} className={`border rounded-xl p-4 space-y-3 ${isDev ? 'border-sky-500/20 bg-sky-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
+                                                        <p className={`text-xs font-bold tracking-wider uppercase ${isDev ? 'text-sky-400' : 'text-emerald-400'}`}>{e.label}</p>
+                                                        <div className="space-y-2">
+                                                            {e.boxes.map((box, bi) => (
+                                                                <div key={bi} className={`border rounded-lg p-3 space-y-1 ${isDev ? 'border-slate-700/40 bg-slate-800/30' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
+                                                                    <p className={`text-xs font-bold ${isDev ? 'text-slate-300' : 'text-emerald-400'}`}>{box.title}</p>
+                                                                    <p className="text-[10px] text-slate-500">{box.sub}</p>
+                                                                    <div className="flex flex-wrap gap-1 pt-0.5">
+                                                                        {box.tags.map((t, ti) => (
+                                                                            <span key={ti} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400">{t}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Deploy */}
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 pl-1">Deploy</p>
+                                        <div className="flex gap-3">
+                                            {architectureData.deploy.map((d, i) => (
+                                                <div key={i} className="flex-1 border border-slate-700/40 bg-slate-800/20 rounded-xl p-4 space-y-1">
+                                                    <p className="text-sm font-bold text-slate-300">{d.title}</p>
+                                                    <p className="text-xs text-slate-500">{d.sub}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Leyenda */}
+                                    <div className="flex gap-6 justify-center flex-wrap pt-2">
+                                        {[['#fbbf24','Presentación'],['#38bdf8','Aplicación'],['#a78bfa','Dominio'],['#f87171','Cola async'],['#34d399','Infraestructura']].map(([color, label]) => (
+                                            <div key={label} className="flex items-center gap-2 text-[10px] text-slate-500">
+                                                <div className="w-2 h-2 rounded-full" style={{background: color}}></div>
+                                                {label}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                </div>
+                            )}
+
+                            {/* PESTAÑA 7: DESARROLLO LOCAL */}
+                            {activeTab === 'dev' && (
+                                <div className="max-w-3xl mx-auto space-y-8 pb-12">
+
+                                    {/* Usuarios de prueba */}
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 pl-1">Usuarios de Prueba (seed de desarrollo)</p>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {[
+                                                { rol: 'berisa_admin',       email: 'admin@berisa.cl',       pass: 'admin123', label: 'BERISA Admin',        desc: 'Superadmin. Crea mandantes, gestiona catálogo global.',         color: 'border-amber-500/30 bg-amber-500/5',  badge: 'bg-amber-500/20 text-amber-300' },
+                                                { rol: 'mandante_admin',     email: 'mandante@demo.cl',      pass: 'demo123',  label: 'Mandante Admin (Demo)', desc: 'Portal mandante de "Codelco (Demo)". Ve contratistas y brechas.', color: 'border-purple-500/30 bg-purple-500/5', badge: 'bg-purple-500/20 text-purple-300' },
+                                                { rol: 'contratista_admin',  email: 'contratista@demo.cl',   pass: 'demo123',  label: 'Contratista Admin (Demo)', desc: 'Portal contratista de "Constructora Demo SpA". Sube documentos.', color: 'border-sky-500/30 bg-sky-500/5',    badge: 'bg-sky-500/20 text-sky-300' },
+                                            ].map(u => (
+                                                <div key={u.email} className={`border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${u.color}`}>
+                                                    <div className="flex-1 space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${u.badge}`}>{u.rol}</span>
+                                                            <span className="text-sm font-semibold text-slate-200">{u.label}</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-400">{u.desc}</p>
+                                                    </div>
+                                                    <div className="font-mono text-xs space-y-1 shrink-0 bg-slate-900/60 rounded-lg px-4 py-3 border border-slate-700/40">
+                                                        <div><span className="text-slate-500">email  </span><span className="text-slate-200">{u.email}</span></div>
+                                                        <div><span className="text-slate-500">pass   </span><span className="text-amber-300">{u.pass}</span></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[10px] text-slate-600 pl-1">Creados con <span className="font-mono">cd backend &amp;&amp; python scripts/seed.py</span>. Idempotente: se puede ejecutar múltiples veces sin duplicar datos.</p>
+                                    </div>
+
+                                    {/* Comandos para levantar el entorno */}
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 pl-1">Levantar Entorno Local</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {[
+                                                { title: '1. Servicios de infraestructura', color: 'border-sky-500/20 bg-sky-500/5', titleColor: 'text-sky-400', code: 'docker-compose up -d', desc: 'Levanta PostgreSQL (puerto 5434), Redis (6379), FastAPI (8000) y el worker Celery.' },
+                                                { title: '2. Poblar la base de datos', color: 'border-amber-500/20 bg-amber-500/5', titleColor: 'text-amber-400', code: 'cd backend\npython scripts/seed.py', desc: 'Crea pilares, requisitos y usuarios de prueba. Idempotente.' },
+                                                { title: '3. Frontend', color: 'border-emerald-500/20 bg-emerald-500/5', titleColor: 'text-emerald-400', code: 'cd frontend\nnpm run dev', desc: 'Next.js en http://localhost:3000. Se redirige automáticamente a /login.' },
+                                                { title: '4. Documentación', color: 'border-slate-600/40 bg-slate-800/20', titleColor: 'text-slate-300', code: 'Abrir docs/documentacion_app.html\nen el navegador', desc: 'Este archivo. Sin servidor necesario — funciona como archivo estático.' },
+                                            ].map(c => (
+                                                <div key={c.title} className={`border rounded-xl p-4 space-y-2 ${c.color}`}>
+                                                    <p className={`text-xs font-bold ${c.titleColor}`}>{c.title}</p>
+                                                    <pre className="text-xs font-mono bg-slate-900/70 border border-slate-700/40 rounded-lg p-3 text-slate-300 whitespace-pre">{c.code}</pre>
+                                                    <p className="text-[10px] text-slate-500">{c.desc}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Puertos */}
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 pl-1">Puertos en Desarrollo</p>
+                                        <div className="border border-slate-700/40 rounded-xl overflow-hidden">
+                                            <table className="w-full text-xs">
+                                                <thead><tr className="bg-slate-800/60 text-slate-400 text-[10px] uppercase tracking-wide"><th className="text-left px-4 py-2">Servicio</th><th className="text-left px-4 py-2">Puerto</th><th className="text-left px-4 py-2">Nota</th></tr></thead>
+                                                <tbody>
+                                                    {[
+                                                        ['Next.js (frontend)',  '3000', 'npm run dev'],
+                                                        ['FastAPI (backend)',   '8000', 'uvicorn con --reload'],
+                                                        ['FastAPI docs (Swagger)', '8000/api/docs', 'Solo en ENVIRONMENT=development'],
+                                                        ['PostgreSQL',         '5434', '5432 internamente en Docker (evita conflictos con Postgres local)'],
+                                                        ['Redis',              '6379', 'Broker Celery y backend de resultados'],
+                                                    ].map(([svc, port, note]) => (
+                                                        <tr key={svc} className="border-t border-slate-800 hover:bg-slate-800/30">
+                                                            <td className="px-4 py-2 font-medium text-slate-300">{svc}</td>
+                                                            <td className="px-4 py-2 font-mono text-amber-300">{port}</td>
+                                                            <td className="px-4 py-2 text-slate-500">{note}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* Configuración de pilares por mandante */}
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 pl-1">Cómo Funciona la Configuración por Mandante</p>
+                                        <div className="border border-slate-700/40 bg-slate-800/10 rounded-xl p-5 space-y-4 text-xs text-slate-300 leading-relaxed">
+                                            <p>Los pilares y requisitos documentales son un <span className="text-amber-300 font-semibold">catálogo global</span> administrado por BERISA. Cada mandante activa los que le aplican a través de <span className="font-mono text-sky-300">MandanteRequisitoConfig</span>.</p>
+                                            <div className="space-y-2">
+                                                {[
+                                                    ['Catálogo global (Pilar → Subpilar → RequisitoDocumental)', 'Define el universo de todos los documentos posibles. Lo gestiona berisa_admin. Crece cuando aparece un nuevo tipo de exigencia en el mercado.'],
+                                                    ['MandanteRequisitoConfig', 'El mandante activa los requisitos que le aplican y define sus reglas: vigencia_max_dias, umbral_deuda_max, es_obligatorio. Si un requisito no está configurado para un mandante → no se evalúa ni aparece.'],
+                                                    ['acreditacion_service.py', 'Evalúa SOLO los requisitos configurados por el mandante. Los pilares que muestra el dashboard son los que el mandante activó, no todos los del catálogo.'],
+                                                ].map(([titulo, desc]) => (
+                                                    <div key={titulo} className="flex gap-3">
+                                                        <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
+                                                        <div><span className="font-mono text-sky-300">{titulo}:</span> <span className="text-slate-400">{desc}</span></div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="bg-slate-900/60 border border-slate-700/40 rounded-lg p-3 font-mono text-[11px] text-slate-400 space-y-0.5">
+                                                <p className="text-slate-600"># Mandante A requiere F30 con 30 días de vigencia</p>
+                                                <p><span className="text-purple-400">INSERT INTO</span> mandante_requisito_config <span className="text-slate-500">(mandante_id, requisito_documental_id, vigencia_max_dias)</span></p>
+                                                <p className="pl-4"><span className="text-purple-400">VALUES</span> <span className="text-slate-500">(:mandante_a, :f30_id, 30);</span></p>
+                                                <p className="mt-2 text-slate-600"># Mandante B requiere F30 con 90 días — mismo requisito, distinta regla</p>
+                                                <p><span className="text-purple-400">INSERT INTO</span> mandante_requisito_config <span className="text-slate-500">(mandante_id, requisito_documental_id, vigencia_max_dias)</span></p>
+                                                <p className="pl-4"><span className="text-purple-400">VALUES</span> <span className="text-slate-500">(:mandante_b, :f30_id, 90);</span></p>
+                                                <p className="mt-2 text-slate-600"># Mandante C no configura F30 → no se evalúa, no aparece en el dashboard</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            )}
+                        </div>
+
+                        {/* INSPECTOR PANEL (RIGHT) */}
+                        <aside className="w-96 bg-slate-950 border-l border-slate-800 flex flex-col shrink-0 overflow-y-auto">
+                            {selectedElement ? (
+                                <div className="p-6 flex flex-col h-full justify-between">
+                                    <div className="space-y-6">
+                                        {/* Cabecera del Inspector */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-bold text-amber-400 tracking-widest uppercase">Auditoría Operativa</span>
+                                                <span className="text-xs bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">Gobernanza 3.0</span>
+                                            </div>
+                                            
+                                            {/* Si es del Flujo de Negocio (NUEVA ESTRUCTURA) */}
+                                            {selectedElement.objective && (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <span className="text-[10px] font-mono bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/30 font-bold">
+                                                            Paso {selectedElement.id}
+                                                        </span>
+                                                        <h2 className="text-xl font-bold text-slate-100 mt-2 leading-tight">{selectedElement.title}</h2>
+                                                        <p className="text-xs text-slate-400 mt-2 font-light leading-relaxed">{selectedElement.summary}</p>
+                                                    </div>
+
+                                                    <div className="space-y-3 pt-3 border-t border-slate-800/80">
+                                                        <div>
+                                                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Objetivo de Negocio</h4>
+                                                            <p className="text-xs text-slate-200 mt-1 leading-relaxed">{selectedElement.objective}</p>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-3 pt-2">
+                                                            <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-lg">
+                                                                <h5 className="text-[9px] font-bold text-slate-500 uppercase">Entrada (Inputs)</h5>
+                                                                <p className="text-xs text-slate-300 mt-1 font-light leading-tight">{selectedElement.inputs}</p>
+                                                            </div>
+                                                            <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-lg">
+                                                                <h5 className="text-[9px] font-bold text-slate-500 uppercase">Salida (Outputs)</h5>
+                                                                <p className="text-xs text-slate-300 mt-1 font-light leading-tight">{selectedElement.outputs}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-lg flex items-center gap-3">
+                                                            {renderIcon('Clock', 'text-amber-400 text-lg')}
+                                                            <div>
+                                                                <h5 className="text-[9px] font-bold text-slate-500 uppercase">SLA Esperado</h5>
+                                                                <p className="text-xs font-semibold text-slate-200">{selectedElement.sla}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-lg">
+                                                            <h5 className="text-[9px] font-bold text-rose-400 uppercase">Riesgo Mitigado de Negocio</h5>
+                                                            <p className="text-xs text-slate-300 mt-1 font-light leading-normal">{selectedElement.risk}</p>
+                                                        </div>
+
+                                                        <div className="pt-2">
+                                                            <h5 className="text-[9px] font-bold text-slate-500 uppercase">Siguiente Paso Operativo</h5>
+                                                            <p className="text-xs text-amber-400 font-medium mt-1">➔ {selectedElement.nextStep}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Si es del Pilar (Documento) */}
+                                            {selectedElement.code && !selectedElement.fields && !selectedElement.objective && (
+                                                <>
+                                                    <h2 className="text-xl font-bold text-slate-100">{selectedElement.name}</h2>
+                                                    <p className="text-sm text-slate-400 mt-2">{selectedElement.desc}</p>
+                                                    
+                                                    <div className="mt-6 space-y-3">
+                                                        <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Esquema de extracción IA (Campos Clave)</h4>
+                                                        <div className="space-y-2">
+                                                            {selectedElement.keyFields.map((field) => (
+                                                                <div key={field} className="flex justify-between items-center bg-slate-900 border border-slate-800 p-2 rounded text-xs font-mono">
+                                                                    <span className="text-amber-400">{field}</span>
+                                                                    <span className="text-slate-500">string</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {/* Si es del Pipeline */}
+                                            {selectedElement.tech && !selectedElement.objective && (
+                                                <>
+                                                    <h2 className="text-xl font-bold text-slate-100">{selectedElement.title}</h2>
+                                                    <p className="text-sm text-slate-400 mt-2">{selectedElement.details.body}</p>
+                                                    
+                                                    <div className="mt-6 space-y-3">
+                                                        <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Código de Implementación / Prompt</h4>
+                                                        <pre className="code-font bg-slate-900 border border-slate-800 p-3 rounded-lg text-[11px] text-slate-300 overflow-x-auto whitespace-pre">
+                                                            {selectedElement.details.code}
+                                                        </pre>
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {/* Si es una Tabla ERD */}
+                                            {selectedElement.fields && !selectedElement.objective && (
+                                                <>
+                                                    <h2 className="text-xl font-mono font-bold text-amber-400 flex items-center gap-2">
+                                                        {selectedElement.name}
+                                                    </h2>
+                                                    <p className="text-sm text-slate-400 mt-2">Especificaciones de persistencia en base de datos relacional para el almacenamiento de auditoría y gobernanza de pilares.</p>
+                                                    
+                                                    <div className="mt-6 space-y-3">
+                                                        <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">DDL Estándar (SQL)</h4>
+                                                        <pre className="code-font bg-slate-900 border border-slate-800 p-3 rounded-lg text-[11px] text-slate-300 overflow-x-auto whitespace-pre">
+{`CREATE TABLE ${selectedElement.name} (
+${selectedElement.fields.map(f => `  ${f.name.padEnd(25)} ${f.type.includes('PK') ? 'UUID PRIMARY KEY' : f.type.includes('FK') ? 'UUID REFERENCES ...' : f.type}`).join(',\n')}
+);`}
+                                                        </pre>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Footer Informativo */}
+                                    <div className="pt-4 border-t border-slate-800 text-[10px] text-slate-500 mt-6">
+                                        <p>La vista de negocio permite capacitar e inducir a los analistas operativos sobre cómo interactuar eficientemente con las sugerencias generadas por la inteligencia artificial en la obra.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-6 text-center text-slate-500 my-auto">
+                                    <p>Selecciona un elemento en el lienzo de trabajo para auditar la lógica y los datos.</p>
+                                </div>
+                            )}
+                        </aside>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- RENDER ---
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CanvasDashboard />);
+    </script>
+</body>
+</html>

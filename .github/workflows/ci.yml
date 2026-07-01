@@ -7,82 +7,56 @@ on:
     branches: [main, master]
 
 jobs:
-  static-and-build:
+  build:
     runs-on: ubuntu-latest
-    env:
-      # Force actions to use Node 24 (required after June 2 2026)
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      NODE_VERSION: 24
-      NODE_ENV: test
-      PORT: 8080
-      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
-      DATABASE_URL: postgres://beriza_ci:ci_password_for_ephemeral_runner_only@localhost:5432/beriza
-      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-      JWT_EXPIRES_IN: 8h
-      SESSION_COOKIE_NAME: beriza_session
-      COOKIE_SECURE: false
-      CORS_ORIGIN: http://localhost:8080,http://localhost:5173
-      ADMIN_EMAIL: admin-ci@example.local
-      ADMIN_PASSWORD: ci_admin_password_ephemeral_only_123456
-      ADMIN_NAME: Administrador CI
-      PII_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-      ALERT_WEBHOOK_SECRET: ci_webhook_secret_ephemeral_only_123456
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: beriza
-          POSTGRES_USER: beriza_ci
-          POSTGRES_PASSWORD: ci_password_for_ephemeral_runner_only
-        ports:
-          - 5432:5432
-        options: >
-          --health-cmd="pg_isready -U beriza_ci -d beriza"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}   # now Node 24
-      - name: Install backend
-        run: cd backend && npm install
-      - name: Install frontend
-        run: cd frontend && npm install
-      - name: Static checks
-        run: cd backend && npm run ci:check
-      - name: Backend syntax
-        run: find backend/src backend/scripts -name '*.js' -print0 | xargs -0 -n1 node --check
-      - name: Migrate and seed
-        run: cd backend && npm run migrate && npm run seed
-      - name: Frontend build
-        run: cd frontend && npm run build
+          node-version: 24
 
-  # Deploy to production – runs only on pushes to main/master
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
   deploy-prod:
-    needs: static-and-build
+    needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
-      - name: Deploy to server
+      - name: Deploy to Hetzner
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: ENV_FILE
           script: |
-            cd /root/beriza
+            set -e
+
+            # Escribir .env desde GitHub Secret (siempre actualiza)
+            mkdir -p /root/acredita
+            echo "$ENV_FILE" > /root/acredita/.env
+
+            # Clonar repo si no existe, hacer pull si ya existe
+            if [ ! -d /root/acredita/.git ]; then
+              git clone https://github.com/jrussellrichards/beriza.git /root/acredita
+            fi
+            cd /root/acredita
             git fetch origin master
             git reset --hard origin/master
-            if [ ! -f .env ]; then
-              cd backend && node scripts/create-env.js && cd ..
-            fi
-            docker stop beriza-app || true
-            docker rm beriza-app || true
-            docker compose down || true
-            docker compose up --build -d
-            sleep 10
-            docker exec berisa-api npm run migrate
-            docker exec berisa-api npm run seed
+
+            # Restaurar .env (el git reset lo sobreescribe si está en el repo)
+            echo "$ENV_FILE" > /root/acredita/.env
+
+            docker compose -f docker-compose.prod.yml --env-file .env up --build -d
+            sleep 8
+            docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
+            docker compose -f docker-compose.prod.yml exec -T backend python scripts/seed.py
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}

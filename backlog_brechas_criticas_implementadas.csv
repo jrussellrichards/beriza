@@ -1,8 +1,0 @@
-id,brecha,estado_v2,archivos_principales,riesgo_residual
-01,Ingestión recurrente multi-fuente,Implementada,backend/src/services/ingestion.js;backend/src/routes/ingestion.js;docker-compose.yml,Conectar APIs externas y validar términos de uso
-02,Fuente licencia y vigencia por dato,Implementada,backend/migrations/002_critical_capabilities.sql;backend/src/routes/ingestion.js,Formalizar revisión legal por fuente
-06,Estimación automática BOM,Implementada preliminar,backend/src/services/bom.js;backend/src/routes/bom.js,Calibrar con históricos reales
-12,Alertas geolocalizadas y por sector,Implementada,backend/src/services/alerts.js;backend/src/routes/alerts.js,Agregar email/webhook productivo
-14,Multi-tenant SaaS,Implementada,backend/src/middleware/auth.js;backend/migrations/002_critical_capabilities.sql;frontend/src/api.js,Pruebas exhaustivas de aislamiento
-21,Gobierno de datos personales,Implementada base,backend/src/routes/privacy.js;backend/src/security.js,Revisión legal y procedimiento formal
-29,Métricas ROI cliente,Implementada,backend/src/routes/roi.js;frontend/src/App.jsx,Integrar datos reales de CRM/ERP
