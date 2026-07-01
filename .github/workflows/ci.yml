@@ -48,8 +48,8 @@ jobs:
               git clone https://github.com/jrussellrichards/beriza.git /root/acredita
             fi
             cd /root/acredita
-            git fetch origin master
-            git reset --hard origin/master
+            git fetch origin main
+            git reset --hard origin/main
 
             # Restaurar .env (el git reset lo sobreescribe si está en el repo)
             echo "$ENV_FILE" > /root/acredita/.env
@@ -59,4 +59,4 @@ jobs:
             docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
             docker compose -f docker-compose.prod.yml exec -T backend python scripts/seed.py
         env:
-          ENV_FILE: ${{ secrets.ENV_FILE }}
+          ENV_FILE: ${{ secrets.ENV }}
