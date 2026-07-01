@@ -249,7 +249,7 @@ export default function DashboardContratistaPage() {
   const data = useMock ? MOCK_DATA : apiData
 
   if (!session || (loading && !timedOut)) return <LoadingState />
-  if (!data && !useMock) return <LoadingState />
+  if (!data) return <LoadingState />
 
   const cfg = ESTADO_CONFIG[data.estado_global]
   const Icon = cfg.icon

@@ -6,3 +6,7 @@ dist/
 *.log
 coverage/
 berisa_pgdata/
+__pycache__/
+*.pyc
+*.pyo
+.next/
