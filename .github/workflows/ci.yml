@@ -39,19 +39,18 @@ jobs:
           script: |
             set -e
 
-            # Escribir .env desde GitHub Secret (siempre actualiza)
+            # init+fetch+reset funciona aunque el directorio exista con archivos
+            # (git clone falla si no está vacío — bug que rompía el bootstrap)
             mkdir -p /root/acredita
-            echo "$ENV_FILE" > /root/acredita/.env
-
-            # Clonar repo si no existe, hacer pull si ya existe
-            if [ ! -d /root/acredita/.git ]; then
-              git clone https://github.com/jrussellrichards/beriza.git /root/acredita
-            fi
             cd /root/acredita
+            if [ ! -d .git ]; then
+              git init -q
+              git remote add origin https://github.com/jrussellrichards/beriza.git
+            fi
             git fetch origin main
             git reset --hard origin/main
 
-            # Restaurar .env (el git reset lo sobreescribe si está en el repo)
+            # Escribir .env desde GitHub Secret (después del reset)
             echo "$ENV_FILE" > /root/acredita/.env
 
             docker compose -f docker-compose.prod.yml --env-file .env up --build -d
