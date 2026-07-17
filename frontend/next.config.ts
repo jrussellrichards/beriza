@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Sin esto, Next redirige /api/v1/servicios/ -> /api/v1/servicios (308)
+  // antes del rewrite, y FastAPI redirige de vuelta: loop infinito.
+  skipTrailingSlashRedirect: true,
   async rewrites() {
     // Proxy same-origin hacia el backend: el navegador llama a /api/* en
     // este mismo dominio y Next lo reenvía server-side. Evita CORS y el
