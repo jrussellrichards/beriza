@@ -3,8 +3,13 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from sqlalchemy.orm import Session
 
-from app.models.mandante import MandanteRequisitoConfig
+from app.domain.estados import EstadoDocumento, EstadoServicio
+from app.models.contratista import ContratistaMandante
 from app.models.pilar import RequisitoDocumental
+from app.models.servicio import PerfilRequisitoConfig, PerfilRequisitos, Servicio
+
+VIGENCIA_DEFAULT_DIAS = 90
+UMBRAL_DEUDA_DEFAULT = 0.0
 
 
 @dataclass
@@ -14,28 +19,86 @@ class ResultadoValidacion:
     brechas: list[str] = field(default_factory=list)
 
 
+@dataclass
+class ConfigAplicable:
+    """
+    Configuración efectiva de un requisito cuando varios perfiles lo exigen:
+    siempre la MÁS ESTRICTA (menor vigencia, menor umbral, obligatorio si
+    cualquiera lo exige). Función pura — el corazón del alcance ENTIDAD
+    compartido entre servicios.
+    """
+    es_obligatorio: bool
+    vigencia_max_dias: int
+    umbral_deuda_max: float
+
+
+def config_mas_estricta(configs: list[PerfilRequisitoConfig]) -> ConfigAplicable:
+    if not configs:
+        return ConfigAplicable(
+            es_obligatorio=False,
+            vigencia_max_dias=VIGENCIA_DEFAULT_DIAS,
+            umbral_deuda_max=UMBRAL_DEUDA_DEFAULT,
+        )
+    return ConfigAplicable(
+        es_obligatorio=any(c.es_obligatorio for c in configs),
+        vigencia_max_dias=min(c.vigencia_max_dias for c in configs),
+        umbral_deuda_max=min(float(c.umbral_deuda_max) for c in configs),
+    )
+
+
+def configs_para_requisito(
+    db: Session,
+    mandante_id: uuid.UUID,
+    requisito_id: uuid.UUID,
+    contratista_id: uuid.UUID | None = None,
+) -> list[PerfilRequisitoConfig]:
+    """
+    Configuraciones del requisito en los perfiles de los servicios ACTIVOS
+    del mandante. Si se indica contratista, se acota a sus servicios;
+    sin contratista, a todos los perfiles con algún servicio activo.
+    """
+    query = (
+        db.query(PerfilRequisitoConfig)
+        .join(PerfilRequisitos, PerfilRequisitoConfig.perfil_id == PerfilRequisitos.id)
+        .join(Servicio, Servicio.perfil_requisitos_id == PerfilRequisitos.id)
+        .join(ContratistaMandante, Servicio.contratista_mandante_id == ContratistaMandante.id)
+        .filter(
+            PerfilRequisitos.mandante_id == mandante_id,
+            PerfilRequisitoConfig.requisito_documental_id == requisito_id,
+            Servicio.estado == EstadoServicio.ACTIVO,
+        )
+    )
+    if contratista_id:
+        query = query.filter(ContratistaMandante.contratista_id == contratista_id)
+    return query.distinct().all()
+
+
 def validar_documento(
     db: Session,
     requisito_codigo: str,
     campos_extraidos: dict,
     mandante_id: uuid.UUID,
+    contratista_id: uuid.UUID | None = None,
 ) -> ResultadoValidacion:
     """
     Evalúa los campos extraídos por la IA contra las reglas configuradas
     por el mandante (vigencia, umbrales, etc.). La decisión es determinista
-    y matemática — nunca la toma un LLM.
+    y matemática — nunca la toma un LLM. Para documentos compartidos entre
+    servicios se aplica la configuración MÁS ESTRICTA entre los perfiles
+    de los servicios activos.
     """
     requisito = db.query(RequisitoDocumental).filter_by(codigo=requisito_codigo).first()
     if not requisito:
-        return ResultadoValidacion(aprobado=False, estado=3, brechas=[f"Requisito '{requisito_codigo}' no encontrado en el sistema."])
+        return ResultadoValidacion(
+            aprobado=False, estado=EstadoDocumento.OBSERVADO,
+            brechas=[f"Requisito '{requisito_codigo}' no encontrado en el sistema."],
+        )
 
-    config = (
-        db.query(MandanteRequisitoConfig)
-        .filter_by(mandante_id=mandante_id, requisito_documental_id=requisito.id)
-        .first()
+    config = config_mas_estricta(
+        configs_para_requisito(db, mandante_id, requisito.id, contratista_id)
     )
-    vigencia_max_dias = config.vigencia_max_dias if config else 90
-    umbral_deuda_max = float(config.umbral_deuda_max) if config else 0.0
+    vigencia_max_dias = config.vigencia_max_dias
+    umbral_deuda_max = config.umbral_deuda_max
 
     validadores = {
         "F30_1": lambda c: _validar_f30_1(c, vigencia_max_dias, umbral_deuda_max),
@@ -52,8 +115,8 @@ def validar_documento(
         brechas = []
 
     if brechas:
-        return ResultadoValidacion(aprobado=False, estado=3, brechas=brechas)
-    return ResultadoValidacion(aprobado=True, estado=4, brechas=[])
+        return ResultadoValidacion(aprobado=False, estado=EstadoDocumento.OBSERVADO, brechas=brechas)
+    return ResultadoValidacion(aprobado=True, estado=EstadoDocumento.APROBADO, brechas=[])
 
 
 def _validar_f30_1(campos: dict, vigencia_max_dias: int, umbral_deuda_max: float) -> list[str]:

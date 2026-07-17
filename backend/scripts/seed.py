@@ -19,17 +19,43 @@ import bcrypt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+import uuid as uuid_lib
+
 from app.core.config import settings
+from app.domain.estados import Alcance, EstadoServicio, TipoEvento
 from app.models import Base, Usuario
-from app.models.mandante import Mandante, MandanteRequisitoConfig
+from app.models.mandante import Mandante
 from app.models.contratista import EmpresaContratista, ContratistaMandante
 from app.models.pilar import Pilar, Subpilar, RequisitoDocumental
+from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
-from app.models.documento import Documento
+from app.models.documento import ArchivoDocumento, Documento, DocumentoEvento, DocumentoVersion
 
 engine = create_engine(settings.DATABASE_URL)
 
 HOY = date.today()
+
+# ── Parametrización del catálogo (decisiones de negocio explícitas) ──────────
+
+# Vigencia máxima en días exigida por defecto para cada requisito
+VIGENCIAS = {
+    "F30": 30, "F30_1": 30, "CONTRATO": 365, "EXAM_MED": 365,
+    "MIPER": 365, "RIOHS": 365, "DAS": 365,
+    "CARPETA_TRIBUTARIA": 90, "VIGENCIA_SOCIEDAD": 365, "DJ_CONFLICTO": 365,
+}
+VIGENCIA_DEFAULT = 90
+
+# Alcance: ENTIDAD se acredita una vez para el mandante; SERVICIO por cada faena.
+# La MIPER es específica de los riesgos de cada faena → SERVICIO.
+ALCANCES = {
+    "MIPER": Alcance.SERVICIO,
+}
+
+# Cantidad máxima de archivos por entrega (contrato + anexos, carpeta multi-PDF)
+MAX_ARCHIVOS = {
+    "CONTRATO": 3,
+    "CARPETA_TRIBUTARIA": 5,
+}
 
 
 def _hash(password: str) -> str:
@@ -42,11 +68,19 @@ def _vigencia(dias: int) -> date:
 
 # ── Pilares y requisitos ──────────────────────────────────────────────────────
 
+def _aplicar_parametros_catalogo(reqs: dict[str, RequisitoDocumental]):
+    """Aplica alcance y max_archivos según las decisiones de negocio del módulo."""
+    for codigo, req in reqs.items():
+        req.alcance = ALCANCES.get(codigo, Alcance.ENTIDAD)
+        req.max_archivos = MAX_ARCHIVOS.get(codigo, 1)
+
+
 def seed_pilares(session: Session) -> dict[str, RequisitoDocumental]:
     if session.query(Pilar).count() > 0:
-        print("  OK Pilares ya existen, saltando.")
-        reqs = session.query(RequisitoDocumental).all()
-        return {r.codigo: r for r in reqs}
+        print("  OK Pilares ya existen, actualizando alcances del catálogo.")
+        reqs = {r.codigo: r for r in session.query(RequisitoDocumental).all()}
+        _aplicar_parametros_catalogo(reqs)
+        return reqs
 
     legal = Pilar(codigo="LEGAL", nombre="Legal / Laboral", orden=1)
     session.add(legal); session.flush()
@@ -93,8 +127,10 @@ def seed_pilares(session: Session) -> dict[str, RequisitoDocumental]:
     session.add_all([carpeta, vigencia_soc, dj])
     session.flush()
 
+    reqs = {r.codigo: r for r in [f30, f30_1, contrato, exam_med, miper, riohs, das, carpeta, vigencia_soc, dj]}
+    _aplicar_parametros_catalogo(reqs)
     print("  OK 3 pilares y 10 requisitos creados.")
-    return {r.codigo: r for r in [f30, f30_1, contrato, exam_med, miper, riohs, das, carpeta, vigencia_soc, dj]}
+    return reqs
 
 
 # ── Admin BERISA ──────────────────────────────────────────────────────────────
@@ -174,41 +210,151 @@ def seed_mandantes(session: Session) -> dict[str, Mandante]:
             "echeverria-izquierdo": echeverria, "enap-refinerias": enap}
 
 
-def _configurar_requisitos(session: Session, mandante_id, reqs: dict[str, RequisitoDocumental]):
-    vigencias = {
-        "F30": 30, "F30_1": 30, "CONTRATO": 365, "EXAM_MED": 365,
-        "MIPER": 365, "RIOHS": 365, "DAS": 365,
-        "CARPETA_TRIBUTARIA": 90, "VIGENCIA_SOCIEDAD": 365, "DJ_CONFLICTO": 365,
-    }
-    for codigo, req in reqs.items():
-        session.add(MandanteRequisitoConfig(
-            mandante_id=mandante_id, requisito_documental_id=req.id,
-            es_obligatorio=True, vigencia_max_dias=vigencias.get(codigo, 90), umbral_deuda_max=0,
-        ))
+# ── Perfiles y servicios ──────────────────────────────────────────────────────
+
+def seed_perfiles_y_servicios(session: Session, reqs: dict[str, RequisitoDocumental]):
+    """
+    Idempotente. Para cada mandante asegura un perfil "General" con la config
+    de todos los requisitos; para cada relación contratista↔mandante un servicio
+    "General" activo; y todos los trabajadores de la empresa asignados a él.
+    """
+    perfiles_creados = servicios_creados = asignaciones_creadas = 0
+
+    for mandante in session.query(Mandante).all():
+        perfil = session.query(PerfilRequisitos).filter_by(
+            mandante_id=mandante.id, nombre="General"
+        ).first()
+        if not perfil:
+            perfil = PerfilRequisitos(
+                mandante_id=mandante.id, nombre="General",
+                descripcion="Perfil por defecto con todos los requisitos del catálogo", activo=True,
+            )
+            session.add(perfil); session.flush()
+            perfiles_creados += 1
+
+        configs_existentes = {
+            str(c.requisito_documental_id)
+            for c in session.query(PerfilRequisitoConfig).filter_by(perfil_id=perfil.id).all()
+        }
+        for codigo, req in reqs.items():
+            if str(req.id) not in configs_existentes:
+                session.add(PerfilRequisitoConfig(
+                    perfil_id=perfil.id, requisito_documental_id=req.id,
+                    es_obligatorio=True, vigencia_max_dias=VIGENCIAS.get(codigo, VIGENCIA_DEFAULT),
+                    umbral_deuda_max=0,
+                ))
+        session.flush()
+
+        for rel in session.query(ContratistaMandante).filter_by(mandante_id=mandante.id).all():
+            servicio = session.query(Servicio).filter_by(
+                contratista_mandante_id=rel.id, nombre="General"
+            ).first()
+            if not servicio:
+                servicio = Servicio(
+                    contratista_mandante_id=rel.id, perfil_requisitos_id=perfil.id,
+                    nombre="General", fecha_inicio=HOY, estado=EstadoServicio.ACTIVO,
+                )
+                session.add(servicio); session.flush()
+                servicios_creados += 1
+
+            asignados = {
+                str(a.trabajador_id)
+                for a in session.query(ServicioTrabajador).filter_by(servicio_id=servicio.id).all()
+            }
+            for t in session.query(Trabajador).filter_by(empresa_id=rel.contratista_id).all():
+                if str(t.id) not in asignados:
+                    session.add(ServicioTrabajador(
+                        servicio_id=servicio.id, trabajador_id=t.id,
+                        activo=t.activo, fecha_asignacion=HOY,
+                    ))
+                    asignaciones_creadas += 1
+    session.flush()
+
+    # Ligar expedientes de requisitos alcance SERVICIO a su servicio "General"
+    docs_sin_servicio = (
+        session.query(Documento)
+        .join(RequisitoDocumental, Documento.requisito_id == RequisitoDocumental.id)
+        .filter(Documento.servicio_id.is_(None), RequisitoDocumental.alcance == Alcance.SERVICIO)
+        .all()
+    )
+    ligados = 0
+    for doc in docs_sin_servicio:
+        empresa_id = doc.empresa_id or session.get(Trabajador, doc.trabajador_id).empresa_id
+        rel = session.query(ContratistaMandante).filter_by(
+            mandante_id=doc.mandante_id, contratista_id=empresa_id
+        ).first()
+        if not rel:
+            continue
+        servicio = session.query(Servicio).filter_by(
+            contratista_mandante_id=rel.id, nombre="General"
+        ).first()
+        if servicio:
+            doc.servicio_id = servicio.id
+            ligados += 1
+    if ligados:
+        print(f"  OK {ligados} expediente(s) de alcance SERVICIO ligados a su servicio General.")
+
+    if perfiles_creados or servicios_creados or asignaciones_creadas:
+        print(f"  OK {perfiles_creados} perfil(es), {servicios_creados} servicio(s), "
+              f"{asignaciones_creadas} asignación(es) de trabajadores.")
+    else:
+        print("  OK Perfiles y servicios ya existen, saltando.")
 
 
 # ── Helpers documentos ────────────────────────────────────────────────────────
 
+def _crear_expediente(session: Session, req: RequisitoDocumental, mandante_id,
+                      estado: int, vigencia_dias: int | None, brecha: str | None,
+                      empresa_id=None, trabajador_id=None):
+    """Crea el expediente completo: documento + versión 1 + archivo demo + evento."""
+    fecha_vig = _vigencia(vigencia_dias) if vigencia_dias and estado == 4 else None
+    doc = Documento(
+        requisito_id=req.id, mandante_id=mandante_id,
+        empresa_id=empresa_id, trabajador_id=trabajador_id,
+        estado=estado, fecha_vigencia_hasta=fecha_vig, mensaje_brecha=brecha,
+    )
+    session.add(doc); session.flush()
+
+    version = DocumentoVersion(
+        documento_id=doc.id, numero_version=1, estado=estado,
+        mensaje_brecha=brecha, fecha_vigencia_hasta=fecha_vig,
+    )
+    session.add(version); session.flush()
+
+    entidad = str(empresa_id or trabajador_id)[:8]
+    session.add(ArchivoDocumento(
+        documento_version_id=version.id, orden=0,
+        storage_key=f"demo/documentos/{req.codigo.lower()}_{entidad}_{uuid_lib.uuid4().hex}.pdf",
+        nombre_original=f"{req.codigo.lower()}.pdf",
+        mime_type="application/pdf", tamaño_bytes=0, hash_sha256="0" * 64,
+    ))
+    session.add(DocumentoEvento(
+        documento_id=doc.id, documento_version_id=version.id,
+        tipo_evento=TipoEvento.SUBIDA, estado_nuevo=estado, detalle={"seed": True},
+    ))
+    doc.version_vigente_id = version.id
+
+
 def _doc_empresa(session: Session, req: RequisitoDocumental, mandante_id, empresa_id,
                  estado: int, vigencia_dias: int | None = None, brecha: str | None = None):
-    session.add(Documento(
-        requisito_id=req.id, mandante_id=mandante_id, empresa_id=empresa_id,
-        estado=estado,
-        archivo_url=f"demo://documentos/{req.codigo.lower()}_{str(empresa_id)[:8]}.pdf",
-        fecha_vigencia_hasta=_vigencia(vigencia_dias) if vigencia_dias and estado == 4 else None,
-        mensaje_brecha=brecha,
-    ))
+    _crear_expediente(session, req, mandante_id, estado, vigencia_dias, brecha, empresa_id=empresa_id)
 
 
 def _doc_trabajador(session: Session, req: RequisitoDocumental, mandante_id, trabajador_id,
                     estado: int, vigencia_dias: int | None = None, brecha: str | None = None):
-    session.add(Documento(
-        requisito_id=req.id, mandante_id=mandante_id, trabajador_id=trabajador_id,
-        estado=estado,
-        archivo_url=f"demo://documentos/{req.codigo.lower()}_{str(trabajador_id)[:8]}.pdf",
-        fecha_vigencia_hasta=_vigencia(vigencia_dias) if vigencia_dias and estado == 4 else None,
-        mensaje_brecha=brecha,
-    ))
+    _crear_expediente(session, req, mandante_id, estado, vigencia_dias, brecha, trabajador_id=trabajador_id)
+
+
+def _eliminar_documentos(session: Session, docs: list[Documento]):
+    """Borra expedientes completos respetando las FKs (solo para limpieza de seed)."""
+    for doc in docs:
+        session.query(DocumentoEvento).filter_by(documento_id=doc.id).delete()
+        doc.version_vigente_id = None
+        session.flush()
+        for v in session.query(DocumentoVersion).filter_by(documento_id=doc.id).all():
+            session.query(ArchivoDocumento).filter_by(documento_version_id=v.id).delete()
+            session.delete(v)
+        session.delete(doc)
 
 
 # ── Contratistas Codelco ──────────────────────────────────────────────────────
@@ -223,10 +369,13 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     # Limpiar contratistas viejos del seed anterior (Constructora Demo SpA, etc.)
     for rel in session.query(ContratistaMandante).filter_by(mandante_id=codelco.id).all():
         empresa = session.get(EmpresaContratista, rel.contratista_id)
-        # Borrar documentos, trabajadores, usuarios y la relación
-        session.query(Documento).filter_by(empresa_id=empresa.id).delete()
+        # Borrar servicios, documentos, trabajadores, usuarios y la relación
+        _eliminar_documentos(session, session.query(Documento).filter_by(empresa_id=empresa.id).all())
         for t in session.query(Trabajador).filter_by(empresa_id=empresa.id).all():
-            session.query(Documento).filter_by(trabajador_id=t.id).delete()
+            _eliminar_documentos(session, session.query(Documento).filter_by(trabajador_id=t.id).all())
+        for s in session.query(Servicio).filter_by(contratista_mandante_id=rel.id).all():
+            session.query(ServicioTrabajador).filter_by(servicio_id=s.id).delete()
+            session.delete(s)
         session.query(Trabajador).filter_by(empresa_id=empresa.id).delete()
         session.query(Usuario).filter_by(contratista_id=empresa.id).delete()
         session.delete(rel)
@@ -375,8 +524,6 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     _doc_empresa(session, r["DJ_CONFLICTO"], mid, montajes.id, 4, 300)
     _doc_trabajador(session, r["CONTRATO"], mid, m1.id, 4, 365)
     _doc_trabajador(session, r["EXAM_MED"], mid, m1.id, 3, brecha="Examen médico vencido desde 2026-01-15")
-
-    _configurar_requisitos(session, mid, reqs)
     print("  OK 7 contratistas Codelco con trabajadores y documentos creados.")
 
 
@@ -415,7 +562,6 @@ def seed_otros_mandantes(session: Session, mandantes: dict, reqs: dict):
     ]
     for rut, nombre, giro, estado in pelambres_data:
         _contratista_bulk(session, rut, nombre, giro, pel_id, estado)
-    _configurar_requisitos(session, pel_id, reqs)
 
     # Echeverría — 8 contratistas (5 ACREDITADA, 2 EN_PROCESO, 1 BLOQUEADA)
     ech_data = [
@@ -430,7 +576,6 @@ def seed_otros_mandantes(session: Session, mandantes: dict, reqs: dict):
     ]
     for rut, nombre, giro, estado in ech_data:
         _contratista_bulk(session, rut, nombre, giro, ech_id, estado)
-    _configurar_requisitos(session, ech_id, reqs)
 
     # ENAP — 4 contratistas (2 ACREDITADA, 1 EN_PROCESO, 1 BLOQUEADA)
     ena_data = [
@@ -441,7 +586,6 @@ def seed_otros_mandantes(session: Session, mandantes: dict, reqs: dict):
     ]
     for rut, nombre, giro, estado in ena_data:
         _contratista_bulk(session, rut, nombre, giro, ena_id, estado)
-    _configurar_requisitos(session, ena_id, reqs)
 
     print("  OK 24 contratistas bulk creados para Los Pelambres, Echeverría y ENAP.")
 
@@ -459,6 +603,8 @@ def main():
         seed_codelco_contratistas(session, mandantes["codelco-demo"], reqs)
         session.flush()
         seed_otros_mandantes(session, mandantes, reqs)
+        session.flush()
+        seed_perfiles_y_servicios(session, reqs)
         session.commit()
     print("\nCredenciales de acceso:")
     print("  admin@berisa.cl       / admin123  (berisa_admin)")

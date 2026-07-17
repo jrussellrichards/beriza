@@ -6,6 +6,8 @@ import { cn } from "@/shared/lib/utils"
 import {
   LayoutDashboard,
   Building2,
+  Briefcase,
+  ClipboardCheck,
   ClipboardList,
   BarChart2,
   Settings,
@@ -15,8 +17,10 @@ import {
 
 const nav = [
   { href: "/mandante", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/mandante/revision", label: "Revisión", icon: ClipboardCheck },
   { href: "/mandante/contratistas", label: "Contratistas", icon: Building2 },
-  { href: "/mandante/requisitos", label: "Requisitos", icon: ClipboardList },
+  { href: "/mandante/servicios", label: "Servicios", icon: Briefcase },
+  { href: "/mandante/requisitos", label: "Perfiles", icon: ClipboardList },
   { href: "/mandante/reportes", label: "Reportes", icon: BarChart2 },
   { href: "/mandante/configuracion", label: "Configuración", icon: Settings },
 ]

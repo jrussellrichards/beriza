@@ -5,6 +5,7 @@ import { Save, Building2, Mail, Globe, Bell, Shield, Users, CheckCircle2 } from 
 import { cn } from "@/shared/lib/utils"
 import { useApiData } from "@/shared/lib/use-api-data"
 import { getSession } from "@/shared/lib/auth"
+import { api } from "@/shared/lib/api"
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -60,11 +61,17 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 export default function ConfiguracionPage() {
   const [seccion, setSeccion] = useState("organizacion")
   const [saved, setSaved] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
   const [endpoint, setEndpoint] = useState<string | null>(null)
+  const [mandanteId, setMandanteId] = useState<string | null>(null)
 
   useEffect(() => {
     const s = getSession()
-    if (s?.mandante_id) setEndpoint(`/api/v1/mandantes/${s.mandante_id}/configuracion`)
+    if (s?.mandante_id) {
+      setMandanteId(s.mandante_id)
+      setEndpoint(`/api/v1/mandantes/${s.mandante_id}/configuracion`)
+    }
   }, [])
 
   const FALLBACK: ConfigData = { razon_social: "", rut: "", email_contacto: "", sitio_web: "", equipo: [] }
@@ -96,9 +103,23 @@ export default function ConfiguracionPage() {
   const [sesion2fa, setSesion2fa] = useState(false)
   const [sesionDias, setSesionDias] = useState("7")
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+  async function handleSave() {
+    if (!mandanteId) return
+    setGuardando(true)
+    setErrorGuardado(null)
+    try {
+      await api.patch(`/api/v1/mandantes/${mandanteId}`, {
+        razon_social: razonSocial,
+        email_contacto: email,
+        sitio_web: sitioWeb,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (e) {
+      setErrorGuardado(e instanceof Error ? e.message : "Error al guardar")
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
@@ -112,15 +133,20 @@ export default function ConfiguracionPage() {
           </div>
           <button
             onClick={handleSave}
+            disabled={guardando}
             className={cn(
               "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
-              saved ? "bg-emerald-500 text-white" : "bg-slate-900 text-white hover:bg-slate-800"
+              saved ? "bg-emerald-500 text-white" : "bg-slate-900 text-white hover:bg-slate-800",
+              guardando && "opacity-60 cursor-not-allowed"
             )}
           >
             {saved ? <CheckCircle2 size={14} /> : <Save size={14} />}
-            {saved ? "¡Guardado!" : "Guardar cambios"}
+            {guardando ? "Guardando..." : saved ? "¡Guardado!" : "Guardar cambios"}
           </button>
         </div>
+        {errorGuardado && (
+          <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{errorGuardado}</p>
+        )}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -230,6 +256,9 @@ export default function ConfiguracionPage() {
                 <h2 className="text-base font-semibold text-slate-900 mb-1">Notificaciones por email</h2>
                 <p className="text-sm text-slate-400">Controla qué alertas recibes en tu correo</p>
               </div>
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+                Estas preferencias aún no se guardan — la configuración de notificaciones está en desarrollo.
+              </p>
 
               <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
                 {[
@@ -299,6 +328,9 @@ export default function ConfiguracionPage() {
                 <h2 className="text-base font-semibold text-slate-900 mb-1">Seguridad de la cuenta</h2>
                 <p className="text-sm text-slate-400">Configuración de autenticación y sesiones</p>
               </div>
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+                Estas preferencias aún no se guardan — la configuración de seguridad está en desarrollo.
+              </p>
 
               <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
                 <div className="flex items-center justify-between px-5 py-4">

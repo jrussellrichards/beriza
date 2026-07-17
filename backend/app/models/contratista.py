@@ -34,3 +34,4 @@ class ContratistaMandante(ModelBase):
 
     contratista: Mapped["EmpresaContratista"] = relationship(back_populates="mandantes")
     mandante: Mapped["Mandante"] = relationship(back_populates="contratistas")
+    servicios: Mapped[list["Servicio"]] = relationship(back_populates="relacion")

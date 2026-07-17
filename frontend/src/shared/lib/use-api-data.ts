@@ -1,63 +1,52 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { api } from "./api"
 
 /**
- * Fetch data from an API endpoint with a 2-second fallback to mock data.
- * If the API responds within 2 seconds, mock data is never shown.
- * If it times out or errors, mock data is used as fallback.
+ * Fetch data from an API endpoint.
+ * `initial` es solo el valor inicial mientras carga — NUNCA se muestran
+ * datos inventados: si la API falla, se expone el error y el valor inicial
+ * (típicamente una lista vacía) para que la página muestre un estado honesto.
  */
 export function useApiData<T>(
   endpoint: string | null,
-  fallback: T,
-): { data: T; loading: boolean } {
-  const [data, setData] = useState<T>(fallback)
+  initial: T,
+): { data: T; loading: boolean; error: string | null } {
+  const [data, setData] = useState<T>(initial)
   const [loading, setLoading] = useState(true)
-  const resolvedRef = useRef(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!endpoint) {
       setLoading(false)
       return
     }
-
-    resolvedRef.current = false
-
-    const timer = setTimeout(() => {
-      if (!resolvedRef.current) {
-        resolvedRef.current = true
-        setData(fallback)
-        setLoading(false)
-      }
-    }, 2000)
+    let cancelado = false
+    setLoading(true)
+    setError(null)
 
     api
       .get<T>(endpoint)
       .then((res) => {
-        if (!resolvedRef.current) {
-          resolvedRef.current = true
-          clearTimeout(timer)
+        if (!cancelado) {
           setData(res)
           setLoading(false)
         }
       })
-      .catch(() => {
-        if (!resolvedRef.current) {
-          resolvedRef.current = true
-          clearTimeout(timer)
-          setData(fallback)
+      .catch((e) => {
+        if (!cancelado) {
+          setError(e instanceof Error ? e.message : "Error al cargar datos")
           setLoading(false)
         }
       })
 
     return () => {
-      resolvedRef.current = true
-      clearTimeout(timer)
+      cancelado = true
     }
     // endpoint changes intentionally reset the fetch
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint])
 
-  return { data, loading }
+  return { data, loading, error }
 }

@@ -51,3 +51,39 @@ class EstadoDocumentoInvalido(AcreditaError):
 class RutInvalido(AcreditaError):
     """El RUT no cumple el formato o el dígito verificador es incorrecto."""
     pass
+
+
+class ServicioNoEncontrado(AcreditaError):
+    pass
+
+
+class PerfilNoEncontrado(AcreditaError):
+    pass
+
+
+class AsignacionInvalida(AcreditaError):
+    """
+    Asignación incoherente entre entidades de distinto tenant.
+    Ej: asignar a un servicio un trabajador de otra empresa, o
+    asociar a un servicio un perfil de otro mandante.
+    """
+    pass
+
+
+class EstadoServicioInvalido(AcreditaError):
+    """Se intentó una transición de estado de servicio inválida."""
+    pass
+
+
+class ArchivoInvalido(AcreditaError):
+    """La entrega de archivos no cumple la config del requisito (cantidad, formato, tamaño)."""
+    pass
+
+
+class EntregaInvalida(AcreditaError):
+    """
+    La entrega es incoherente con el catálogo o el estado del expediente.
+    Ej: falta servicio_id para un requisito de alcance SERVICIO, o ya hay
+    una entrega pendiente de revisión.
+    """
+    pass

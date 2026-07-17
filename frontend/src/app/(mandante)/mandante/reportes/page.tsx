@@ -20,7 +20,7 @@ interface ReportesData {
   acreditadas: number
   docs_procesados: number
   pilares: { nombre: string; cumplimiento: number }[]
-  evolucion: { mes: string; pct: number }[]
+  evolucion: { mes: string; aprobados: number }[]
   historial: { contratista: string; tipo: string; descripcion: string; estado: string; fecha: string }[]
   contratistas_lista: { id: string; nombre: string }[]
 }
@@ -30,11 +30,8 @@ const FALLBACK: ReportesData = {
   pilares: [], evolucion: [], historial: [], contratistas_lista: [],
 }
 
-const PILAR_COLOR: Record<string, string> = {
-  "Legal / Laboral": "bg-blue-500",
-  "HSE — Salud, Seguridad y Medio Ambiente": "bg-amber-500",
-  "Compliance / Tributario": "bg-purple-500",
-}
+// Colores por posición del pilar (el orden viene del catálogo)
+const PILAR_COLORES = ["bg-blue-500", "bg-amber-500", "bg-purple-500", "bg-emerald-500", "bg-rose-500"]
 
 const TIPO_REPORTE_CFG: Record<TipoReporte, { label: string; color: string }> = {
   acreditacion: { label: "Acreditación", color: "bg-blue-50 text-blue-700 border-blue-200" },
@@ -70,16 +67,20 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
   )
 }
 
-function EvolucionChart({ evolucion }: { evolucion: { mes: string; pct: number }[] }) {
+function EvolucionChart({ evolucion }: { evolucion: { mes: string; aprobados: number }[] }) {
   const maxH = 80
   if (!evolucion.length) return <div className="h-24 flex items-center justify-center text-xs text-slate-400">Sin datos</div>
+  const max = Math.max(...evolucion.map(e => e.aprobados), 1)
   return (
-    <div className="flex items-end justify-around gap-3 h-24 px-2">
-      {evolucion.map(({ mes, pct }) => (
-        <div key={mes} className="flex flex-col items-center gap-2 flex-1">
-          <div className="flex items-end gap-0.5 w-full justify-center" style={{ height: maxH }}>
-            <div className="w-4 bg-slate-200 rounded-t-sm" style={{ height: `${maxH}px` }} />
-            <div className="w-4 bg-emerald-500 rounded-t-sm" style={{ height: `${(pct / 100) * maxH}px` }} />
+    <div className="flex items-end justify-around gap-3 h-28 px-2">
+      {evolucion.map(({ mes, aprobados }) => (
+        <div key={mes} className="flex flex-col items-center gap-1.5 flex-1">
+          <span className="text-[10px] font-medium text-slate-500">{aprobados > 0 ? aprobados : ""}</span>
+          <div className="flex items-end w-full justify-center" style={{ height: maxH }}>
+            <div
+              className={cn("w-5 rounded-t-sm", aprobados > 0 ? "bg-emerald-500" : "bg-slate-100")}
+              style={{ height: `${Math.max((aprobados / max) * maxH, 3)}px` }}
+            />
           </div>
           <span className="text-[10px] text-slate-400">{mes}</span>
         </div>
@@ -94,8 +95,6 @@ export default function ReportesPage() {
   const [rango, setRango] = useState<RangoFecha>("30d")
   const [contratista, setContratista] = useState("todos")
   const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoReporte>("acreditacion")
-  const [generando, setGenerando] = useState(false)
-  const [generado, setGenerado] = useState(false)
   const [endpoint, setEndpoint] = useState<string | null>(null)
 
   useEffect(() => {
@@ -110,25 +109,12 @@ export default function ReportesPage() {
     ...data.contratistas_lista.map(c => ({ id: c.id, label: c.nombre })),
   ]
 
-  const esFiltradoPorContratista = contratista !== "todos"
-  const nombreContratista = contratistasLista.find(c => c.id === contratista)?.label ?? ""
-
   const resumenActual = [
     { label: "Contratistas evaluados", value: data.total_contratistas, color: "text-slate-900" },
     { label: "Tasa de acreditación",   value: `${data.cumplimiento_global}%`, color: "text-emerald-600" },
     { label: "Documentos procesados",  value: data.docs_procesados, color: "text-blue-600" },
     { label: "Brechas activas", value: data.historial.filter(h => h.estado === "warn").length, color: "text-red-600" },
   ]
-
-  function handleGenerar() {
-    setGenerando(true)
-    setGenerado(false)
-    setTimeout(() => {
-      setGenerando(false)
-      setGenerado(true)
-      setTimeout(() => setGenerado(false), 3000)
-    }, 1500)
-  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -145,7 +131,7 @@ export default function ReportesPage() {
               <Building2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <select
                 value={contratista}
-                onChange={e => { setContratista(e.target.value); setGenerado(false) }}
+                onChange={e => setContratista(e.target.value)}
                 className="appearance-none pl-8 pr-8 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10 cursor-pointer max-w-[220px]"
               >
                 {contratistasLista.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -166,10 +152,10 @@ export default function ReportesPage() {
           </div>
         </div>
         {/* Banner contratista seleccionado */}
-        {esFiltradoPorContratista && (
+        {contratista !== "todos" && (
           <div className="mt-3 flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
             <Building2 size={12} />
-            Filtrando por: <span className="font-semibold">{nombreContratista}</span>
+            Filtrando por: <span className="font-semibold">{contratistasLista.find(c => c.id === contratista)?.label ?? ""}</span>
             <button onClick={() => setContratista("todos")} className="ml-auto text-blue-500 hover:text-blue-700 font-medium">Ver todos →</button>
           </div>
         )}
@@ -211,13 +197,13 @@ export default function ReportesPage() {
           <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-6">
             <h2 className="text-sm font-semibold text-slate-900 mb-4">Cumplimiento por pilar</h2>
             <div className="space-y-4">
-              {data.pilares.map(p => (
+              {data.pilares.map((p, i) => (
                 <div key={p.nombre}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm text-slate-700">{p.nombre}</span>
                     <span className="text-xs font-semibold text-slate-500">{p.cumplimiento}%</span>
                   </div>
-                  <MiniBar pct={p.cumplimiento} color={PILAR_COLOR[p.nombre] ?? "bg-slate-400"} />
+                  <MiniBar pct={p.cumplimiento} color={PILAR_COLORES[i % PILAR_COLORES.length]} />
                 </div>
               ))}
             </div>
@@ -256,31 +242,14 @@ export default function ReportesPage() {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={handleGenerar}
-                disabled={generando}
-                className={cn(
-                  "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  generado
-                    ? "bg-emerald-500 text-white"
-                    : generando
-                      ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                      : "bg-slate-900 text-white hover:bg-slate-800"
-                )}
+                disabled
+                title="La exportación a PDF/Excel aún no está disponible"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-400 cursor-not-allowed"
               >
-                {generando ? (
-                  <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Generando...</>
-                ) : generado ? (
-                  <><CheckCircle2 size={14} /> ¡Listo para descargar!</>
-                ) : (
-                  <><Download size={14} /> {esFiltradoPorContratista ? `PDF — ${nombreContratista.split(" ").slice(0,3).join(" ")}` : "Generar PDF"}</>
-                )}
+                <Download size={14} />
+                Exportar PDF
               </button>
-              {generado && (
-                <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                  <Download size={14} />
-                  Descargar Excel
-                </button>
-              )}
+              <p className="text-xs text-slate-400">La exportación de informes estará disponible próximamente.</p>
             </div>
           </div>
         </div>

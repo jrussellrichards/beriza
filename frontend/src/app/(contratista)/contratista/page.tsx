@@ -9,12 +9,21 @@ import {
 import { cn } from "@/shared/lib/utils"
 import { getSession } from "@/shared/lib/auth"
 import { useAcreditacion } from "@/entities/contratista/use-acreditacion"
-import { SubirDocumentoDialog } from "@/features/subir-documento/subir-documento-dialog"
 import type { EstadoPilar, EstadoTrabajador } from "@/shared/types"
 
 // ── Config visual ────────────────────────────────────────────────────────────
 
 const ESTADO_CONFIG = {
+  PENDIENTE: {
+    label: "Pendiente",
+    icon: Clock,
+    iconColor: "text-slate-400",
+    border: "border-slate-200",
+    bg: "bg-slate-50",
+    dot: "bg-slate-400",
+    text: "text-slate-600",
+    badgeBg: "bg-slate-50 border-slate-200",
+  },
   ACREDITADA: {
     label: "Acreditada",
     icon: CheckCircle2,
@@ -103,18 +112,8 @@ function PilarCard({ pilar, onSubir }: { pilar: EstadoPilar; onSubir?: () => voi
   )
 }
 
-function TrabajadorRow({
-  trabajador,
-  mandanteId,
-  onRefetch,
-}: {
-  trabajador: EstadoTrabajador
-  mandanteId: string
-  onRefetch: () => void
-}) {
+function TrabajadorRow({ trabajador }: { trabajador: EstadoTrabajador }) {
   const [expanded, setExpanded] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [pilarSeleccionado, setPilarSeleccionado] = useState("")
 
   return (
     <div className={cn("rounded-xl border overflow-hidden transition-colors", expanded ? "border-slate-300" : "border-slate-200")}>
@@ -146,22 +145,11 @@ function TrabajadorRow({
             <PilarCard
               key={pilar.pilar_codigo}
               pilar={pilar}
-              onSubir={!pilar.cumple ? () => { setPilarSeleccionado(pilar.pilar_nombre); setDialogOpen(true) } : undefined}
+              onSubir={!pilar.cumple ? () => { window.location.href = "/contratista/documentos" } : undefined}
             />
           ))}
         </div>
       )}
-
-      <SubirDocumentoDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSuccess={onRefetch}
-        requisitoId=""
-        requisitoNombre={pilarSeleccionado}
-        entidadTipo="trabajador"
-        entidadId={trabajador.trabajador_id}
-        mandanteId={mandanteId}
-      />
     </div>
   )
 }
@@ -184,72 +172,32 @@ function LoadingState() {
   )
 }
 
-// ── Mock data para preview sin backend ───────────────────────────────────────
-
-const MOCK_DATA = {
-  contratista_id: "demo",
-  mandante_id: "demo",
-  estado_global: "EN_PROCESO" as const,
-  pilares_empresa: [
-    { pilar_codigo: "LEGAL", pilar_nombre: "Legal / Laboral", cumple: true, brechas: [] },
-    { pilar_codigo: "HSE", pilar_nombre: "HSE", cumple: false, brechas: ["RIOHS no firmado por representante legal", "Falta certificado MIPER vigente"] },
-    { pilar_codigo: "COMPLIANCE", pilar_nombre: "Compliance", cumple: false, brechas: ["Carpeta tributaria vencida hace 12 días"] },
-  ],
-  trabajadores: [
-    {
-      trabajador_id: "t1",
-      nombre: "Pedro Carrasco Méndez",
-      rut: "16.789.012-3",
-      cumple: true,
-      pilares: [
-        { pilar_codigo: "HSE", pilar_nombre: "HSE", cumple: true, brechas: [] },
-      ],
-    },
-    {
-      trabajador_id: "t2",
-      nombre: "Ana Salinas Vega",
-      rut: "17.890.123-4",
-      cumple: false,
-      pilares: [
-        { pilar_codigo: "HSE", pilar_nombre: "HSE", cumple: false, brechas: ["Examen médico vencido hace 45 días", "DAS pendiente de firma"] },
-      ],
-    },
-  ],
-}
-
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export default function DashboardContratistaPage() {
   const [session, setSession] = useState<{ contratista_id: string; mandante_id: string } | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [pilarSeleccionado, setPilarSeleccionado] = useState("")
-  const [useMock, setUseMock] = useState(false)
 
   useEffect(() => {
     const s = getSession()
     if (s) setSession(s)
   }, [])
 
-  const { data: apiData, loading, error, refetch } = useAcreditacion(
+  const { data, loading, error } = useAcreditacion(
     session?.contratista_id ?? "",
     session?.mandante_id ?? ""
   )
-  const [timedOut, setTimedOut] = useState(false)
-  useEffect(() => {
-    if (loading) {
-      const t = setTimeout(() => setTimedOut(true), 2000)
-      return () => clearTimeout(t)
-    }
-  }, [loading])
 
-  useEffect(() => {
-    if (error || timedOut) setUseMock(true)
-  }, [error, timedOut])
-
-  const data = useMock ? MOCK_DATA : apiData
-
-  if (!session || (loading && !timedOut)) return <LoadingState />
-  if (!data) return <LoadingState />
+  if (!session || loading) return <LoadingState />
+  if (error || !data) {
+    return (
+      <div className="p-8">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+          <p className="text-sm font-medium text-red-800">No se pudo cargar tu estado de acreditación</p>
+          <p className="text-xs text-red-600 mt-1">{error ?? "Intenta recargar la página."}</p>
+        </div>
+      </div>
+    )
+  }
 
   const cfg = ESTADO_CONFIG[data.estado_global]
   const Icon = cfg.icon
@@ -281,7 +229,9 @@ export default function DashboardContratistaPage() {
                 ? "Tu empresa cumple todos los requisitos exigidos. Los trabajadores pueden ingresar a la faena."
                 : data.estado_global === "BLOQUEADA"
                   ? "Hay brechas críticas que impiden el acceso a la obra. Corrígelas lo antes posible."
-                  : "Hay documentos pendientes o en revisión. El acceso está condicionado."
+                  : data.estado_global === "PENDIENTE"
+                    ? "Aún no tienes servicios activos con este mandante — no hay requisitos exigibles todavía."
+                    : "Hay documentos pendientes o en revisión. El acceso está condicionado."
               }
             </p>
           </div>
@@ -304,7 +254,7 @@ export default function DashboardContratistaPage() {
               <PilarCard
                 key={pilar.pilar_codigo}
                 pilar={pilar}
-                onSubir={() => { setPilarSeleccionado(pilar.pilar_nombre); setDialogOpen(true) }}
+                onSubir={() => { window.location.href = "/contratista/documentos" }}
               />
             ))}
           </div>
@@ -345,29 +295,13 @@ export default function DashboardContratistaPage() {
           ) : (
             <div className="space-y-2">
               {data.trabajadores.map(t => (
-                <TrabajadorRow
-                  key={t.trabajador_id}
-                  trabajador={t}
-                  mandanteId={data.mandante_id}
-                  onRefetch={refetch}
-                />
+                <TrabajadorRow key={t.trabajador_id} trabajador={t} />
               ))}
             </div>
           )}
         </section>
 
       </div>
-
-      <SubirDocumentoDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSuccess={refetch}
-        requisitoId=""
-        requisitoNombre={pilarSeleccionado}
-        entidadTipo="empresa"
-        entidadId={session?.contratista_id ?? ""}
-        mandanteId={session?.mandante_id ?? ""}
-      />
     </div>
   )
 }

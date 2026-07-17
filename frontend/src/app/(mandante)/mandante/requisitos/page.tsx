@@ -1,15 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
-  ChevronDown, ChevronRight, CheckCircle2,
-  Circle, Info, Save, Lock
+  Briefcase, ChevronDown, ChevronRight, CheckCircle2,
+  Circle, Layers, Lock, Plus, Save,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
-import { useApiData } from "@/shared/lib/use-api-data"
+import { api } from "@/shared/lib/api"
 import { getSession } from "@/shared/lib/auth"
+import type { Perfil } from "@/entities/servicio/types"
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/shared/ui/dialog"
+import { Button } from "@/shared/ui/button"
+import { Input } from "@/shared/ui/input"
+import { Label } from "@/shared/ui/label"
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+// ── Tipos (espejo del backend) ────────────────────────────────────────────────
 
 interface Requisito {
   id: string
@@ -17,31 +24,114 @@ interface Requisito {
   nombre: string
   descripcion: string
   entidad: "EMPRESA" | "TRABAJADOR"
+  alcance: "ENTIDAD" | "SERVICIO"
+  max_archivos: number
   es_obligatorio: boolean
   vigencia_max_dias: number
-  umbral_deuda_max?: number
+  umbral_deuda_max: number | null
 }
 
 interface Pilar {
   id: string
   codigo: string
   nombre: string
-  descripcion: string
   color: string
   requisitos: Requisito[]
+}
+
+interface ConfigPerfil {
+  perfil: { id: string; nombre: string; descripcion: string | null }
+  pilares: Pilar[]
 }
 
 const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text: string; badge: string }> = {
   blue:   { border: "border-blue-200",   bg: "bg-blue-50",   dot: "bg-blue-500",   text: "text-blue-700",   badge: "bg-blue-50 text-blue-700 border-blue-200" },
   amber:  { border: "border-amber-200",  bg: "bg-amber-50",  dot: "bg-amber-500",  text: "text-amber-700",  badge: "bg-amber-50 text-amber-700 border-amber-200" },
   purple: { border: "border-purple-200", bg: "bg-purple-50", dot: "bg-purple-500", text: "text-purple-700", badge: "bg-purple-50 text-purple-700 border-purple-200" },
+  slate:  { border: "border-slate-200",  bg: "bg-slate-50",  dot: "bg-slate-500",  text: "text-slate-700",  badge: "bg-slate-100 text-slate-600 border-slate-200" },
 }
 
-// ── Componentes ───────────────────────────────────────────────────────────────
+// ── Crear perfil ──────────────────────────────────────────────────────────────
+
+function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
+  mandanteId: string
+  onClose: () => void
+  onCreado: (perfil: Perfil) => void
+}) {
+  const [nombre, setNombre] = useState("")
+  const [descripcion, setDescripcion] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const perfil = await api.post<Perfil>(`/api/v1/mandantes/${mandanteId}/perfiles`, {
+        nombre,
+        descripcion: descripcion || null,
+      })
+      onCreado(perfil)
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al crear perfil")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={() => !loading && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nuevo perfil de exigencias</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="nombre">Nombre</Label>
+            <Input
+              id="nombre"
+              placeholder="Obras civiles, Transporte, Servicios eléctricos..."
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="desc">Descripción (opcional)</Label>
+            <Input
+              id="desc"
+              placeholder="Exigencias para contratos de obras civiles"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+            />
+          </div>
+          <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+            El perfil parte sin requisitos exigidos — actívalos después de crearlo.
+            Cada servicio que crees podrá usar este perfil.
+          </p>
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading || !nombre.trim()}>
+              {loading ? "Creando..." : "Crear perfil"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ── Fila de requisito ─────────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
+      type="button"
       onClick={() => onChange(!checked)}
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
@@ -56,29 +146,25 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
-function RequisitoRow({
-  req,
-  color,
-  onChange,
-}: {
+function RequisitoRow({ req, color, dirty, onChange }: {
   req: Requisito
   color: string
-  onChange: (id: string, field: keyof Requisito, value: unknown) => void
+  dirty: boolean
+  onChange: (id: string, cambios: Partial<Requisito>) => void
 }) {
-  const [editing, setEditing] = useState(false)
-  const c = COLOR_MAP[color]
+  const c = COLOR_MAP[color] ?? COLOR_MAP.slate
 
   return (
     <div className={cn(
       "rounded-lg border p-4 transition-colors",
-      req.es_obligatorio ? "bg-white border-slate-200" : "bg-slate-50/60 border-slate-100"
+      req.es_obligatorio ? "bg-white border-slate-200" : "bg-slate-50/60 border-slate-100",
+      dirty && "border-amber-300"
     )}>
       <div className="flex items-start gap-3">
-        {/* Toggle obligatorio */}
         <div className="mt-0.5">
           <Toggle
             checked={req.es_obligatorio}
-            onChange={v => onChange(req.id, "es_obligatorio", v)}
+            onChange={(v) => onChange(req.id, { es_obligatorio: v })}
           />
         </div>
 
@@ -93,67 +179,48 @@ function RequisitoRow({
             )}>
               {req.codigo}
             </span>
-            <span className={cn(
-              "text-[10px] px-1.5 py-0.5 rounded border font-medium",
-              req.entidad === "EMPRESA"
-                ? "bg-slate-100 text-slate-500 border-slate-200"
-                : "bg-slate-100 text-slate-500 border-slate-200"
-            )}>
+            <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-slate-100 text-slate-500 border-slate-200">
               {req.entidad === "EMPRESA" ? "Empresa" : "Trabajador"}
             </span>
+            <span className={cn(
+              "text-[10px] px-1.5 py-0.5 rounded border font-medium",
+              req.alcance === "SERVICIO"
+                ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                : "bg-slate-100 text-slate-500 border-slate-200"
+            )}>
+              {req.alcance === "SERVICIO" ? "Por cada servicio" : "Se acredita una vez"}
+            </span>
+            {dirty && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-amber-50 text-amber-700 border-amber-200">
+                Sin guardar
+              </span>
+            )}
           </div>
-          <p className={cn("text-xs mb-3", req.es_obligatorio ? "text-slate-500" : "text-slate-400")}>
-            {req.descripcion}
-          </p>
 
-          {/* Parámetros */}
           {req.es_obligatorio && (
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap mt-2">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 whitespace-nowrap">Vigencia máx.</label>
-                {editing ? (
+                <label className="text-xs text-slate-500 whitespace-nowrap">Vigencia máx. (días)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={req.vigencia_max_dias}
+                  onChange={(e) => onChange(req.id, { vigencia_max_dias: Number(e.target.value) })}
+                  className="w-20 text-xs border border-slate-200 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                />
+              </div>
+              {req.codigo.startsWith("F30") && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-slate-500 whitespace-nowrap">Deuda máx. ($)</label>
                   <input
                     type="number"
-                    value={req.vigencia_max_dias}
-                    onChange={e => onChange(req.id, "vigencia_max_dias", Number(e.target.value))}
-                    className="w-16 text-xs border border-slate-300 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                    min={0}
+                    value={req.umbral_deuda_max ?? 0}
+                    onChange={(e) => onChange(req.id, { umbral_deuda_max: Number(e.target.value) })}
+                    className="w-28 text-xs border border-slate-200 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                   />
-                ) : (
-                  <span className="text-xs font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded">
-                    {req.vigencia_max_dias} días
-                  </span>
-                )}
-              </div>
-
-              {req.umbral_deuda_max !== undefined && (
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-500 whitespace-nowrap">Deuda máx.</label>
-                  {editing ? (
-                    <input
-                      type="number"
-                      value={req.umbral_deuda_max}
-                      onChange={e => onChange(req.id, "umbral_deuda_max", Number(e.target.value))}
-                      className="w-24 text-xs border border-slate-300 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                    />
-                  ) : (
-                    <span className="text-xs font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded">
-                      ${(req.umbral_deuda_max ?? 0).toLocaleString("es-CL")}
-                    </span>
-                  )}
                 </div>
               )}
-
-              <button
-                onClick={() => setEditing(!editing)}
-                className={cn(
-                  "text-xs px-2 py-1 rounded transition-colors flex items-center gap-1",
-                  editing
-                    ? "bg-slate-900 text-white hover:bg-slate-800"
-                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-                )}
-              >
-                {editing ? <><Save size={11} /> Guardar</> : "Editar parámetros"}
-              </button>
             </div>
           )}
         </div>
@@ -167,49 +234,27 @@ function RequisitoRow({
   )
 }
 
-function PilarSection({ pilar, onChange }: {
+function PilarSection({ pilar, dirties, onChange }: {
   pilar: Pilar
-  onChange: (pilarId: string, reqId: string, field: keyof Requisito, value: unknown) => void
+  dirties: Set<string>
+  onChange: (reqId: string, cambios: Partial<Requisito>) => void
 }) {
   const [open, setOpen] = useState(true)
-  const c = COLOR_MAP[pilar.color]
+  const c = COLOR_MAP[pilar.color] ?? COLOR_MAP.slate
   const obligatorios = pilar.requisitos.filter(r => r.es_obligatorio).length
-  const empresa = pilar.requisitos.filter(r => r.entidad === "EMPRESA").length
-  const trabajador = pilar.requisitos.filter(r => r.entidad === "TRABAJADOR").length
 
   return (
     <div className={cn("rounded-xl border overflow-hidden", c.border)}>
-      {/* Header del pilar */}
       <button
         onClick={() => setOpen(!open)}
         className={cn("w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:opacity-90", c.bg)}
       >
         <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <p className={cn("text-sm font-bold", c.text)}>{pilar.nombre}</p>
-            <span className="text-xs text-slate-500">{pilar.descripcion}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-slate-500">
-            {obligatorios}/{pilar.requisitos.length} activos
-          </span>
-          {empresa > 0 && (
-            <span className="text-[10px] bg-white/70 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500">
-              {empresa} empresa
-            </span>
-          )}
-          {trabajador > 0 && (
-            <span className="text-[10px] bg-white/70 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500">
-              {trabajador} trabajador
-            </span>
-          )}
-          {open ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
-        </div>
+        <p className={cn("text-sm font-bold flex-1", c.text)}>{pilar.nombre}</p>
+        <span className="text-xs text-slate-500">{obligatorios}/{pilar.requisitos.length} exigidos</span>
+        {open ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
       </button>
 
-      {/* Requisitos */}
       {open && (
         <div className="p-4 space-y-2 bg-white">
           {pilar.requisitos.map(req => (
@@ -217,7 +262,8 @@ function PilarSection({ pilar, onChange }: {
               key={req.id}
               req={req}
               color={pilar.color}
-              onChange={(reqId, field, value) => onChange(pilar.id, reqId, field, value)}
+              dirty={dirties.has(req.id)}
+              onChange={onChange}
             />
           ))}
         </div>
@@ -228,38 +274,78 @@ function PilarSection({ pilar, onChange }: {
 
 // ── Página ────────────────────────────────────────────────────────────────────
 
-export default function RequisitosPage() {
-  const [endpoint, setEndpoint] = useState<string | null>(null)
+export default function PerfilesPage() {
+  const [mandanteId, setMandanteId] = useState<string | null>(null)
+  const [perfiles, setPerfiles] = useState<Perfil[]>([])
+  const [perfilId, setPerfilId] = useState<string | null>(null)
+  const [pilares, setPilares] = useState<Pilar[]>([])
+  const [dirties, setDirties] = useState<Set<string>>(new Set())
+  const [guardando, setGuardando] = useState(false)
+  const [guardado, setGuardado] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [dialogPerfil, setDialogPerfil] = useState(false)
+
   useEffect(() => {
     const s = getSession()
-    if (s?.mandante_id) setEndpoint(`/api/v1/mandantes/${s.mandante_id}/requisitos`)
+    if (s?.mandante_id) setMandanteId(s.mandante_id)
   }, [])
 
-  const { data: apiPilares } = useApiData<Pilar[]>(endpoint, [])
-  const [pilares, setPilares] = useState<Pilar[]>([])
-  const [saved, setSaved] = useState(false)
+  const cargarPerfiles = useCallback((mid: string) => {
+    api.get<Perfil[]>(`/api/v1/mandantes/${mid}/perfiles`)
+      .then((ps) => {
+        setPerfiles(ps)
+        setPerfilId((actual) => actual ?? ps[0]?.id ?? null)
+      })
+      .catch(() => setPerfiles([]))
+  }, [])
 
   useEffect(() => {
-    if (apiPilares.length > 0) setPilares(apiPilares)
-  }, [apiPilares])
+    if (mandanteId) cargarPerfiles(mandanteId)
+  }, [mandanteId, cargarPerfiles])
 
-  function handleChange(pilarId: string, reqId: string, field: keyof Requisito, value: unknown) {
-    setSaved(false)
-    setPilares(prev => prev.map(p =>
-      p.id !== pilarId ? p : {
-        ...p,
-        requisitos: p.requisitos.map(r => r.id !== reqId ? r : { ...r, [field]: value })
+  useEffect(() => {
+    if (!mandanteId || !perfilId) return
+    setDirties(new Set())
+    api.get<ConfigPerfil>(`/api/v1/mandantes/${mandanteId}/requisitos?perfil_id=${perfilId}`)
+      .then((cfg) => setPilares(cfg.pilares))
+      .catch(() => setPilares([]))
+  }, [mandanteId, perfilId])
+
+  function handleChange(reqId: string, cambios: Partial<Requisito>) {
+    setGuardado(false)
+    setDirties((prev) => new Set(prev).add(reqId))
+    setPilares((prev) => prev.map(p => ({
+      ...p,
+      requisitos: p.requisitos.map(r => r.id !== reqId ? r : { ...r, ...cambios }),
+    })))
+  }
+
+  async function handleGuardar() {
+    if (!mandanteId || !perfilId || dirties.size === 0) return
+    setGuardando(true)
+    setError(null)
+    const requisitos = pilares.flatMap(p => p.requisitos).filter(r => dirties.has(r.id))
+    try {
+      for (const r of requisitos) {
+        await api.post(`/api/v1/mandantes/${mandanteId}/perfiles/${perfilId}/requisitos`, {
+          requisito_documental_id: r.id,
+          es_obligatorio: r.es_obligatorio,
+          vigencia_max_dias: r.vigencia_max_dias,
+          umbral_deuda_max: r.umbral_deuda_max ?? 0,
+        })
       }
-    ))
+      setDirties(new Set())
+      setGuardado(true)
+      setTimeout(() => setGuardado(false), 2500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al guardar")
+    } finally {
+      setGuardando(false)
+    }
   }
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
-  }
-
-  const totalActivos = pilares.flatMap(p => p.requisitos).filter(r => r.es_obligatorio).length
-  const totalRequisitos = pilares.flatMap(p => p.requisitos).length
+  const perfilActivo = perfiles.find(p => p.id === perfilId)
+  const totalExigidos = pilares.flatMap(p => p.requisitos).filter(r => r.es_obligatorio).length
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -267,52 +353,96 @@ export default function RequisitosPage() {
       <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">Requisitos</h1>
+            <h1 className="text-xl font-semibold text-slate-900">Perfiles de exigencias</h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              Configura qué documentos exiges y con qué parámetros — se aplica a todos tus contratistas
+              Define qué documentos exiges por tipo de servicio — cada servicio usa un perfil
             </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
               <Lock size={12} className="text-slate-400" />
-              Los pilares los gestiona BERISA
+              El catálogo lo gestiona BERISA
             </div>
             <button
-              onClick={handleSave}
+              onClick={handleGuardar}
+              disabled={dirties.size === 0 || guardando}
               className={cn(
                 "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
-                saved
+                guardado
                   ? "bg-emerald-500 text-white"
-                  : "bg-slate-900 text-white hover:bg-slate-800"
+                  : dirties.size === 0
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : "bg-slate-900 text-white hover:bg-slate-800"
               )}
             >
               <Save size={14} />
-              {saved ? "¡Guardado!" : "Guardar cambios"}
+              {guardando ? "Guardando..." : guardado ? "¡Guardado!" : `Guardar${dirties.size > 0 ? ` (${dirties.size})` : ""}`}
             </button>
           </div>
         </div>
 
-        {/* Info banner */}
-        <div className="mt-4 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-          <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
-          <p className="text-xs text-blue-700">
-            Tienes <strong>{totalActivos} de {totalRequisitos} requisitos activos</strong>.
-            Los requisitos desactivados no aparecerán en el checklist de tus contratistas.
-            Los cambios afectan a todos los contratistas actuales y futuros.
-          </p>
+        {/* Selector de perfil */}
+        <div className="mt-4 flex items-center gap-2 flex-wrap">
+          <Layers size={14} className="text-slate-400" />
+          {perfiles.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setPerfilId(p.id)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                p.id === perfilId
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+              )}
+            >
+              {p.nombre}
+            </button>
+          ))}
+          <button
+            onClick={() => setDialogPerfil(true)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-slate-300 text-slate-500 hover:border-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <Plus size={12} /> Nuevo perfil
+          </button>
         </div>
+
+        {perfilActivo && (
+          <div className="mt-3 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <Briefcase size={14} className="text-blue-500 mt-0.5 shrink-0" />
+            <p className="text-xs text-blue-700">
+              Perfil <strong>{perfilActivo.nombre}</strong>: {totalExigidos} requisito{totalExigidos !== 1 ? "s" : ""} exigido{totalExigidos !== 1 ? "s" : ""}.
+              {perfilActivo.descripcion ? ` ${perfilActivo.descripcion}.` : ""} Se aplica a los servicios que usen este perfil.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</p>
+        )}
       </div>
 
-      {/* Contenido */}
-      <div className="flex-1 overflow-auto px-8 py-6 space-y-5">
-        {pilares.map(pilar => (
-          <PilarSection
-            key={pilar.id}
-            pilar={pilar}
-            onChange={handleChange}
-          />
+      {/* Pilares */}
+      <div className="flex-1 overflow-auto px-8 py-6 space-y-4">
+        {pilares.map((pilar) => (
+          <PilarSection key={pilar.id} pilar={pilar} dirties={dirties} onChange={handleChange} />
         ))}
+        {pilares.length === 0 && (
+          <div className="py-14 text-center bg-white rounded-xl border border-slate-200">
+            <p className="text-sm text-slate-400">Cargando configuración del perfil...</p>
+          </div>
+        )}
       </div>
+
+      {dialogPerfil && mandanteId && (
+        <CrearPerfilDialog
+          mandanteId={mandanteId}
+          onClose={() => setDialogPerfil(false)}
+          onCreado={(p) => {
+            setPerfiles((prev) => [...prev, p])
+            setPerfilId(p.id)
+          }}
+        />
+      )}
     </div>
   )
 }

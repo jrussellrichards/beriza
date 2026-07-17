@@ -1,333 +1,100 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
-  Search, Plus, ChevronRight, CheckCircle2,
-  AlertCircle, Users, X, FileText, Download,
-  Clock, XCircle
+  AlertCircle, Briefcase, CheckCircle2, ChevronRight,
+  FileText, History, Plus, Search, ShieldCheck, Users, X,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { getSession } from "@/shared/lib/auth"
-import { useApiData } from "@/shared/lib/use-api-data"
+import { api } from "@/shared/lib/api"
+import { InvitarContratistaDialog } from "@/features/invitar-contratista/invitar-contratista-dialog"
+import { HistorialDialog } from "@/entities/documento/historial-dialog"
+import type { Servicio } from "@/entities/servicio/types"
+import type { EstadoGlobal } from "@/shared/types"
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/shared/ui/dialog"
+import { Button } from "@/shared/ui/button"
+import { Textarea } from "@/shared/ui/textarea"
+import { Label } from "@/shared/ui/label"
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+// ── Tipos (espejo de contratistas-detalle) ────────────────────────────────────
 
-type EstadoAcreditacion = "ACREDITADA" | "EN_PROCESO" | "BLOQUEADA"
-type EstadoPilar = "OK" | "PENDIENTE" | "FALLIDO"
-type EstadoDoc = "APROBADO" | "PENDIENTE" | "RECHAZADO" | "VENCIDO"
-type PanelTab = "estado" | "documentos" | "trabajadores"
+interface DocDetalle {
+  requisito_id: string
+  requisito_codigo: string
+  requisito_nombre: string
+  entidad_tipo: "EMPRESA" | "TRABAJADOR"
+  pilar_codigo: string
+  pilar_nombre: string
+  servicio_nombre: string | null
+  estado: number | null
+  fecha_vigencia_hasta: string | null
+  mensaje_brecha: string | null
+  documento_id: string | null
+}
 
-interface Documento {
-  nombre: string
+interface PilarDetalle {
   codigo: string
-  estado: EstadoDoc
-  fecha_subida: string
-  fecha_vence: string | null
-  entidad: "EMPRESA" | "TRABAJADOR"
-  trabajador?: string
-}
-
-interface PilarConDocs {
   nombre: string
-  estado: EstadoPilar
-  brechas: string[]
-  documentos: Documento[]
+  color: string
+  cumple: boolean
+  documentos: DocDetalle[]
 }
 
-interface Trabajador { nombre: string; rut: string; cumple: boolean }
+interface TrabajadorDetalle {
+  id: string
+  nombre: string
+  rut: string
+  cargo: string | null
+  cumple: boolean
+  documentos: DocDetalle[]
+}
 
 interface Contratista {
-  id: string; razon_social: string; rut: string
-  estado: EstadoAcreditacion; pilares: PilarConDocs[]
-  trabajadores: Trabajador[]; ultima_actualizacion: string
+  id: string
+  razon_social: string
+  rut: string
+  giro: string | null
+  estado_acreditacion: EstadoGlobal
+  total_trabajadores: number
+  pilares: PilarDetalle[]
+  trabajadores: TrabajadorDetalle[]
 }
 
-// ── API types + transform ─────────────────────────────────────────────────────
-
-type ApiDocEmpresa = {
-  requisito_codigo: string; requisito_nombre: string; entidad_tipo: "EMPRESA" | "TRABAJADOR"
-  estado: number | null; fecha_vigencia_hasta: string | null; mensaje_brecha: string | null
-}
-type ApiTrabajador = {
-  id: string; nombre: string; rut: string; cargo: string; cumple: boolean
-  documentos: ApiDocEmpresa[]
-}
-type ApiPilar = { codigo: string; nombre: string; cumple: boolean; documentos: ApiDocEmpresa[] }
-type ApiContratista = {
-  id: string; razon_social: string; rut: string; estado_acreditacion: string
-  total_trabajadores: number; pilares: ApiPilar[]; trabajadores: ApiTrabajador[]
-}
-
-const CODIGO_PILAR: Record<string, string> = {
-  F30: "Legal / Laboral", F30_1: "Legal / Laboral", CONTRATO: "Legal / Laboral",
-  EXAM_MED: "HSE — Salud, Seguridad y Medio Ambiente",
-  MIPER: "HSE — Salud, Seguridad y Medio Ambiente",
-  RIOHS: "HSE — Salud, Seguridad y Medio Ambiente",
-  DAS: "HSE — Salud, Seguridad y Medio Ambiente",
-  CARPETA_TRIBUTARIA: "Compliance / Tributario",
-  VIGENCIA_SOCIEDAD: "Compliance / Tributario",
-  DJ_CONFLICTO: "Compliance / Tributario",
-}
-
-function mapEstadoDoc(estado: number | null): EstadoDoc {
-  if (estado === 4) return "APROBADO"
-  if (estado === 3) return "RECHAZADO"
-  return "PENDIENTE"
-}
-
-function mapContratistas(api: ApiContratista[]): Contratista[] {
-  return api.map(c => {
-    const pilaresMap: Record<string, PilarConDocs> = {}
-    c.pilares.forEach(p => {
-      const nombre = p.nombre
-      if (!pilaresMap[nombre]) {
-        pilaresMap[nombre] = { nombre, estado: p.cumple ? "OK" : "PENDIENTE", brechas: [], documentos: [] }
-      }
-      p.documentos.forEach(d => {
-        if (d.estado === 3) {
-          pilaresMap[nombre].estado = "FALLIDO"
-          if (d.mensaje_brecha) pilaresMap[nombre].brechas.push(d.mensaje_brecha)
-        }
-        pilaresMap[nombre].documentos.push({
-          nombre: d.requisito_nombre,
-          codigo: d.requisito_codigo,
-          estado: mapEstadoDoc(d.estado),
-          fecha_subida: "—",
-          fecha_vence: d.fecha_vigencia_hasta,
-          entidad: d.entidad_tipo,
-        })
-      })
-    })
-    // Añadir documentos de trabajadores a sus pilares
-    c.trabajadores.forEach(t => {
-      t.documentos.forEach(d => {
-        const nombrePilar = CODIGO_PILAR[d.requisito_codigo]
-        if (nombrePilar && pilaresMap[nombrePilar]) {
-          if (d.estado === 3) {
-            pilaresMap[nombrePilar].estado = "FALLIDO"
-            if (d.mensaje_brecha) pilaresMap[nombrePilar].brechas.push(d.mensaje_brecha)
-          }
-          pilaresMap[nombrePilar].documentos.push({
-            nombre: `${d.requisito_nombre} — ${t.nombre}`,
-            codigo: d.requisito_codigo,
-            estado: mapEstadoDoc(d.estado),
-            fecha_subida: "—",
-            fecha_vence: d.fecha_vigencia_hasta,
-            entidad: "TRABAJADOR",
-            trabajador: t.nombre,
-          })
-        }
-      })
-    })
-    return {
-      id: c.id,
-      razon_social: c.razon_social,
-      rut: c.rut,
-      estado: c.estado_acreditacion as EstadoAcreditacion,
-      pilares: Object.values(pilaresMap),
-      trabajadores: c.trabajadores.map(t => ({ nombre: t.nombre, rut: t.rut, cumple: t.cumple })),
-      ultima_actualizacion: "—",
-    }
-  })
-}
+type PanelTab = "estado" | "documentos" | "trabajadores" | "servicios"
 
 // ── Config visual ─────────────────────────────────────────────────────────────
 
-const CONTRATISTAS_DEFAULT: Contratista[] = [
-  {
-    id: "1", razon_social: "Constructora Vial del Norte S.A.", rut: "76.234.891-2",
-    estado: "ACREDITADA", ultima_actualizacion: "17 Jun 2025",
-    pilares: [
-      {
-        nombre: "Legal", estado: "OK", brechas: [],
-        documentos: [
-          { nombre: "Certificado F30", codigo: "F30", estado: "APROBADO", fecha_subida: "10 Jun 2025", fecha_vence: "10 Jul 2025", entidad: "EMPRESA" },
-          { nombre: "Certificado F30-1", codigo: "F30_1", estado: "APROBADO", fecha_subida: "10 Jun 2025", fecha_vence: "10 Jul 2025", entidad: "EMPRESA" },
-          { nombre: "Contrato — Jorge Muñoz", codigo: "CONTRATO", estado: "APROBADO", fecha_subida: "05 Jun 2025", fecha_vence: null, entidad: "TRABAJADOR", trabajador: "Jorge Muñoz" },
-          { nombre: "Contrato — Ana Salinas", codigo: "CONTRATO", estado: "APROBADO", fecha_subida: "05 Jun 2025", fecha_vence: null, entidad: "TRABAJADOR", trabajador: "Ana Salinas" },
-        ],
-      },
-      {
-        nombre: "HSE", estado: "OK", brechas: [],
-        documentos: [
-          { nombre: "Matriz MIPER", codigo: "MIPER", estado: "APROBADO", fecha_subida: "08 Jun 2025", fecha_vence: "08 Jun 2026", entidad: "EMPRESA" },
-          { nombre: "RIOHS", codigo: "RIOHS", estado: "APROBADO", fecha_subida: "08 Jun 2025", fecha_vence: "08 Jun 2026", entidad: "EMPRESA" },
-          { nombre: "DAS — Jorge Muñoz", codigo: "DAS", estado: "APROBADO", fecha_subida: "09 Jun 2025", fecha_vence: "08 Sep 2025", entidad: "TRABAJADOR", trabajador: "Jorge Muñoz" },
-          { nombre: "Examen médico — Jorge Muñoz", codigo: "EXAMEN_MEDICO", estado: "APROBADO", fecha_subida: "09 Jun 2025", fecha_vence: "09 Dic 2025", entidad: "TRABAJADOR", trabajador: "Jorge Muñoz" },
-        ],
-      },
-      {
-        nombre: "Compliance", estado: "OK", brechas: [],
-        documentos: [
-          { nombre: "Carpeta tributaria", codigo: "CARPETA_TRIBUTARIA", estado: "APROBADO", fecha_subida: "11 Jun 2025", fecha_vence: "11 Sep 2025", entidad: "EMPRESA" },
-          { nombre: "Vigencia de sociedad", codigo: "VIGENCIA_SOCIEDAD", estado: "APROBADO", fecha_subida: "11 Jun 2025", fecha_vence: "11 Jun 2026", entidad: "EMPRESA" },
-        ],
-      },
-    ],
-    trabajadores: [
-      { nombre: "Jorge Muñoz", rut: "12.345.678-9", cumple: true },
-      { nombre: "Ana Salinas", rut: "13.456.789-0", cumple: true },
-    ],
-  },
-  {
-    id: "2", razon_social: "Servicios Industriales Omega Ltda.", rut: "77.891.234-5",
-    estado: "EN_PROCESO", ultima_actualizacion: "19 Jun 2025",
-    pilares: [
-      {
-        nombre: "Legal", estado: "OK", brechas: [],
-        documentos: [
-          { nombre: "Certificado F30", codigo: "F30", estado: "APROBADO", fecha_subida: "15 Jun 2025", fecha_vence: "15 Jul 2025", entidad: "EMPRESA" },
-          { nombre: "Contrato — Juan Rojas", codigo: "CONTRATO", estado: "APROBADO", fecha_subida: "12 Jun 2025", fecha_vence: null, entidad: "TRABAJADOR", trabajador: "Juan Rojas" },
-        ],
-      },
-      {
-        nombre: "HSE", estado: "PENDIENTE", brechas: ["Falta examen médico de J. Rojas"],
-        documentos: [
-          { nombre: "Matriz MIPER", codigo: "MIPER", estado: "APROBADO", fecha_subida: "13 Jun 2025", fecha_vence: "13 Jun 2026", entidad: "EMPRESA" },
-          { nombre: "Examen médico — Juan Rojas", codigo: "EXAMEN_MEDICO", estado: "PENDIENTE", fecha_subida: "—", fecha_vence: null, entidad: "TRABAJADOR", trabajador: "Juan Rojas" },
-        ],
-      },
-      {
-        nombre: "Compliance", estado: "PENDIENTE", brechas: ["Carpeta tributaria vencida hace 12 días"],
-        documentos: [
-          { nombre: "Carpeta tributaria", codigo: "CARPETA_TRIBUTARIA", estado: "VENCIDO", fecha_subida: "20 Mar 2025", fecha_vence: "07 Jun 2025", entidad: "EMPRESA" },
-          { nombre: "Vigencia de sociedad", codigo: "VIGENCIA_SOCIEDAD", estado: "APROBADO", fecha_subida: "02 Ene 2025", fecha_vence: "02 Ene 2026", entidad: "EMPRESA" },
-        ],
-      },
-    ],
-    trabajadores: [
-      { nombre: "Juan Rojas", rut: "14.567.890-1", cumple: false },
-      { nombre: "Claudia Vega", rut: "15.678.901-2", cumple: true },
-    ],
-  },
-  {
-    id: "3", razon_social: "Ingeniería Aplicada Cóndor SpA", rut: "76.012.345-K",
-    estado: "BLOQUEADA", ultima_actualizacion: "09 Jun 2025",
-    pilares: [
-      {
-        nombre: "Legal", estado: "FALLIDO", brechas: ["F30-1 con deuda de $4.200.000", "F30 vencido hace 32 días"],
-        documentos: [
-          { nombre: "Certificado F30", codigo: "F30", estado: "VENCIDO", fecha_subida: "08 May 2025", fecha_vence: "08 Jun 2025", entidad: "EMPRESA" },
-          { nombre: "Certificado F30-1", codigo: "F30_1", estado: "RECHAZADO", fecha_subida: "09 Jun 2025", fecha_vence: null, entidad: "EMPRESA" },
-        ],
-      },
-      {
-        nombre: "HSE", estado: "FALLIDO", brechas: ["RIOHS no firmado por representante legal"],
-        documentos: [
-          { nombre: "RIOHS", codigo: "RIOHS", estado: "RECHAZADO", fecha_subida: "07 Jun 2025", fecha_vence: null, entidad: "EMPRESA" },
-          { nombre: "Examen médico — Pedro Carrasco", codigo: "EXAMEN_MEDICO", estado: "APROBADO", fecha_subida: "01 Jun 2025", fecha_vence: "01 Dic 2025", entidad: "TRABAJADOR", trabajador: "Pedro Carrasco" },
-        ],
-      },
-      {
-        nombre: "Compliance", estado: "OK", brechas: [],
-        documentos: [
-          { nombre: "Carpeta tributaria", codigo: "CARPETA_TRIBUTARIA", estado: "APROBADO", fecha_subida: "04 Jun 2025", fecha_vence: "04 Sep 2025", entidad: "EMPRESA" },
-        ],
-      },
-    ],
-    trabajadores: [{ nombre: "Pedro Carrasco", rut: "16.789.012-3", cumple: false }],
-  },
-  {
-    id: "4", razon_social: "Mantención y Servicios Andinos Ltda.", rut: "96.543.210-3",
-    estado: "ACREDITADA", ultima_actualizacion: "21 Jun 2025",
-    pilares: [
-      { nombre: "Legal", estado: "OK", brechas: [], documentos: [
-        { nombre: "Certificado F30", codigo: "F30", estado: "APROBADO", fecha_subida: "18 Jun 2025", fecha_vence: "18 Jul 2025", entidad: "EMPRESA" },
-      ]},
-      { nombre: "HSE", estado: "OK", brechas: [], documentos: [
-        { nombre: "Matriz MIPER", codigo: "MIPER", estado: "APROBADO", fecha_subida: "18 Jun 2025", fecha_vence: "18 Jun 2026", entidad: "EMPRESA" },
-      ]},
-      { nombre: "Compliance", estado: "OK", brechas: [], documentos: [
-        { nombre: "Carpeta tributaria", codigo: "CARPETA_TRIBUTARIA", estado: "APROBADO", fecha_subida: "18 Jun 2025", fecha_vence: "18 Sep 2025", entidad: "EMPRESA" },
-      ]},
-    ],
-    trabajadores: [
-      { nombre: "Rosa Fuentes", rut: "17.890.123-4", cumple: true },
-      { nombre: "Carlos Díaz", rut: "18.901.234-5", cumple: true },
-      { nombre: "Marcela Soto", rut: "19.012.345-6", cumple: true },
-    ],
-  },
-  {
-    id: "5", razon_social: "Transportes Patagonia Express S.A.", rut: "78.321.654-7",
-    estado: "EN_PROCESO", ultima_actualizacion: "18 Jun 2025",
-    pilares: [
-      { nombre: "Legal", estado: "OK", brechas: [], documentos: [
-        { nombre: "Certificado F30", codigo: "F30", estado: "APROBADO", fecha_subida: "14 Jun 2025", fecha_vence: "14 Jul 2025", entidad: "EMPRESA" },
-      ]},
-      { nombre: "HSE", estado: "OK", brechas: [], documentos: [
-        { nombre: "RIOHS", codigo: "RIOHS", estado: "APROBADO", fecha_subida: "14 Jun 2025", fecha_vence: "14 Jun 2026", entidad: "EMPRESA" },
-      ]},
-      { nombre: "Compliance", estado: "PENDIENTE", brechas: ["Declaración jurada conflicto de interés pendiente"], documentos: [
-        { nombre: "Carpeta tributaria", codigo: "CARPETA_TRIBUTARIA", estado: "APROBADO", fecha_subida: "14 Jun 2025", fecha_vence: "14 Sep 2025", entidad: "EMPRESA" },
-        { nombre: "DJ conflicto de interés", codigo: "DJ_CONFLICTO", estado: "PENDIENTE", fecha_subida: "—", fecha_vence: null, entidad: "EMPRESA" },
-      ]},
-    ],
-    trabajadores: [{ nombre: "Tomás Herrera", rut: "20.123.456-7", cumple: true }],
-  },
-  {
-    id: "6", razon_social: "Consultora Horizonte Sur SpA", rut: "76.789.012-1",
-    estado: "ACREDITADA", ultima_actualizacion: "20 Jun 2025",
-    pilares: [
-      { nombre: "Legal", estado: "OK", brechas: [], documentos: [] },
-      { nombre: "HSE", estado: "OK", brechas: [], documentos: [] },
-      { nombre: "Compliance", estado: "OK", brechas: [], documentos: [] },
-    ],
-    trabajadores: [{ nombre: "Valentina Pardo", rut: "21.234.567-8", cumple: true }],
-  },
-  {
-    id: "7", razon_social: "Eléctrica Nacional del Pacífico S.A.", rut: "93.456.789-4",
-    estado: "BLOQUEADA", ultima_actualizacion: "04 Jun 2025",
-    pilares: [
-      { nombre: "Legal", estado: "OK", brechas: [], documentos: [
-        { nombre: "Certificado F30", codigo: "F30", estado: "APROBADO", fecha_subida: "02 Jun 2025", fecha_vence: "02 Jul 2025", entidad: "EMPRESA" },
-      ]},
-      { nombre: "HSE", estado: "FALLIDO", brechas: ["3 trabajadores sin examen médico", "EPP no acreditado"], documentos: [
-        { nombre: "Examen médico — Luis Castillo", codigo: "EXAMEN_MEDICO", estado: "PENDIENTE", fecha_subida: "—", fecha_vence: null, entidad: "TRABAJADOR", trabajador: "Luis Castillo" },
-        { nombre: "Examen médico — Patricia Mora", codigo: "EXAMEN_MEDICO", estado: "PENDIENTE", fecha_subida: "—", fecha_vence: null, entidad: "TRABAJADOR", trabajador: "Patricia Mora" },
-      ]},
-      { nombre: "Compliance", estado: "FALLIDO", brechas: ["Vigencia sociedad expirada el 01 Jun 2025"], documentos: [
-        { nombre: "Vigencia de sociedad", codigo: "VIGENCIA_SOCIEDAD", estado: "VENCIDO", fecha_subida: "01 Jun 2024", fecha_vence: "01 Jun 2025", entidad: "EMPRESA" },
-      ]},
-    ],
-    trabajadores: [
-      { nombre: "Luis Castillo", rut: "22.345.678-9", cumple: false },
-      { nombre: "Patricia Mora", rut: "23.456.789-0", cumple: false },
-      { nombre: "Andrés Reyes", rut: "24.567.890-1", cumple: false },
-    ],
-  },
-]
-
-const ESTADO_CFG = {
+const ESTADO_CFG: Record<EstadoGlobal, { label: string; dot: string; text: string; bg: string; border: string }> = {
   ACREDITADA: { label: "Acreditada", dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  EN_PROCESO:  { label: "En Proceso",  dot: "bg-amber-500",  text: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200"  },
-  BLOQUEADA:   { label: "Bloqueada",   dot: "bg-red-500",    text: "text-red-700",    bg: "bg-red-50",    border: "border-red-200"    },
+  EN_PROCESO: { label: "En Proceso", dot: "bg-amber-500",  text: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200" },
+  BLOQUEADA:  { label: "Bloqueada",  dot: "bg-red-500",    text: "text-red-700",    bg: "bg-red-50",    border: "border-red-200" },
+  PENDIENTE:  { label: "Pendiente",  dot: "bg-slate-400",  text: "text-slate-600",  bg: "bg-slate-50",  border: "border-slate-200" },
 }
 
-const PILAR_CFG = {
-  OK:       { dot: "bg-emerald-500", text: "text-emerald-700" },
-  PENDIENTE:{ dot: "bg-amber-400",   text: "text-amber-600"   },
-  FALLIDO:  { dot: "bg-red-500",     text: "text-red-600"     },
-}
-
-const DOC_CFG: Record<EstadoDoc, { label: string; dot: string; text: string; bg: string; border: string }> = {
-  APROBADO:  { label: "Aprobado",  dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50",  border: "border-emerald-200"  },
-  PENDIENTE: { label: "Pendiente", dot: "bg-slate-400",   text: "text-slate-600",   bg: "bg-slate-100",  border: "border-slate-200"    },
-  RECHAZADO: { label: "Rechazado", dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200"      },
-  VENCIDO:   { label: "Vencido",   dot: "bg-orange-500",  text: "text-orange-700",  bg: "bg-orange-50",  border: "border-orange-200"   },
+// Estados de documento del backend: null=Falta | 1=En revisión | 2=En análisis | 3=Observado | 4=Aprobado
+const DOC_CFG: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
+  "4":    { label: "Aprobado",    dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+  "3":    { label: "Observado",   dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
+  "2":    { label: "En análisis", dot: "bg-blue-500",    text: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
+  "1":    { label: "En revisión", dot: "bg-amber-500",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
+  "null": { label: "Falta",       dot: "bg-slate-300",   text: "text-slate-500",   bg: "bg-slate-50",   border: "border-slate-200" },
 }
 
 const PILAR_COLOR: Record<string, string> = {
-  "Legal":      "bg-blue-50 text-blue-700 border-blue-200",
-  "HSE":        "bg-amber-50 text-amber-700 border-amber-200",
-  "Compliance": "bg-purple-50 text-purple-700 border-purple-200",
+  blue: "bg-blue-50 text-blue-700 border-blue-200",
+  amber: "bg-amber-50 text-amber-700 border-amber-200",
+  purple: "bg-purple-50 text-purple-700 border-purple-200",
 }
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
 }
 
-function EstadoBadge({ estado }: { estado: EstadoAcreditacion }) {
-  const c = ESTADO_CFG[estado]
+function EstadoBadge({ estado }: { estado: EstadoGlobal }) {
+  const c = ESTADO_CFG[estado] ?? ESTADO_CFG.PENDIENTE
   return (
     <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", c.bg, c.border, c.text)}>
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
@@ -336,37 +103,202 @@ function EstadoBadge({ estado }: { estado: EstadoAcreditacion }) {
   )
 }
 
-function PilarBadge({ estado }: { estado: EstadoPilar }) {
-  const c = PILAR_CFG[estado]
+function DocEstadoBadge({ estado }: { estado: number | null }) {
+  const c = DOC_CFG[String(estado)] ?? DOC_CFG["null"]
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium", c.text)}>
-      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
-      {estado === "OK" ? "OK" : estado === "PENDIENTE" ? "Pendiente" : "Fallido"}
-    </span>
-  )
-}
-
-function DocEstadoBadge({ estado }: { estado: EstadoDoc }) {
-  const c = DOC_CFG[estado]
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border", c.bg, c.border, c.text)}>
+    <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0", c.bg, c.border, c.text)}>
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
       {c.label}
     </span>
   )
 }
 
+// ── Dialog de excepción (sobre un documento observado) ────────────────────────
+
+function ExcepcionDialog({ doc, onClose, onDone }: {
+  doc: DocDetalle
+  onClose: () => void
+  onDone: () => void
+}) {
+  const [justificacion, setJustificacion] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!doc.documento_id) return
+    setLoading(true)
+    setError(null)
+    try {
+      const form = new FormData()
+      form.append("justificacion", justificacion)
+      await api.upload(`/api/v1/documentos/${doc.documento_id}/aprobar-excepcion`, form)
+      onDone()
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al aprobar la excepción")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={() => !loading && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Aprobar por excepción</DialogTitle>
+          <DialogDescription>
+            {doc.requisito_nombre} — quedará aprobado pese a la observación,
+            con tu justificación registrada en la bitácora del expediente.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {doc.mensaje_brecha && (
+            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              Observación actual: {doc.mensaje_brecha}
+            </p>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="just">Justificación</Label>
+            <Textarea
+              id="just"
+              rows={3}
+              placeholder="Ej: Se acepta el certificado con 35 días por acuerdo contractual vigente..."
+              value={justificacion}
+              onChange={(e) => setJustificacion(e.target.value)}
+              required
+            />
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading || !justificacion.trim()} className="bg-purple-600 hover:bg-purple-700">
+              {loading ? "Aprobando..." : "Aprobar excepción"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Panel detalle ─────────────────────────────────────────────────────────────
 
-function DetailPanel({ c, onClose }: { c: Contratista; onClose: () => void }) {
+function DocRow({ doc, onExcepcion, onVerArchivos }: {
+  doc: DocDetalle
+  onExcepcion: (d: DocDetalle) => void
+  onVerArchivos: (d: DocDetalle) => void
+}) {
+  return (
+    <div className="px-3 py-2 rounded-lg bg-white border border-slate-100">
+      <div className="flex items-center gap-2.5">
+        <FileText size={13} className="text-slate-400 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-slate-800 truncate">
+            {doc.requisito_nombre}
+            {doc.servicio_nombre && <span className="text-indigo-500 font-normal"> — {doc.servicio_nombre}</span>}
+          </p>
+          {doc.fecha_vigencia_hasta && (
+            <p className="text-[10px] text-slate-400">Vence: {doc.fecha_vigencia_hasta}</p>
+          )}
+        </div>
+        <DocEstadoBadge estado={doc.estado} />
+        {doc.documento_id && (
+          <button
+            onClick={() => onVerArchivos(doc)}
+            title="Ver archivos subidos"
+            className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+          >
+            <History size={13} />
+          </button>
+        )}
+        {doc.estado === 3 && doc.documento_id && (
+          <button
+            onClick={() => onExcepcion(doc)}
+            title="Aprobar por excepción justificada"
+            className="text-[10px] font-medium text-purple-700 border border-purple-200 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-md transition-colors shrink-0"
+          >
+            Excepción
+          </button>
+        )}
+      </div>
+      {doc.estado === 3 && doc.mensaje_brecha && (
+        <p className="text-[10px] text-red-600 mt-1 ml-6 flex items-start gap-1">
+          <AlertCircle size={10} className="mt-px shrink-0" />
+          {doc.mensaje_brecha}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function ServiciosTab({ contratistaId }: { contratistaId: string }) {
+  const [servicios, setServicios] = useState<Servicio[] | null>(null)
+
+  useEffect(() => {
+    api.get<Servicio[]>(`/api/v1/servicios/?contratista_id=${contratistaId}`)
+      .then(setServicios)
+      .catch(() => setServicios([]))
+  }, [contratistaId])
+
+  if (servicios === null) return <p className="text-xs text-slate-400">Cargando servicios...</p>
+  if (servicios.length === 0) {
+    return (
+      <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+        Sin servicios contratados. Crea uno desde la página Servicios para que existan exigencias.
+      </p>
+    )
+  }
+  return (
+    <div className="space-y-1.5">
+      {servicios.map((s) => (
+        <div key={s.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Briefcase size={13} className="text-slate-400 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-800 truncate">{s.nombre}</p>
+              <p className="text-[10px] text-slate-400">
+                {s.codigo_referencia ? `${s.codigo_referencia} · ` : ""}Perfil: {s.perfil_nombre} · {s.trabajadores_asignados} trabajador{s.trabajadores_asignados !== 1 ? "es" : ""}
+              </p>
+            </div>
+          </div>
+          <span className={cn(
+            "text-[10px] font-medium px-2 py-0.5 rounded-full border",
+            s.estado === "ACTIVO" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : s.estado === "SUSPENDIDO" ? "bg-amber-50 text-amber-700 border-amber-200"
+              : "bg-slate-100 text-slate-600 border-slate-200"
+          )}>
+            {s.estado === "ACTIVO" ? "Activo" : s.estado === "SUSPENDIDO" ? "Suspendido" : "Terminado"}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DetailPanel({ c, onClose, onCambio }: {
+  c: Contratista
+  onClose: () => void
+  onCambio: () => void
+}) {
   const [tab, setTab] = useState<PanelTab>("estado")
+  const [excepcionDoc, setExcepcionDoc] = useState<DocDetalle | null>(null)
+  const [historialDoc, setHistorialDoc] = useState<DocDetalle | null>(null)
+
   const trabajadoresOk = c.trabajadores.filter(t => t.cumple).length
-  const totalDocs = c.pilares.flatMap(p => p.documentos).length
+  const docsEmpresa = c.pilares.flatMap(p => p.documentos)
+  const docsTrabajadores = c.trabajadores.flatMap(t =>
+    t.documentos.map(d => ({ ...d, trabajador: t.nombre }))
+  )
+  const totalDocs = docsEmpresa.length + docsTrabajadores.length
 
   const tabs: { id: PanelTab; label: string; count?: number }[] = [
     { id: "estado", label: "Estado" },
     { id: "documentos", label: "Documentos", count: totalDocs },
     { id: "trabajadores", label: "Trabajadores", count: c.trabajadores.length },
+    { id: "servicios", label: "Servicios" },
   ]
 
   return (
@@ -387,16 +319,15 @@ function DetailPanel({ c, onClose }: { c: Contratista; onClose: () => void }) {
             <X size={16} />
           </button>
         </div>
-        <EstadoBadge estado={c.estado} />
+        <EstadoBadge estado={c.estado_acreditacion} />
 
-        {/* Tabs */}
-        <div className="flex gap-0 mt-4 -mb-px">
+        <div className="flex gap-0 mt-4 -mb-px overflow-x-auto">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors",
+                "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
                 tab === t.id
                   ? "border-slate-900 text-slate-900"
                   : "border-transparent text-slate-400 hover:text-slate-600"
@@ -418,77 +349,72 @@ function DetailPanel({ c, onClose }: { c: Contratista; onClose: () => void }) {
 
       {/* Contenido */}
       <div className="flex-1 overflow-y-auto px-5 py-4">
-
-        {/* Tab: Estado */}
         {tab === "estado" && (
           <div className="space-y-3">
-            {c.pilares.map(pilar => (
-              <div key={pilar.nombre} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium text-slate-800">{pilar.nombre}</p>
-                  <PilarBadge estado={pilar.estado} />
+            {c.pilares.map(pilar => {
+              const brechas = pilar.documentos
+                .filter(d => d.estado !== 4)
+                .map(d => d.estado === 3 && d.mensaje_brecha
+                  ? d.mensaje_brecha
+                  : `${d.requisito_nombre}${d.servicio_nombre ? ` (${d.servicio_nombre})` : ""}: ${(DOC_CFG[String(d.estado)] ?? DOC_CFG["null"]).label.toLowerCase()}`)
+              return (
+                <div key={pilar.codigo} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium text-slate-800">{pilar.nombre}</p>
+                    {pilar.cumple
+                      ? <span className="flex items-center gap-1 text-xs font-medium text-emerald-600"><CheckCircle2 size={12} /> OK</span>
+                      : <span className="flex items-center gap-1 text-xs font-medium text-red-600"><AlertCircle size={12} /> {brechas.length} brecha{brechas.length !== 1 ? "s" : ""}</span>
+                    }
+                  </div>
+                  {brechas.length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                      {brechas.map((b, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-slate-500">
+                          <AlertCircle size={11} className="text-red-400 mt-0.5 shrink-0" />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                {pilar.brechas.length > 0 && (
-                  <ul className="mt-2 space-y-1">
-                    {pilar.brechas.map((b, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-slate-500">
-                        <AlertCircle size={11} className="text-red-400 mt-0.5 shrink-0" />
-                        {b}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-
-            {c.estado === "BLOQUEADA" && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 mt-2">
-                <p className="text-xs font-semibold text-amber-800 mb-1">Aprobar excepción</p>
-                <p className="text-xs text-amber-700 mb-3">
-                  Puedes aprobar manualmente esta acreditación con justificación escrita.
-                </p>
-                <button className="w-full text-xs font-medium text-amber-800 border border-amber-300 bg-white hover:bg-amber-50 px-3 py-2 rounded-md transition-colors">
-                  Aprobar excepción justificada
-                </button>
-              </div>
+              )
+            })}
+            {c.pilares.length === 0 && (
+              <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+                Sin servicios activos — no hay requisitos exigibles para esta empresa todavía.
+              </p>
             )}
           </div>
         )}
 
-        {/* Tab: Documentos */}
         {tab === "documentos" && (
           <div className="space-y-5">
             {c.pilares.map(pilar => {
-              const docsEmpresa = pilar.documentos.filter(d => d.entidad === "EMPRESA")
-              const docsTrabajador = pilar.documentos.filter(d => d.entidad === "TRABAJADOR")
+              const docsT = docsTrabajadores.filter(d => d.pilar_codigo === pilar.codigo)
               return (
-                <div key={pilar.nombre}>
-                  {/* Encabezado pilar */}
+                <div key={pilar.codigo}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[pilar.nombre] ?? "bg-slate-100 text-slate-600 border-slate-200")}>
+                    <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[pilar.color] ?? "bg-slate-100 text-slate-600 border-slate-200")}>
                       {pilar.nombre}
                     </span>
-                    <span className="text-[10px] text-slate-400">{pilar.documentos.length} doc{pilar.documentos.length !== 1 ? "s" : ""}</span>
+                    <span className="text-[10px] text-slate-400">
+                      {pilar.documentos.length + docsT.length} doc{pilar.documentos.length + docsT.length !== 1 ? "s" : ""}
+                    </span>
                   </div>
-
                   <div className="space-y-1.5">
-                    {/* Documentos de empresa */}
-                    {docsEmpresa.map(doc => (
-                      <DocRow key={doc.codigo + doc.nombre} doc={doc} />
+                    {pilar.documentos.map((doc, i) => (
+                      <DocRow key={`${doc.requisito_id}-${i}`} doc={doc} onExcepcion={setExcepcionDoc} onVerArchivos={setHistorialDoc} />
                     ))}
-
-                    {/* Documentos de trabajador agrupados */}
-                    {docsTrabajador.length > 0 && (
+                    {docsT.length > 0 && (
                       <div className="mt-1 ml-2 border-l-2 border-slate-100 pl-3 space-y-1.5">
                         <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1.5">Por trabajador</p>
-                        {docsTrabajador.map(doc => (
-                          <DocRow key={doc.codigo + doc.trabajador} doc={doc} showTrabajador />
+                        {docsT.map((doc, i) => (
+                          <div key={`${doc.requisito_id}-${doc.trabajador}-${i}`}>
+                            <p className="text-[10px] text-slate-400 mb-0.5">{doc.trabajador}</p>
+                            <DocRow doc={doc} onExcepcion={setExcepcionDoc} onVerArchivos={setHistorialDoc} />
+                          </div>
                         ))}
                       </div>
-                    )}
-
-                    {pilar.documentos.length === 0 && (
-                      <p className="text-xs text-slate-400 italic px-1">Sin documentos cargados</p>
                     )}
                   </div>
                 </div>
@@ -497,15 +423,16 @@ function DetailPanel({ c, onClose }: { c: Contratista; onClose: () => void }) {
           </div>
         )}
 
-        {/* Tab: Trabajadores */}
         {tab === "trabajadores" && (
           <div className="space-y-2">
-            <p className="text-xs text-slate-400 mb-3">{trabajadoresOk}/{c.trabajadores.length} trabajadores cumplen todos los requisitos</p>
+            <p className="text-xs text-slate-400 mb-3">
+              {trabajadoresOk}/{c.trabajadores.length} trabajadores evaluados cumplen todos los requisitos
+            </p>
             {c.trabajadores.map(t => (
-              <div key={t.rut} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
+              <div key={t.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
                 <div>
                   <p className="text-sm font-medium text-slate-800">{t.nombre}</p>
-                  <p className="text-xs text-slate-400 font-mono">{t.rut}</p>
+                  <p className="text-xs text-slate-400 font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
                 </div>
                 {t.cumple
                   ? <CheckCircle2 size={14} className="text-emerald-500" />
@@ -513,37 +440,35 @@ function DetailPanel({ c, onClose }: { c: Contratista; onClose: () => void }) {
                 }
               </div>
             ))}
+            {c.trabajadores.length === 0 && (
+              <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+                Sin trabajadores asignados a servicios activos.
+              </p>
+            )}
           </div>
         )}
+
+        {tab === "servicios" && <ServiciosTab contratistaId={c.id} />}
       </div>
 
-      <div className="px-5 py-3 border-t border-slate-100 shrink-0">
-        <p className="text-xs text-slate-400">Actualizado: {c.ultima_actualizacion}</p>
-      </div>
-    </div>
-  )
-}
+      {excepcionDoc && (
+        <ExcepcionDialog
+          doc={excepcionDoc}
+          onClose={() => setExcepcionDoc(null)}
+          onDone={onCambio}
+        />
+      )}
 
-function DocRow({ doc, showTrabajador }: { doc: Documento; showTrabajador?: boolean }) {
-  return (
-    <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white border border-slate-100 hover:border-slate-200 transition-colors group">
-      <FileText size={13} className="text-slate-400 shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-slate-800 truncate">
-          {showTrabajador && doc.trabajador ? doc.trabajador : doc.nombre}
-        </p>
-        {showTrabajador && doc.trabajador && (
-          <p className="text-[10px] text-slate-400">{doc.nombre}</p>
-        )}
-        {doc.fecha_vence && (
-          <p className="text-[10px] text-slate-400">Vence: {doc.fecha_vence}</p>
-        )}
-      </div>
-      <DocEstadoBadge estado={doc.estado} />
-      {doc.estado === "APROBADO" && (
-        <button className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-slate-600">
-          <Download size={12} />
-        </button>
+      {historialDoc?.documento_id && (
+        <HistorialDialog
+          documentoId={historialDoc.documento_id}
+          titulo={
+            historialDoc.servicio_nombre
+              ? `${historialDoc.requisito_nombre} — ${historialDoc.servicio_nombre}`
+              : historialDoc.requisito_nombre
+          }
+          onClose={() => setHistorialDoc(null)}
+        />
       )}
     </div>
   )
@@ -552,30 +477,54 @@ function DocRow({ doc, showTrabajador }: { doc: Documento; showTrabajador?: bool
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function ContratistasPage() {
+  const [contratistas, setContratistas] = useState<Contratista[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState("")
-  const [filtro, setFiltro] = useState<EstadoAcreditacion | "TODOS">("TODOS")
-  const [seleccionado, setSeleccionado] = useState<Contratista | null>(null)
-  const [endpoint, setEndpoint] = useState<string | null>(null)
+  const [filtro, setFiltro] = useState<EstadoGlobal | "TODOS">("TODOS")
+  const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null)
+  const [dialogInvitar, setDialogInvitar] = useState(false)
+  const [mandanteId, setMandanteId] = useState<string | null>(null)
+  const [invitado, setInvitado] = useState(false)
+
+  const cargar = useCallback((mid: string) => {
+    setLoading(true)
+    api.get<Contratista[]>(`/api/v1/mandantes/${mid}/contratistas-detalle`)
+      .then((data) => { setContratistas(data); setError(null) })
+      .catch((e) => setError(e instanceof Error ? e.message : "Error al cargar"))
+      .finally(() => setLoading(false))
+  }, [])
 
   useEffect(() => {
     const s = getSession()
-    if (s?.mandante_id) setEndpoint(`/api/v1/mandantes/${s.mandante_id}/contratistas-detalle`)
-  }, [])
+    if (s?.mandante_id) {
+      setMandanteId(s.mandante_id)
+      cargar(s.mandante_id)
+    }
+  }, [cargar])
 
-  const { data: apiData } = useApiData<ApiContratista[]>(endpoint, [])
-  const CONTRATISTAS = apiData.length > 0 ? mapContratistas(apiData) : CONTRATISTAS_DEFAULT
+  const seleccionado = contratistas.find(c => c.id === seleccionadoId) ?? null
 
-  const total = CONTRATISTAS.length
-  const filtrados = CONTRATISTAS.filter(c => {
+  const filtrados = contratistas.filter(c => {
     const matchQ = c.razon_social.toLowerCase().includes(busqueda.toLowerCase()) || c.rut.includes(busqueda)
-    const matchE = filtro === "TODOS" || c.estado === filtro
+    const matchE = filtro === "TODOS" || c.estado_acreditacion === filtro
     return matchQ && matchE
   })
 
+  // Columnas de pilares derivadas de los datos (no hardcodeadas)
+  const pilarColumnas: { codigo: string; nombre: string }[] = []
+  for (const c of contratistas) {
+    for (const p of c.pilares) {
+      if (!pilarColumnas.some(x => x.codigo === p.codigo)) {
+        pilarColumnas.push({ codigo: p.codigo, nombre: p.nombre.split("—")[0].split("/")[0].trim() })
+      }
+    }
+  }
+
   const kpi = {
-    acreditadas: CONTRATISTAS.filter(c => c.estado === "ACREDITADA").length,
-    enProceso: CONTRATISTAS.filter(c => c.estado === "EN_PROCESO").length,
-    bloqueadas: CONTRATISTAS.filter(c => c.estado === "BLOQUEADA").length,
+    acreditadas: contratistas.filter(c => c.estado_acreditacion === "ACREDITADA").length,
+    enProceso: contratistas.filter(c => c.estado_acreditacion === "EN_PROCESO").length,
+    bloqueadas: contratistas.filter(c => c.estado_acreditacion === "BLOQUEADA").length,
   }
 
   return (
@@ -589,11 +538,20 @@ export default function ContratistasPage() {
               <h1 className="text-xl font-semibold text-slate-900">Contratistas</h1>
               <p className="text-sm text-slate-500 mt-0.5">Gestiona y monitorea el estado de acreditación</p>
             </div>
-            <button className="flex items-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+            <button
+              onClick={() => setDialogInvitar(true)}
+              className="flex items-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+            >
               <Plus size={15} />
               Invitar contratista
             </button>
           </div>
+          {invitado && (
+            <div className="mt-3 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5">
+              <ShieldCheck size={14} className="text-emerald-600" />
+              <p className="text-xs text-emerald-700">Invitación enviada — la empresa aparecerá al activar su cuenta.</p>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-auto px-8 py-6 space-y-5">
@@ -601,7 +559,7 @@ export default function ContratistasPage() {
           {/* KPI */}
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: "Total", value: total, color: "text-slate-900" },
+              { label: "Total", value: contratistas.length, color: "text-slate-900" },
               { label: "Acreditadas", value: kpi.acreditadas, color: "text-emerald-600" },
               { label: "En Proceso", value: kpi.enProceso, color: "text-amber-600" },
               { label: "Bloqueadas", value: kpi.bloqueadas, color: "text-red-600" },
@@ -626,7 +584,7 @@ export default function ContratistasPage() {
               />
             </div>
             <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
-              {(["TODOS", "ACREDITADA", "EN_PROCESO", "BLOQUEADA"] as const).map(e => (
+              {(["TODOS", "ACREDITADA", "EN_PROCESO", "BLOQUEADA", "PENDIENTE"] as const).map(e => (
                 <button
                   key={e}
                   onClick={() => setFiltro(e)}
@@ -635,11 +593,11 @@ export default function ContratistasPage() {
                     filtro === e ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"
                   )}
                 >
-                  {e === "TODOS" ? "Todos" : e === "ACREDITADA" ? "Acreditadas" : e === "EN_PROCESO" ? "En Proceso" : "Bloqueadas"}
+                  {e === "TODOS" ? "Todos" : ESTADO_CFG[e].label + (e === "EN_PROCESO" ? "" : "s")}
                 </button>
               ))}
             </div>
-            <p className="text-xs text-slate-400 ml-auto">{filtrados.length} de {total}</p>
+            <p className="text-xs text-slate-400 ml-auto">{filtrados.length} de {contratistas.length}</p>
           </div>
 
           {/* Tabla */}
@@ -650,24 +608,23 @@ export default function ContratistasPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Empresa</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">RUT</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acreditación</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Legal</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">HSE</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Compliance</th>
+                  {pilarColumnas.map(p => (
+                    <th key={p.codigo} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{p.nombre}</th>
+                  ))}
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     <Users size={12} className="inline" />
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actualizado</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtrados.map(c => {
                   const tOk = c.trabajadores.filter(t => t.cumple).length
-                  const selected = seleccionado?.id === c.id
+                  const selected = seleccionadoId === c.id
                   return (
                     <tr
                       key={c.id}
-                      onClick={() => setSeleccionado(selected ? null : c)}
+                      onClick={() => setSeleccionadoId(selected ? null : c.id)}
                       className={cn("cursor-pointer transition-colors", selected ? "bg-slate-50" : "hover:bg-slate-50/70")}
                     >
                       <td className="px-4 py-3.5">
@@ -679,16 +636,27 @@ export default function ContratistasPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">{c.rut}</td>
-                      <td className="px-4 py-3.5"><EstadoBadge estado={c.estado} /></td>
-                      {c.pilares.map(p => (
-                        <td key={p.nombre} className="px-4 py-3.5"><PilarBadge estado={p.estado} /></td>
-                      ))}
+                      <td className="px-4 py-3.5"><EstadoBadge estado={c.estado_acreditacion} /></td>
+                      {pilarColumnas.map(col => {
+                        const p = c.pilares.find(x => x.codigo === col.codigo)
+                        return (
+                          <td key={col.codigo} className="px-4 py-3.5">
+                            {p === undefined
+                              ? <span className="text-xs text-slate-300">—</span>
+                              : (
+                                <span className={cn("inline-flex items-center gap-1 text-xs font-medium", p.cumple ? "text-emerald-700" : "text-red-600")}>
+                                  <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.cumple ? "bg-emerald-500" : "bg-red-500")} />
+                                  {p.cumple ? "OK" : "Brechas"}
+                                </span>
+                              )}
+                          </td>
+                        )
+                      })}
                       <td className="px-4 py-3.5">
-                        <span className={cn("text-xs font-medium", tOk === c.trabajadores.length ? "text-emerald-600" : "text-amber-600")}>
+                        <span className={cn("text-xs font-medium", c.trabajadores.length > 0 && tOk === c.trabajadores.length ? "text-emerald-600" : "text-amber-600")}>
                           {tOk}/{c.trabajadores.length}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-400">{c.ultima_actualizacion}</td>
                       <td className="px-4 py-3.5">
                         <ChevronRight size={14} className={cn("text-slate-300 transition-transform", selected && "rotate-90 text-slate-500")} />
                       </td>
@@ -698,15 +666,15 @@ export default function ContratistasPage() {
               </tbody>
             </table>
 
-            {filtrados.length === 0 && (
-              <div className="py-14 text-center">
-                <p className="text-sm text-slate-400">No se encontraron contratistas</p>
-              </div>
+            {loading && filtrados.length === 0 && (
+              <div className="py-14 text-center"><p className="text-sm text-slate-400">Cargando contratistas...</p></div>
             )}
-
-            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50">
-              <p className="text-xs text-slate-400">Mostrando {filtrados.length} resultado{filtrados.length !== 1 ? "s" : ""}</p>
-            </div>
+            {error && !loading && (
+              <div className="py-14 text-center"><p className="text-sm text-red-500">No se pudieron cargar los contratistas: {error}</p></div>
+            )}
+            {!loading && !error && filtrados.length === 0 && (
+              <div className="py-14 text-center"><p className="text-sm text-slate-400">No se encontraron contratistas</p></div>
+            )}
           </div>
         </div>
       </div>
@@ -716,8 +684,26 @@ export default function ContratistasPage() {
         "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
         seleccionado ? "translate-x-0" : "translate-x-full"
       )}>
-        {seleccionado && <DetailPanel c={seleccionado} onClose={() => setSeleccionado(null)} />}
+        {seleccionado && mandanteId && (
+          <DetailPanel
+            c={seleccionado}
+            onClose={() => setSeleccionadoId(null)}
+            onCambio={() => cargar(mandanteId)}
+          />
+        )}
       </div>
+
+      {dialogInvitar && mandanteId && (
+        <InvitarContratistaDialog
+          mandanteId={mandanteId}
+          onClose={() => setDialogInvitar(false)}
+          onSuccess={() => {
+            setInvitado(true)
+            setTimeout(() => setInvitado(false), 5000)
+            cargar(mandanteId)
+          }}
+        />
+      )}
     </div>
   )
 }

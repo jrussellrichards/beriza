@@ -7,17 +7,25 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.schemas import (
-    ConfigurarRequisitoRequest,
+    ActualizarMandanteRequest,
+    ConfigurarRequisitoPerfilRequest,
     CrearMandanteRequest,
+    CrearPerfilRequest,
     InvitarContratistaRequest,
     MandanteResponse,
+    PerfilResponse,
 )
+from app.core.exceptions import PerfilNoEncontrado
+from app.domain import acreditacion_service, servicio_service
+from app.domain.estados import EstadoDocumento
+from app.domain.reglas_service import VIGENCIA_DEFAULT_DIAS
+from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig
 from app.infrastructure.database import get_db
 from app.infrastructure.email import Email, get_email_cliente
 from app.middleware.auth import require_rol
 from app.models.contratista import ContratistaMandante, EmpresaContratista
 from app.models.documento import Documento
-from app.models.mandante import Mandante, MandanteRequisitoConfig
+from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
@@ -49,6 +57,31 @@ def crear_mandante(
     return mandante
 
 
+@router.patch("/{mandante_id}", response_model=MandanteResponse)
+def actualizar_mandante(
+    mandante_id: uuid.UUID,
+    body: ActualizarMandanteRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """Actualiza los datos de la organización. El mandante_admin solo la suya."""
+    if usuario.mandante_id and usuario.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede editar su propio mandante")
+    mandante = db.get(Mandante, mandante_id)
+    if not mandante:
+        raise HTTPException(status_code=404, detail="Mandante no encontrado")
+
+    if body.razon_social is not None:
+        mandante.razon_social = body.razon_social
+    if body.email_contacto is not None:
+        mandante.email_contacto = body.email_contacto
+    if body.sitio_web is not None:
+        mandante.sitio_web = body.sitio_web
+    db.commit()
+    db.refresh(mandante)
+    return mandante
+
+
 @router.get("/{mandante_id}", response_model=MandanteResponse)
 def obtener_mandante(
     mandante_id: uuid.UUID,
@@ -66,27 +99,41 @@ def invitar_contratista(
     mandante_id: uuid.UUID,
     body: InvitarContratistaRequest,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin"])),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
     """
     Crea una empresa contratista y un usuario contratista_admin inactivo.
     Envía email de invitación con un token (el usuario_id) para que active su cuenta.
     El token expira al ser usado (no hay TTL por ahora — Fase 2).
+    El mandante_admin solo puede invitar a su propio mandante.
     """
+    if usuario.mandante_id and usuario.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede invitar contratistas a su propio mandante")
     mandante = db.get(Mandante, mandante_id)
     if not mandante:
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
 
+    if db.query(Usuario).filter_by(email=body.email).first():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ya existe un usuario con el email {body.email}. "
+                   "Si la empresa ya fue invitada, pídale que active su cuenta desde el email recibido.",
+        )
+
     empresa_existente = db.query(EmpresaContratista).filter_by(rut=body.rut).first()
     if empresa_existente:
         empresa = empresa_existente
+        if db.query(ContratistaMandante).filter_by(contratista_id=empresa.id, mandante_id=mandante_id).first():
+            raise HTTPException(
+                status_code=400,
+                detail=f"{empresa.razon_social} ya está vinculada a este mandante.",
+            )
     else:
         empresa = EmpresaContratista(rut=body.rut, razon_social=body.razon_social)
         db.add(empresa)
         db.flush()
 
-    if not db.query(ContratistaMandante).filter_by(contratista_id=empresa.id, mandante_id=mandante_id).first():
-        db.add(ContratistaMandante(contratista_id=empresa.id, mandante_id=mandante_id))
+    db.add(ContratistaMandante(contratista_id=empresa.id, mandante_id=mandante_id))
 
     nuevo_usuario = Usuario(
         email=body.email,
@@ -151,30 +198,20 @@ def dashboard_mandante(
     en_proceso = sum(1 for r in rels if r.estado_acreditacion == "EN_PROCESO")
     bloqueadas = sum(1 for r in rels if r.estado_acreditacion == "BLOQUEADA")
 
-    # Cumplimiento por pilar
+    # Cumplimiento por pilar, evaluado desde los perfiles de servicios activos
     pilares = db.query(Pilar).order_by(Pilar.orden).all()
+    cumplimiento_rels = [
+        acreditacion_service.cumple_por_pilar(
+            acreditacion_service.evaluar_relacion(db, rel.contratista_id, mandante_id)
+        )
+        for rel in rels
+    ]
     pilar_stats = []
     for pilar in pilares:
-        req_ids = [
-            r.id for sp in pilar.subpilares for r in sp.requisitos
-        ]
-        if not req_ids:
+        evaluados = [c for c in cumplimiento_rels if pilar.codigo in c]
+        if not evaluados:
             continue
-        ok_count = 0
-        for rel in rels:
-            docs_ok = db.query(Documento).filter(
-                Documento.empresa_id == rel.contratista_id,
-                Documento.mandante_id == mandante_id,
-                Documento.requisito_id.in_(req_ids),
-                Documento.estado == 4,
-            ).count()
-            reqs_count = db.query(MandanteRequisitoConfig).filter(
-                MandanteRequisitoConfig.mandante_id == mandante_id,
-                MandanteRequisitoConfig.requisito_documental_id.in_(req_ids),
-                MandanteRequisitoConfig.es_obligatorio == True,
-            ).count()
-            if reqs_count > 0 and docs_ok >= reqs_count:
-                ok_count += 1
+        ok_count = sum(1 for c in evaluados if c[pilar.codigo])
         pilar_stats.append({
             "codigo": pilar.codigo,
             "nombre": pilar.nombre,
@@ -253,78 +290,61 @@ def contratistas_detalle(
     db: Session = Depends(get_db),
     usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
-    """Lista completa de contratistas con pilares, documentos y trabajadores."""
-    pilares = db.query(Pilar).order_by(Pilar.orden).all()
+    """
+    Lista completa de contratistas con pilares, documentos y trabajadores,
+    evaluados contra los perfiles de sus servicios activos.
+    """
     rels = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id).all()
     resultado = []
 
-    for rel in rels:
-        empresa = rel.contratista
-        docs_empresa = {
-            str(d.requisito_id): d
-            for d in db.query(Documento).filter_by(
-                empresa_id=empresa.id, mandante_id=mandante_id
-            ).order_by(Documento.created_at.desc()).all()
+    def _doc_dict(item) -> dict:
+        return {
+            "requisito_id": str(item.requisito_id),
+            "requisito_codigo": item.requisito_codigo,
+            "requisito_nombre": item.requisito_nombre,
+            "entidad_tipo": item.entidad_tipo,
+            "pilar_codigo": item.pilar_codigo,
+            "pilar_nombre": item.pilar_nombre,
+            "servicio_nombre": item.servicio_nombre,
+            "estado": item.estado,
+            "fecha_vigencia_hasta": item.fecha_vigencia_hasta.isoformat() if item.fecha_vigencia_hasta else None,
+            "mensaje_brecha": item.mensaje_brecha,
+            "documento_id": str(item.documento_id) if item.documento_id else None,
         }
 
-        trabajadores = db.query(Trabajador).filter_by(empresa_id=empresa.id, activo=True).all()
+    for rel in rels:
+        empresa = rel.contratista
+        ev = acreditacion_service.evaluar_relacion(db, rel.contratista_id, mandante_id)
 
         pilares_data = []
-        for pilar in pilares:
-            docs_pilar = []
-            for sp in pilar.subpilares:
-                for req in sp.requisitos:
-                    if req.entidad_tipo == "EMPRESA":
-                        doc = docs_empresa.get(str(req.id))
-                        docs_pilar.append({
-                            "requisito_id": str(req.id),
-                            "requisito_codigo": req.codigo,
-                            "requisito_nombre": req.nombre,
-                            "entidad_tipo": "EMPRESA",
-                            "estado": doc.estado if doc else None,
-                            "fecha_vigencia_hasta": doc.fecha_vigencia_hasta.isoformat() if doc and doc.fecha_vigencia_hasta else None,
-                            "mensaje_brecha": doc.mensaje_brecha if doc else None,
-                            "documento_id": str(doc.id) if doc else None,
-                        })
-
-            cumple = all(
-                d["estado"] == 4 for d in docs_pilar if d["estado"] is not None
-            ) and all(d["estado"] is not None for d in docs_pilar)
-
+        for pilar in ev.pilares_empresa:
+            docs_pilar = [
+                _doc_dict(i) for i in ev.items_empresa if i.pilar_codigo == pilar.pilar_codigo
+            ]
             pilares_data.append({
-                "codigo": pilar.codigo,
-                "nombre": pilar.nombre,
-                "color": COLOR_PILAR.get(pilar.codigo, "slate"),
-                "cumple": cumple,
+                "codigo": pilar.pilar_codigo,
+                "nombre": pilar.pilar_nombre,
+                "color": COLOR_PILAR.get(pilar.pilar_codigo, "slate"),
+                "cumple": pilar.cumple,
                 "documentos": docs_pilar,
             })
 
+        cargos = {
+            str(t.id): t
+            for t in db.query(Trabajador).filter_by(empresa_id=empresa.id).all()
+        }
         trabajadores_data = []
-        for t in trabajadores:
-            docs_t = {
-                str(d.requisito_id): d
-                for d in db.query(Documento).filter_by(
-                    trabajador_id=t.id, mandante_id=mandante_id
-                ).all()
-            }
-            t_docs = []
-            for req in db.query(RequisitoDocumental).filter_by(entidad_tipo="TRABAJADOR").all():
-                doc = docs_t.get(str(req.id))
-                t_docs.append({
-                    "requisito_codigo": req.codigo,
-                    "requisito_nombre": req.nombre,
-                    "estado": doc.estado if doc else None,
-                    "mensaje_brecha": doc.mensaje_brecha if doc else None,
-                })
-            cumple_t = all(d["estado"] == 4 for d in t_docs if d["estado"] is not None)
+        for t in ev.trabajadores:
+            items_t = ev.items_trabajadores.get(str(t.trabajador_id), [])
+            trabajador = cargos.get(str(t.trabajador_id))
             trabajadores_data.append({
-                "id": str(t.id),
-                "nombre": t.nombre_completo,
+                "id": str(t.trabajador_id),
+                "nombre": t.nombre,
                 "rut": t.rut,
-                "cargo": t.cargo,
-                "activo": t.activo,
-                "cumple": cumple_t,
-                "documentos": t_docs,
+                "cargo": trabajador.cargo if trabajador else None,
+                "activo": True,
+                "cumple": t.cumple,
+                "documentos": [_doc_dict(i) for i in items_t],
             })
 
         resultado.append({
@@ -333,7 +353,7 @@ def contratistas_detalle(
             "rut": empresa.rut,
             "giro": empresa.giro,
             "estado_acreditacion": rel.estado_acreditacion,
-            "total_trabajadores": len(trabajadores),
+            "total_trabajadores": len(trabajadores_data),
             "pilares": pilares_data,
             "trabajadores": trabajadores_data,
         })
@@ -384,37 +404,50 @@ def reportes_mandante(
     docs_procesados = sum(1 for d in docs_todos if d.estado in (3, 4))
 
     pilares = db.query(Pilar).order_by(Pilar.orden).all()
+    cumplimiento_rels = [
+        acreditacion_service.cumple_por_pilar(
+            acreditacion_service.evaluar_relacion(db, rel.contratista_id, mandante_id)
+        )
+        for rel in rels
+    ]
     pilar_stats = []
     for pilar in pilares:
-        req_ids = [r.id for sp in pilar.subpilares for r in sp.requisitos if r.entidad_tipo == "EMPRESA"]
-        if not req_ids:
+        evaluados = [c for c in cumplimiento_rels if pilar.codigo in c]
+        if not evaluados:
             continue
-        ok = 0
-        for rel in rels:
-            aprobados = db.query(Documento).filter(
-                Documento.empresa_id == rel.contratista_id,
-                Documento.mandante_id == mandante_id,
-                Documento.requisito_id.in_(req_ids),
-                Documento.estado == 4,
-            ).count()
-            if aprobados >= len(req_ids):
-                ok += 1
+        ok = sum(1 for c in evaluados if c[pilar.codigo])
         pilar_stats.append({
             "nombre": pilar.nombre,
             "cumplimiento": round(ok / total * 100) if total else 0,
         })
 
-    # Evolución mensual simplificada (últimos 6 meses)
+    # Evolución mensual real: aprobaciones registradas en la bitácora de
+    # eventos (documento_eventos) en los últimos 6 meses.
     from datetime import date
-    import calendar
+    from app.models.documento import DocumentoEvento
+
     hoy = date.today()
-    evolucion = []
     MESES_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
+    aprobaciones = (
+        db.query(DocumentoEvento)
+        .join(Documento, DocumentoEvento.documento_id == Documento.id)
+        .filter(
+            Documento.mandante_id == mandante_id,
+            DocumentoEvento.estado_nuevo == EstadoDocumento.APROBADO,
+        )
+        .all()
+    )
+    por_mes: dict[tuple[int, int], int] = {}
+    for ev in aprobaciones:
+        clave = (ev.created_at.year, ev.created_at.month)
+        por_mes[clave] = por_mes.get(clave, 0) + 1
+    evolucion = []
     for i in range(5, -1, -1):
+        año = hoy.year if hoy.month - i > 0 else hoy.year - 1
         mes_num = (hoy.month - 1 - i) % 12 + 1
         evolucion.append({
             "mes": MESES_ES[mes_num - 1],
-            "pct": round(acreditadas / total * 100 * (0.5 + i * 0.1)) if total else 0,
+            "aprobados": por_mes.get((año, mes_num), 0),
         })
 
     # Historial: últimos documentos procesados
@@ -454,20 +487,41 @@ def reportes_mandante(
     }
 
 
+def _perfil_por_defecto(db: Session, mandante_id: uuid.UUID) -> PerfilRequisitos:
+    """El perfil "General" del mandante, o el primero activo si no existe."""
+    perfil = db.query(PerfilRequisitos).filter_by(mandante_id=mandante_id, nombre="General").first()
+    if not perfil:
+        perfil = db.query(PerfilRequisitos).filter_by(mandante_id=mandante_id, activo=True).first()
+    if not perfil:
+        raise HTTPException(
+            status_code=404,
+            detail="El mandante no tiene perfiles de requisitos. Cree uno primero.",
+        )
+    return perfil
+
+
 @router.get("/{mandante_id}/requisitos")
 def listar_requisitos_mandante(
     mandante_id: uuid.UUID,
+    perfil_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
     usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
-    """Catálogo de pilares/requisitos con la config específica del mandante superpuesta."""
+    """
+    Catálogo de pilares/requisitos con la config del perfil superpuesta.
+    Sin perfil_id usa el perfil "General" del mandante.
+    """
     mandante = db.get(Mandante, mandante_id)
     if not mandante:
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
 
+    perfil = db.get(PerfilRequisitos, perfil_id) if perfil_id else _perfil_por_defecto(db, mandante_id)
+    if not perfil or perfil.mandante_id != mandante_id:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado para este mandante")
+
     configs = {
         str(c.requisito_documental_id): c
-        for c in db.query(MandanteRequisitoConfig).filter_by(mandante_id=mandante_id).all()
+        for c in db.query(PerfilRequisitoConfig).filter_by(perfil_id=perfil.id).all()
     }
 
     pilares = db.query(Pilar).order_by(Pilar.orden).all()
@@ -481,10 +535,13 @@ def listar_requisitos_mandante(
                     "id": str(req.id),
                     "codigo": req.codigo,
                     "nombre": req.nombre,
-                    "descripcion": "",
+                    "descripcion": req.descripcion or "",
                     "entidad": req.entidad_tipo,
-                    "es_obligatorio": cfg.es_obligatorio if cfg else True,
-                    "vigencia_max_dias": cfg.vigencia_max_dias if cfg else 30,
+                    "alcance": req.alcance,
+                    "max_archivos": req.max_archivos,
+                    # Sin config en el perfil = el requisito NO se exige en él
+                    "es_obligatorio": cfg.es_obligatorio if cfg else False,
+                    "vigencia_max_dias": cfg.vigencia_max_dias if cfg else VIGENCIA_DEFAULT_DIAS,
                     "umbral_deuda_max": float(cfg.umbral_deuda_max) if cfg and cfg.umbral_deuda_max is not None else None,
                 })
         resultado.append({
@@ -495,35 +552,63 @@ def listar_requisitos_mandante(
             "color": COLOR_PILAR.get(pilar.codigo, "slate"),
             "requisitos": requisitos,
         })
-    return resultado
+    return {
+        "perfil": {
+            "id": str(perfil.id),
+            "nombre": perfil.nombre,
+            "descripcion": perfil.descripcion,
+        },
+        "pilares": resultado,
+    }
 
 
-@router.post("/{mandante_id}/requisitos", status_code=status.HTTP_201_CREATED)
-def configurar_requisito(
+@router.get("/{mandante_id}/perfiles", response_model=list[PerfilResponse])
+def listar_perfiles(
     mandante_id: uuid.UUID,
-    body: ConfigurarRequisitoRequest,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin"])),
+    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
-    """Agrega o actualiza la configuración de un requisito documental para este mandante."""
-    config = db.query(MandanteRequisitoConfig).filter_by(
-        mandante_id=mandante_id,
+    """Perfiles de requisitos del mandante (plantillas de exigencias por tipo de servicio)."""
+    return servicio_service.listar_perfiles(db, mandante_id)
+
+
+@router.post("/{mandante_id}/perfiles", response_model=PerfilResponse, status_code=status.HTTP_201_CREATED)
+def crear_perfil(
+    mandante_id: uuid.UUID,
+    body: CrearPerfilRequest,
+    db: Session = Depends(get_db),
+    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    if not db.get(Mandante, mandante_id):
+        raise HTTPException(status_code=404, detail="Mandante no encontrado")
+    return servicio_service.crear_perfil(db, mandante_id, body.nombre, body.descripcion)
+
+
+@router.post("/{mandante_id}/perfiles/{perfil_id}/requisitos", status_code=status.HTTP_201_CREATED)
+def configurar_requisito_perfil(
+    mandante_id: uuid.UUID,
+    perfil_id: uuid.UUID,
+    body: ConfigurarRequisitoPerfilRequest,
+    db: Session = Depends(get_db),
+    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """Agrega o actualiza la parametrización de un requisito dentro del perfil."""
+    try:
+        perfil = servicio_service.obtener_perfil(db, perfil_id)
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if perfil.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="El perfil no pertenece a este mandante")
+
+    servicio_service.configurar_requisito_perfil(
+        db,
+        perfil_id=perfil_id,
         requisito_documental_id=body.requisito_documental_id,
-    ).first()
+        es_obligatorio=body.es_obligatorio,
+        vigencia_max_dias=body.vigencia_max_dias,
+        umbral_deuda_max=body.umbral_deuda_max,
+        parametros_extra=body.parametros_extra,
+    )
+    return {"mensaje": "Requisito configurado en el perfil"}
 
-    if config:
-        config.es_obligatorio = body.es_obligatorio
-        config.vigencia_max_dias = body.vigencia_max_dias
-        config.umbral_deuda_max = body.umbral_deuda_max
-    else:
-        config = MandanteRequisitoConfig(
-            mandante_id=mandante_id,
-            requisito_documental_id=body.requisito_documental_id,
-            es_obligatorio=body.es_obligatorio,
-            vigencia_max_dias=body.vigencia_max_dias,
-            umbral_deuda_max=body.umbral_deuda_max,
-        )
-        db.add(config)
 
-    db.commit()
-    return {"mensaje": "Requisito configurado correctamente"}

@@ -29,6 +29,11 @@ class StorageBase(ABC):
         ...
 
     @abstractmethod
+    def descargar(self, url: str) -> bytes:
+        """Descarga el contenido binario de un archivo por su URL/key interna."""
+        ...
+
+    @abstractmethod
     def obtener_url_firmada(self, url: str, expira_en_segundos: int = 3600) -> str:
         """
         Genera una URL temporal firmada para descarga segura.
@@ -56,6 +61,12 @@ class StorageLocal(StorageBase):
         destino.write_bytes(contenido)
         url = f"{carpeta}/{nombre_unico}"
         return ArchivoSubido(url=url, nombre=nombre_archivo, tamaño_bytes=len(contenido))
+
+    def descargar(self, url: str) -> bytes:
+        ruta = self.base_path / url
+        if not ruta.exists():
+            raise FileNotFoundError(f"Archivo no encontrado en storage local: {url}")
+        return ruta.read_bytes()
 
     def obtener_url_firmada(self, url: str, expira_en_segundos: int = 3600) -> str:
         # En local la "URL firmada" es la ruta completa del archivo
@@ -85,6 +96,10 @@ class StorageS3(StorageBase):
         key = f"{carpeta}/{nombre_unico}"
         self.client.put_object(Bucket=self.bucket, Key=key, Body=contenido)
         return ArchivoSubido(url=key, nombre=nombre_archivo, tamaño_bytes=len(contenido))
+
+    def descargar(self, url: str) -> bytes:
+        respuesta = self.client.get_object(Bucket=self.bucket, Key=url)
+        return respuesta["Body"].read()
 
     def obtener_url_firmada(self, url: str, expira_en_segundos: int = 3600) -> str:
         return self.client.generate_presigned_url(

@@ -1,25 +1,35 @@
+"""
+Router de documentos. Solo HTTP — la orquestación del expediente vive en
+domain/documento_service.py y la validación de archivos en archivo_service.
+"""
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.schemas import DocumentoResponse, SubidaDocumentoResponse, UrlDescargaResponse
-from app.core.exceptions import DocumentoNoEncontrado, EstadoDocumentoInvalido
-from app.domain import documento_service
+from app.api.schemas import (
+    DocumentoResponse,
+    HistorialDocumentoResponse,
+    PendienteRevisionResponse,
+    RevisarDocumentoRequest,
+    SubidaDocumentoResponse,
+    UrlDescargaResponse,
+)
+from app.core.exceptions import (
+    ArchivoInvalido,
+    DocumentoNoEncontrado,
+    EntregaInvalida,
+    EstadoDocumentoInvalido,
+    TrabajadorNoEncontrado,
+)
+from app.domain import archivo_service, documento_service
+from app.domain.archivo_service import ArchivoEntrada
 from app.infrastructure.database import get_db
-from app.infrastructure.storage import get_storage
 from app.middleware.auth import require_rol
-from app.models.pilar import Pilar, Subpilar, RequisitoDocumental
-from app.models.documento import Documento
-from app.models.trabajador import Trabajador
+from app.models.documento import ArchivoDocumento
 from app.models.usuario import Usuario
 
 router = APIRouter()
-
-COLOR_PILAR = {"LEGAL": "blue", "HSE": "amber", "COMPLIANCE": "purple"}
-
-MIME_PERMITIDOS = {"application/pdf"}
-TAMAÑO_MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 
 
 @router.post("/", response_model=SubidaDocumentoResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -28,41 +38,78 @@ async def subir_documento(
     mandante_id: uuid.UUID = Form(...),
     empresa_id: uuid.UUID | None = Form(None),
     trabajador_id: uuid.UUID | None = Form(None),
-    archivo: UploadFile = File(...),
+    servicio_id: uuid.UUID | None = Form(None),
+    archivos: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(require_rol(["contratista_admin", "prevencionista"])),
 ):
     """
-    Recibe un PDF, lo guarda en storage y encola el análisis IA.
-    Responde inmediatamente con documento_id y estado=1 (Enviado).
+    Recibe una entrega (1..N archivos según el requisito), la guarda en
+    storage como versión nueva del expediente y responde inmediatamente.
+    Sin LLM configurado, queda pendiente de revisión manual del mandante.
     """
-    if archivo.content_type not in MIME_PERMITIDOS:
-        raise HTTPException(status_code=400, detail="Solo se aceptan archivos PDF")
-
-    contenido = await archivo.read()
-    if len(contenido) > TAMAÑO_MAX_BYTES:
-        raise HTTPException(status_code=400, detail="El archivo supera el límite de 20 MB")
-
-    if empresa_id is None and trabajador_id is None:
-        raise HTTPException(status_code=400, detail="Debe indicar empresa_id o trabajador_id")
-
-    storage = get_storage()
-    carpeta = f"mandante_{mandante_id}"
-    subido = storage.subir(contenido, archivo.filename or "documento.pdf", carpeta)
-
-    resultado = documento_service.subir_documento(
-        db=db,
-        requisito_id=requisito_id,
-        mandante_id=mandante_id,
-        empresa_id=empresa_id,
-        trabajador_id=trabajador_id,
-        archivo_url=subido.url,
-    )
+    entrada = [
+        ArchivoEntrada(
+            contenido=await a.read(),
+            nombre_original=a.filename or "documento.pdf",
+            mime_type=a.content_type or "application/octet-stream",
+        )
+        for a in archivos
+    ]
+    try:
+        resultado = documento_service.subir_entrega(
+            db=db,
+            requisito_id=requisito_id,
+            mandante_id=mandante_id,
+            empresa_id=empresa_id,
+            trabajador_id=trabajador_id,
+            servicio_id=servicio_id,
+            archivos=entrada,
+            subido_por_usuario_id=usuario.id,
+        )
+    except (ArchivoInvalido, EntregaInvalida, EstadoDocumentoInvalido) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except TrabajadorNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
     return SubidaDocumentoResponse(
         documento_id=resultado.documento_id,
+        version_id=resultado.version_id,
+        numero_version=resultado.numero_version,
         mensaje=resultado.mensaje,
     )
+
+
+@router.get("/pendientes-revision", response_model=list[PendienteRevisionResponse])
+def pendientes_revision(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin", "prevencionista"])),
+):
+    """Cola de revisión manual: entregas en estado Enviado del mandante del usuario."""
+    if not usuario.mandante_id:
+        raise HTTPException(status_code=400, detail="El usuario no está asociado a un mandante")
+
+    docs = documento_service.listar_pendientes_revision(db, usuario.mandante_id)
+    resultado = []
+    for d in docs:
+        version = d.version_vigente
+        if version is None:
+            continue
+        trabajador = d.trabajador
+        empresa = d.empresa or (trabajador.empresa if trabajador else None)
+        resultado.append(PendienteRevisionResponse(
+            documento_id=d.id,
+            requisito_codigo=d.requisito.codigo,
+            requisito_nombre=d.requisito.nombre,
+            pilar_nombre=d.requisito.subpilar.pilar.nombre,
+            contratista_razon_social=empresa.razon_social if empresa else "—",
+            trabajador_nombre=trabajador.nombre_completo if trabajador else None,
+            servicio_nombre=d.servicio.nombre if d.servicio else None,
+            numero_version=version.numero_version,
+            subido_en=version.created_at,
+            archivos=version.archivos,
+        ))
+    return resultado
 
 
 @router.get("/{documento_id}", response_model=DocumentoResponse)
@@ -71,11 +118,56 @@ def obtener_documento(
     db: Session = Depends(get_db),
     usuario=Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
 ):
-    """Retorna el estado actual y resultado del análisis de un documento."""
+    """Estado actual del expediente con su versión vigente y archivos."""
     try:
         return documento_service.obtener_documento(db, documento_id)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+
+@router.get("/{documento_id}/historial", response_model=HistorialDocumentoResponse)
+def historial_documento(
+    documento_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario=Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
+):
+    """Historial completo del expediente: todas las versiones y la bitácora de eventos."""
+    try:
+        doc = documento_service.obtener_documento(db, documento_id)
+    except DocumentoNoEncontrado:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    return HistorialDocumentoResponse(
+        documento_id=doc.id,
+        versiones=doc.versiones,
+        eventos=doc.eventos,
+    )
+
+
+@router.post("/{documento_id}/revisar", status_code=status.HTTP_204_NO_CONTENT)
+def revisar_documento(
+    documento_id: uuid.UUID,
+    body: RevisarDocumentoRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["mandante_admin", "berisa_admin"])),
+):
+    """
+    Revisión manual del mandante sobre la entrega vigente:
+    aprueba (con fecha de vigencia opcional) u observa con motivo.
+    """
+    try:
+        doc = documento_service.obtener_documento(db, documento_id)
+        if usuario.mandante_id and doc.mandante_id != usuario.mandante_id:
+            raise HTTPException(status_code=403, detail="El documento no pertenece a su mandante")
+        documento_service.revisar_documento(
+            db, documento_id, usuario.id,
+            aprobar=body.aprobar,
+            mensaje_brecha=body.mensaje_brecha,
+            fecha_vigencia_hasta=body.fecha_vigencia_hasta,
+        )
+    except DocumentoNoEncontrado:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    except EstadoDocumentoInvalido as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/{documento_id}/aprobar-excepcion", status_code=status.HTTP_204_NO_CONTENT)
@@ -97,108 +189,18 @@ def aprobar_por_excepcion(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/empresa/{empresa_id}/mandante/{mandante_id}/agrupados")
-def documentos_agrupados(
-    empresa_id: uuid.UUID,
-    mandante_id: uuid.UUID,
+@router.get("/{documento_id}/archivos/{archivo_id}/url-descarga", response_model=UrlDescargaResponse)
+def url_descarga_archivo(
+    documento_id: uuid.UUID,
+    archivo_id: uuid.UUID,
     db: Session = Depends(get_db),
     usuario=Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
 ):
-    """
-    Documentos de una empresa ante un mandante, agrupados por pilar.
-    Incluye docs de empresa y docs por trabajador en subsecciones.
-    """
-    pilares = db.query(Pilar).order_by(Pilar.orden).all()
-
-    # Último doc por requisito para la empresa
-    docs_empresa = {}
-    for d in (
-        db.query(Documento)
-        .filter_by(empresa_id=empresa_id, mandante_id=mandante_id)
-        .order_by(Documento.created_at.desc())
-        .all()
-    ):
-        key = str(d.requisito_id)
-        if key not in docs_empresa:
-            docs_empresa[key] = d
-
-    # Último doc por (trabajador_id, requisito_id)
-    docs_trabajadores: dict[str, dict[str, Documento]] = {}
-    for d in (
-        db.query(Documento)
-        .filter_by(mandante_id=mandante_id)
-        .filter(Documento.trabajador_id.isnot(None))
-        .join(Trabajador, Documento.trabajador_id == Trabajador.id)
-        .filter(Trabajador.empresa_id == empresa_id)
-        .order_by(Documento.created_at.desc())
-        .all()
-    ):
-        tid = str(d.trabajador_id)
-        rid = str(d.requisito_id)
-        if tid not in docs_trabajadores:
-            docs_trabajadores[tid] = {}
-        if rid not in docs_trabajadores[tid]:
-            docs_trabajadores[tid][rid] = d
-
-    # Trabajadores activos
-    trabajadores = db.query(Trabajador).filter_by(empresa_id=empresa_id, activo=True).all()
-
-    resultado = []
-    for pilar in pilares:
-        req_empresa = []
-        req_trabajador = []
-        for sp in pilar.subpilares:
-            for req in sp.requisitos:
-                if req.entidad_tipo == "EMPRESA":
-                    req_empresa.append(req)
-                else:
-                    req_trabajador.append(req)
-
-        docs_empresa_pilar = []
-        for req in req_empresa:
-            doc = docs_empresa.get(str(req.id))
-            docs_empresa_pilar.append({
-                "id": str(doc.id) if doc else None,
-                "requisito_id": str(req.id),
-                "requisito_codigo": req.codigo,
-                "requisito_nombre": req.nombre,
-                "estado": doc.estado if doc else None,
-                "fecha_vigencia_hasta": doc.fecha_vigencia_hasta.isoformat() if doc and doc.fecha_vigencia_hasta else None,
-                "mensaje_brecha": doc.mensaje_brecha if doc else None,
-            })
-
-        docs_trabajadores_pilar = []
-        if req_trabajador:
-            for t in trabajadores:
-                tid = str(t.id)
-                t_docs = []
-                for req in req_trabajador:
-                    doc = docs_trabajadores.get(tid, {}).get(str(req.id))
-                    t_docs.append({
-                        "id": str(doc.id) if doc else None,
-                        "requisito_id": str(req.id),
-                        "requisito_codigo": req.codigo,
-                        "requisito_nombre": req.nombre,
-                        "estado": doc.estado if doc else None,
-                        "fecha_vigencia_hasta": doc.fecha_vigencia_hasta.isoformat() if doc and doc.fecha_vigencia_hasta else None,
-                        "mensaje_brecha": doc.mensaje_brecha if doc else None,
-                    })
-                docs_trabajadores_pilar.append({
-                    "trabajador_id": tid,
-                    "trabajador_nombre": t.nombre_completo,
-                    "trabajador_rut": t.rut,
-                    "documentos": t_docs,
-                })
-
-        resultado.append({
-            "pilar_codigo": pilar.codigo,
-            "pilar_nombre": pilar.nombre,
-            "color": COLOR_PILAR.get(pilar.codigo, "slate"),
-            "documentos_empresa": docs_empresa_pilar,
-            "documentos_trabajadores": docs_trabajadores_pilar,
-        })
-
-    return resultado
+    """URL firmada temporal (1 hora) para un archivo específico del expediente."""
+    archivo = db.get(ArchivoDocumento, archivo_id)
+    if not archivo or archivo.version.documento_id != documento_id:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return UrlDescargaResponse(url=archivo_service.url_descarga(archivo.storage_key))
 
 
 @router.get("/{documento_id}/url-descarga", response_model=UrlDescargaResponse)
@@ -208,15 +210,15 @@ def obtener_url_descarga(
     usuario=Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
 ):
     """
-    Retorna una URL firmada temporal (1 hora) para descargar el PDF.
-    Nunca expone la URL interna de storage directamente.
+    URL firmada del primer archivo de la versión vigente (compatibilidad).
+    Para expedientes multi-archivo usar /archivos/{archivo_id}/url-descarga.
     """
     try:
         doc = documento_service.obtener_documento(db, documento_id)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
 
-    storage = get_storage()
-    url_firmada = storage.obtener_url_firmada(doc.archivo_url, expira_en_segundos=3600)
-
-    return UrlDescargaResponse(url=url_firmada)
+    version = doc.version_vigente
+    if not version or not version.archivos:
+        raise HTTPException(status_code=404, detail="El expediente no tiene archivos")
+    return UrlDescargaResponse(url=archivo_service.url_descarga(version.archivos[0].storage_key))

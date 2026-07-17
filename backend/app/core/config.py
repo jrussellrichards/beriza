@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = 60
     VISION_LLM_API_KEY: str = ""
     VISION_LLM_MODEL: str = ""
+    # Pipeline IA explícitamente deshabilitado hasta que esté implementado.
+    # Con False, las entregas quedan ENVIADO para revisión manual del mandante.
+    IA_HABILITADA: bool = False
     FILE_STORAGE: str = "local"       # local | s3
     LOCAL_STORAGE_PATH: str = "uploads"
     S3_ENDPOINT: str = ""
@@ -20,8 +23,12 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
 
+    # Validación de archivos (default global; cada requisito puede restringir más)
+    MAX_ARCHIVO_MB: int = 20
+    FORMATOS_PERMITIDOS_DEFAULT: List[str] = ["application/pdf"]
+
     class Config:
-        env_file = ".env"
+        env_file = (".env", "../.env")
 
 
 settings = Settings()

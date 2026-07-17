@@ -1,21 +1,39 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { UserPlus, CheckCircle2, XCircle } from "lucide-react"
+import { Briefcase, UserPlus, CheckCircle2, XCircle } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { AgregarTrabajadorDialog } from "@/features/agregar-trabajador/agregar-trabajador-dialog"
 import { useTrabajadores } from "@/entities/trabajador/use-trabajadores"
 import { getSession } from "@/shared/lib/auth"
-
-const MOCK_TRABAJADORES = [
-  { id: "t1", nombre_completo: "Pedro Carrasco Méndez", rut: "16.789.012-3", cargo: "Operario", activo: true },
-  { id: "t2", nombre_completo: "Ana Salinas Vega", rut: "17.890.123-4", cargo: "Prevencionista", activo: true },
-  { id: "t3", nombre_completo: "Luis Contreras Ríos", rut: "18.901.234-5", cargo: "Operario", activo: true },
-  { id: "t4", nombre_completo: "Marcela Fuentes Ortiz", rut: "19.012.345-6", cargo: "Técnico", activo: false },
-]
+import { api } from "@/shared/lib/api"
+import type { Servicio } from "@/entities/servicio/types"
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
+}
+
+/** trabajador_id → nombres de los servicios activos donde está asignado */
+function useServiciosPorTrabajador() {
+  const [mapa, setMapa] = useState<Record<string, string[]>>({})
+
+  useEffect(() => {
+    api.get<Servicio[]>("/api/v1/servicios/")
+      .then(async (servicios) => {
+        const activos = servicios.filter(s => s.estado === "ACTIVO")
+        const porTrabajador: Record<string, string[]> = {}
+        await Promise.all(activos.map(async (s) => {
+          const ts = await api.get<{ id: string }[]>(`/api/v1/servicios/${s.id}/trabajadores`)
+          for (const t of ts) {
+            porTrabajador[t.id] = [...(porTrabajador[t.id] ?? []), s.nombre]
+          }
+        }))
+        setMapa(porTrabajador)
+      })
+      .catch(() => setMapa({}))
+  }, [])
+
+  return mapa
 }
 
 export default function TrabajadoresPage() {
@@ -27,17 +45,9 @@ export default function TrabajadoresPage() {
     if (s) setSession(s)
   }, [])
 
-  const { data: apiTrabajadores, loading, error, refetch } = useTrabajadores(session?.contratista_id ?? "")
-  const [timedOut, setTimedOut] = useState(false)
-  useEffect(() => {
-    if (loading) {
-      const t = setTimeout(() => setTimedOut(true), 2000)
-      return () => clearTimeout(t)
-    }
-  }, [loading])
-  const useMock = timedOut || error
-  const trabajadores = useMock ? MOCK_TRABAJADORES : apiTrabajadores
-  const isLoading = loading && !timedOut
+  const { data: trabajadores, loading, error, refetch } = useTrabajadores(session?.contratista_id ?? "")
+  const serviciosPor = useServiciosPorTrabajador()
+  const isLoading = loading
 
   const activos = trabajadores.filter(t => t.activo).length
 
@@ -89,6 +99,7 @@ export default function TrabajadoresPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Nombre</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">RUT</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cargo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Servicios asignados</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
                 </tr>
               </thead>
@@ -105,6 +116,18 @@ export default function TrabajadoresPage() {
                     </td>
                     <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">{t.rut}</td>
                     <td className="px-4 py-3.5 text-slate-500">{t.cargo ?? "—"}</td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(serviciosPor[t.id] ?? []).map(nombre => (
+                          <span key={nombre} className="inline-flex items-center gap-1 text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                            <Briefcase size={9} /> {nombre}
+                          </span>
+                        ))}
+                        {(serviciosPor[t.id] ?? []).length === 0 && (
+                          <span className="text-xs text-slate-300">Sin asignar</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5">
                       <span className={cn(
                         "inline-flex items-center gap-1.5 text-xs font-medium",

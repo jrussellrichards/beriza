@@ -24,23 +24,15 @@ export interface EstadoTrabajador {
   pilares: EstadoPilar[]
 }
 
+// PENDIENTE = la relación no tiene servicios activos (nada exigible aún)
+export type EstadoGlobal = "PENDIENTE" | "EN_PROCESO" | "ACREDITADA" | "BLOQUEADA"
+
 export interface EstadoAcreditacion {
   contratista_id: string
   mandante_id: string
-  estado_global: "ACREDITADA" | "EN_PROCESO" | "BLOQUEADA"
+  estado_global: EstadoGlobal
   pilares_empresa: EstadoPilar[]
   trabajadores: EstadoTrabajador[]
-}
-
-export interface Documento {
-  id: string
-  requisito_id: string
-  estado: 1 | 2 | 3 | 4
-  mensaje_brecha: string | null
-  campos_extraidos: Record<string, unknown> | null
-  fecha_vigencia_hasta: string | null
-  aprobado_por_excepcion: boolean
-  created_at: string
 }
 
 export interface Trabajador {
@@ -49,9 +41,4 @@ export interface Trabajador {
   nombre_completo: string
   cargo: string | null
   activo: boolean
-}
-
-export interface SubidaDocumentoResponse {
-  documento_id: string
-  mensaje: string
 }

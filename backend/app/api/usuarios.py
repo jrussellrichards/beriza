@@ -88,6 +88,17 @@ def activar_cuenta(body: ActivarCuentaRequest, db: Session = Depends(get_db)):
 
     empresa = db.query(EmpresaContratista).filter_by(id=usuario.contratista_id).first()
     if empresa:
+        if body.rut != empresa.rut:
+            conflicto = db.query(EmpresaContratista).filter(
+                EmpresaContratista.rut == body.rut,
+                EmpresaContratista.id != empresa.id,
+            ).first()
+            if conflicto:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El RUT {body.rut} ya está registrado por otra empresa "
+                           f"({conflicto.razon_social}). Verifica el RUT ingresado.",
+                )
         empresa.razon_social = body.razon_social
         empresa.rut = body.rut
         empresa.giro = body.giro
