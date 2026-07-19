@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.schemas import (
     ActivarCuentaRequest,
     CrearUsuarioRequest,
+    InvitacionInfoResponse,
     LoginRequest,
     TokenResponse,
     UsuarioResponse,
@@ -67,6 +68,42 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
         rol=usuario.rol,
         mandante_id=usuario.mandante_id,
         contratista_id=usuario.contratista_id,
+    )
+
+
+@router.get("/invitacion/{token}", response_model=InvitacionInfoResponse)
+def obtener_invitacion(token: str, db: Session = Depends(get_db)):
+    """
+    Datos de la invitación pendiente para prellenar el formulario de
+    activación -- el contratista corrige/completa en vez de reescribir
+    a ciegas lo que el mandante ya ingresó al invitar.
+    """
+    try:
+        usuario_id = uuid.UUID(token)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Token inválido")
+
+    usuario = db.get(Usuario, usuario_id)
+    if not usuario or usuario.activo:
+        raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
+
+    empresa = db.query(EmpresaContratista).filter_by(id=usuario.contratista_id).first()
+    if not empresa:
+        raise HTTPException(status_code=404, detail="Invitación no encontrada")
+
+    relacion = (
+        db.query(ContratistaMandante)
+        .filter_by(contratista_id=empresa.id)
+        .order_by(ContratistaMandante.created_at.desc())
+        .first()
+    )
+
+    return InvitacionInfoResponse(
+        email=usuario.email,
+        razon_social=empresa.razon_social,
+        rut=empresa.rut,
+        giro=empresa.giro,
+        mandante_razon_social=relacion.mandante.razon_social if relacion else "",
     )
 
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Building2, Eye, EyeOff, ShieldCheck } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
@@ -12,6 +12,14 @@ interface TokenResponse {
   rol: string
   mandante_id: string | null
   contratista_id: string | null
+}
+
+interface InvitacionInfo {
+  email: string
+  razon_social: string
+  rut: string
+  giro: string | null
+  mandante_razon_social: string
 }
 
 function ActivarForm() {
@@ -27,6 +35,26 @@ function ActivarForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [invitacion, setInvitacion] = useState<InvitacionInfo | null>(null)
+  const [cargandoInvitacion, setCargandoInvitacion] = useState(true)
+
+  useEffect(() => {
+    if (!token) {
+      setCargandoInvitacion(false)
+      return
+    }
+    api.get<InvitacionInfo>(`/api/v1/usuarios/invitacion/${token}`)
+      .then((data) => {
+        setInvitacion(data)
+        setRazonSocial(data.razon_social)
+        setRut(data.rut)
+        setGiro(data.giro ?? "")
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Invitación inválida o ya activada")
+      })
+      .finally(() => setCargandoInvitacion(false))
+  }, [token])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -72,8 +100,28 @@ function ActivarForm() {
     )
   }
 
+  if (cargandoInvitacion) {
+    return <p className="text-sm text-slate-400 text-center">Cargando invitación...</p>
+  }
+
+  if (!invitacion) {
+    return (
+      <div className="text-center space-y-3">
+        <p className="text-sm font-medium text-slate-900">No pudimos cargar tu invitación</p>
+        <p className="text-sm text-slate-500">
+          {error ?? "El enlace puede haber expirado o la cuenta ya fue activada."}
+        </p>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+        Invitación de <span className="font-medium text-slate-700">{invitacion.mandante_razon_social}</span> para{" "}
+        <span className="font-medium text-slate-700">{invitacion.email}</span>. Confirma o corrige los datos de tu empresa.
+      </p>
+
       <div className="space-y-1.5">
         <label className="text-sm font-medium text-slate-700">Razón social de tu empresa</label>
         <div className="relative">

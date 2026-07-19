@@ -27,6 +27,14 @@ class ActivarCuentaRequest(BaseModel):
     giro: str | None = None
 
 
+class InvitacionInfoResponse(BaseModel):
+    email: str
+    razon_social: str
+    rut: str
+    giro: str | None = None
+    mandante_razon_social: str
+
+
 class CrearUsuarioRequest(BaseModel):
     email: EmailStr
     nombre: str
