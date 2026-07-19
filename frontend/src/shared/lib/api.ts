@@ -1,4 +1,8 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+// Vacío por defecto: en producción las llamadas van a rutas relativas
+// /api/v1/... que el rewrite same-origin de next.config.ts reenvía al
+// backend server-side (evita mixed-content, ver next.config.ts). Para
+// desarrollo local, define NEXT_PUBLIC_API_URL en frontend/.env.local.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ""
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
