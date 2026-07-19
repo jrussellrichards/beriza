@@ -2,26 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Sin esto, Next redirige /api/v1/servicios/ -> /api/v1/servicios (308)
-  // antes del rewrite, y FastAPI redirige de vuelta: loop infinito.
+  // antes de llegar al route handler de app/api/[...path]/route.ts.
   skipTrailingSlashRedirect: true,
-  async rewrites() {
-    // Proxy same-origin hacia el backend: el navegador llama a /api/* en
-    // este mismo dominio y Next lo reenvía server-side. Evita CORS y el
-    // bloqueo de mixed-content cuando el backend aún no tiene HTTPS.
-    // BACKEND_URL se configura en Vercel (producción); en dev apunta al
-    // backend local y no interfiere porque el front usa NEXT_PUBLIC_API_URL.
-    const backend = process.env.BACKEND_URL ?? "http://localhost:8000";
-    return [
-      {
-        source: "/api/:path*/",
-        destination: `${backend}/api/:path*/`,
-      },
-      {
-        source: "/api/:path*",
-        destination: `${backend}/api/:path*`,
-      },
-    ];
-  },
+  // El proxy hacia el backend vive en app/api/[...path]/route.ts (route
+  // handler), no en rewrites(): Vercel no reenvía de forma confiable POST/PUT
+  // con body a un origen externo vía rewrites (cae a un 307 con la URL real
+  // del backend, que el navegador bloquea como mixed content en HTTPS).
 };
 
 export default nextConfig;
