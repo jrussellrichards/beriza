@@ -22,7 +22,10 @@ class Settings(BaseSettings):
     S3_BUCKET: str = ""
     S3_ACCESS_KEY: str = ""
     S3_SECRET_KEY: str = ""
+    S3_REGION: str = "auto"  # Cloudflare R2 exige "auto"; Hetzner usa su región (ej. "fsn1")
     RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "Acredita <onboarding@resend.dev>"
+    FRONTEND_URL: str = "http://localhost:3000"
     # String crudo del env: acepta JSON (["https://a.cl"]) o separado por
     # comas (https://a.cl, https://b.cl). Se declara str porque
     # pydantic-settings 2.5 exige JSON en campos List y revienta con el

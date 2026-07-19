@@ -32,7 +32,7 @@ class EmailClienteResend(EmailClienteBase):
 
     def enviar(self, email: Email) -> None:
         resend.Emails.send({
-            "from": "Acredita <noreply@acredita.cl>",
+            "from": settings.EMAIL_FROM,
             "to": [email.destinatario],
             "subject": email.asunto,
             "html": email.cuerpo_html,

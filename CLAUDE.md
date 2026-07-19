@@ -15,7 +15,7 @@ El sistema permite que mandantes (empresas principales) validen si una empresa c
 | Base de datos | PostgreSQL + SQLAlchemy + Alembic |
 | Cola async | Celery + Redis |
 | Pipeline IA | Vision LLM (por definir) + Pydantic |
-| Storage | Local en dev → Hetzner Object Storage en prod |
+| Storage | Local en dev → Cloudflare R2 en prod (API compatible S3) |
 | Deploy frontend | Vercel |
 | Deploy backend | Hetzner (Docker Compose) |
 

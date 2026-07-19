@@ -1,3 +1,4 @@
+import logging
 import uuid
 import secrets
 from collections import defaultdict
@@ -15,6 +16,7 @@ from app.api.schemas import (
     MandanteResponse,
     PerfilResponse,
 )
+from app.core.config import settings
 from app.core.exceptions import PerfilNoEncontrado
 from app.domain import acreditacion_service, servicio_service
 from app.domain.estados import EstadoDocumento
@@ -29,6 +31,8 @@ from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
+
+logger = logging.getLogger("acredita")
 
 router = APIRouter()
 
@@ -147,17 +151,24 @@ def invitar_contratista(
     db.commit()
     db.refresh(nuevo_usuario)
 
-    get_email_cliente().enviar(Email(
-        destinatario=body.email,
-        asunto=f"Invitación a acreditarse ante {mandante.razon_social}",
-        cuerpo_html=f"""
-        <h2>Bienvenido a Acredita</h2>
-        <p>{mandante.razon_social} te invita a acreditarte como empresa contratista.</p>
-        <p>Para activar tu cuenta, haz clic en el siguiente enlace:</p>
-        <a href="http://localhost:3000/activar?token={nuevo_usuario.id}">Activar cuenta</a>
-        <p>Este enlace es personal e intransferible.</p>
-        """,
-    ))
+    try:
+        get_email_cliente().enviar(Email(
+            destinatario=body.email,
+            asunto=f"Invitación a acreditarse ante {mandante.razon_social}",
+            cuerpo_html=f"""
+            <h2>Bienvenido a Acredita</h2>
+            <p>{mandante.razon_social} te invita a acreditarte como empresa contratista.</p>
+            <p>Para activar tu cuenta, haz clic en el siguiente enlace:</p>
+            <a href="{settings.FRONTEND_URL}/activar?token={nuevo_usuario.id}">Activar cuenta</a>
+            <p>Este enlace es personal e intransferible.</p>
+            """,
+        ))
+    except Exception:
+        logger.exception("No se pudo enviar el email de invitación a %s", body.email)
+        return {
+            "mensaje": f"Contratista creado, pero el email de invitación a {body.email} no pudo enviarse. "
+                       "Reenvíe la invitación o entregue el enlace manualmente."
+        }
 
     return {"mensaje": f"Invitación enviada a {body.email}"}
 

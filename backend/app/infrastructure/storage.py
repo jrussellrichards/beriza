@@ -79,7 +79,7 @@ class StorageLocal(StorageBase):
 
 
 class StorageS3(StorageBase):
-    """Implementación para producción. Usa Hetzner Object Storage (compatible S3)."""
+    """Implementación para producción. Usa un storage compatible S3 (Cloudflare R2, Hetzner Object Storage, etc.)."""
 
     def __init__(self):
         self.bucket = settings.S3_BUCKET
@@ -88,6 +88,7 @@ class StorageS3(StorageBase):
             endpoint_url=settings.S3_ENDPOINT,
             aws_access_key_id=settings.S3_ACCESS_KEY,
             aws_secret_access_key=settings.S3_SECRET_KEY,
+            region_name=settings.S3_REGION,
             config=Config(signature_version="s3v4"),
         )
 
