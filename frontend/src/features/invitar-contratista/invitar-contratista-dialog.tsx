@@ -15,30 +15,68 @@ interface Props {
   onSuccess: () => void
 }
 
+interface InvitarContratistaResponse {
+  mensaje: string
+  link_activacion?: string
+}
+
 export function InvitarContratistaDialog({ mandanteId, onClose, onSuccess }: Props) {
   const [email, setEmail] = useState("")
   const [razonSocial, setRazonSocial] = useState("")
   const [rut, setRut] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [linkActivacion, setLinkActivacion] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
     try {
-      await api.post(`/api/v1/mandantes/${mandanteId}/invitar-contratista`, {
-        email,
-        razon_social: razonSocial,
-        rut,
-      })
+      const data = await api.post<InvitarContratistaResponse>(
+        `/api/v1/mandantes/${mandanteId}/invitar-contratista`,
+        { email, razon_social: razonSocial, rut },
+      )
       onSuccess()
-      onClose()
+      if (data.link_activacion) {
+        setLinkActivacion(data.link_activacion)
+      } else {
+        onClose()
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al enviar la invitación")
     } finally {
       setLoading(false)
     }
+  }
+
+  if (linkActivacion) {
+    return (
+      <Dialog open onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Contratista creado</DialogTitle>
+            <DialogDescription>
+              El email de invitación no pudo enviarse (dominio de correo aún no verificado).
+              Comparte este link manualmente con {email} para que active su cuenta:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <Input readOnly value={linkActivacion} onFocus={(e) => e.currentTarget.select()} />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigator.clipboard.writeText(linkActivacion)}
+            >
+              Copiar
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={onClose}>Listo</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   return (

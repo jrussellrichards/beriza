@@ -151,6 +151,8 @@ def invitar_contratista(
     db.commit()
     db.refresh(nuevo_usuario)
 
+    link_activacion = f"{settings.FRONTEND_URL}/activar?token={nuevo_usuario.id}"
+
     try:
         get_email_cliente().enviar(Email(
             destinatario=body.email,
@@ -159,15 +161,19 @@ def invitar_contratista(
             <h2>Bienvenido a Acredita</h2>
             <p>{mandante.razon_social} te invita a acreditarte como empresa contratista.</p>
             <p>Para activar tu cuenta, haz clic en el siguiente enlace:</p>
-            <a href="{settings.FRONTEND_URL}/activar?token={nuevo_usuario.id}">Activar cuenta</a>
+            <a href="{link_activacion}">Activar cuenta</a>
             <p>Este enlace es personal e intransferible.</p>
             """,
         ))
     except Exception:
         logger.exception("No se pudo enviar el email de invitación a %s", body.email)
+        # El link solo se expone aca al admin que hizo la invitacion (via su
+        # propia respuesta autenticada) -- nunca se loguea ni se muestra a
+        # nadie mas. Es un respaldo temporal mientras el dominio de envio no
+        # este verificado; una vez que lo este, este caso deja de ocurrir.
         return {
-            "mensaje": f"Contratista creado, pero el email de invitación a {body.email} no pudo enviarse. "
-                       "Reenvíe la invitación o entregue el enlace manualmente."
+            "mensaje": f"Contratista creado, pero el email de invitación a {body.email} no pudo enviarse.",
+            "link_activacion": link_activacion,
         }
 
     return {"mensaje": f"Invitación enviada a {body.email}"}
