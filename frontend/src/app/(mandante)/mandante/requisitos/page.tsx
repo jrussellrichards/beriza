@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   Briefcase, ChevronDown, ChevronRight, CheckCircle2,
-  Circle, Layers, Lock, Plus, Save, Star, Trash2,
+  Circle, Edit2, Layers, Lock, Plus, Save, Star, Trash2,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
@@ -242,7 +242,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
                 title="Editar requisito propio"
                 className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
               >
-                <Layers size={11} />
+                <Edit2 size={11} />
               </button>
               <button
                 onClick={() => onDelete(req)}
