@@ -3,154 +3,17 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   AlertCircle, CheckCircle2, ChevronDown, ChevronRight,
-  FileText, History, RefreshCw, Search, Upload,
+  FileText, RefreshCw, Search,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { SubirDocumentoDialog, type RequisitoSubida } from "@/features/subir-documento/subir-documento-dialog"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
+import { type Exigencia, type EstadoDoc, estadoDe, PILAR_COLOR, PILAR_DEFAULT } from "@/entities/documento/exigencia"
+import { ExigenciaRow } from "@/entities/documento/exigencia-row"
 import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
 
-// ── Tipos (espejo del endpoint de exigencias) ─────────────────────────────────
-
-type EstadoDoc = "APROBADO" | "EN_ANALISIS" | "OBSERVADO" | "ENVIADO" | "FALTA"
-
-interface Exigencia {
-  requisito_id: string
-  requisito_codigo: string
-  requisito_nombre: string
-  entidad_tipo: "EMPRESA" | "TRABAJADOR"
-  alcance: "ENTIDAD" | "SERVICIO"
-  max_archivos: number
-  estado: number | null
-  fecha_vigencia_hasta: string | null
-  mensaje_brecha: string | null
-  documento_id: string | null
-  trabajador_id: string | null
-  trabajador_nombre: string | null
-  servicio_id: string | null
-  servicio_nombre: string | null
-  pilar_codigo: string
-  pilar_nombre: string
-}
-
-const ESTADO_NUM: Record<number, EstadoDoc> = { 1: "ENVIADO", 2: "EN_ANALISIS", 3: "OBSERVADO", 4: "APROBADO" }
-const estadoDe = (e: Exigencia): EstadoDoc => (e.estado ? ESTADO_NUM[e.estado] ?? "FALTA" : "FALTA")
-
-const ESTADO_CFG: Record<EstadoDoc, { label: string; dot: string; text: string; bg: string; border: string }> = {
-  APROBADO:    { label: "Aprobado",    dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  EN_ANALISIS: { label: "En análisis", dot: "bg-blue-400",    text: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
-  OBSERVADO:   { label: "Observado",   dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
-  ENVIADO:     { label: "En revisión", dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-  FALTA:       { label: "Falta",       dot: "bg-slate-300",   text: "text-slate-500",   bg: "bg-slate-50",   border: "border-slate-200" },
-}
-
-const PILAR_COLOR: Record<string, { border: string; bg: string; dot: string; text: string }> = {
-  LEGAL:      { border: "border-blue-200",   bg: "bg-blue-50",   dot: "bg-blue-500",   text: "text-blue-700" },
-  HSE:        { border: "border-amber-200",  bg: "bg-amber-50",  dot: "bg-amber-500",  text: "text-amber-700" },
-  COMPLIANCE: { border: "border-purple-200", bg: "bg-purple-50", dot: "bg-purple-500", text: "text-purple-700" },
-}
-const PILAR_DEFAULT = { border: "border-slate-200", bg: "bg-slate-50", dot: "bg-slate-500", text: "text-slate-700" }
-
-function formatFecha(iso: string | null): string | null {
-  if (!iso) return null
-  return new Date(iso).toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" })
-}
-
 // ── Componentes ───────────────────────────────────────────────────────────────
-
-function EstadoBadge({ estado }: { estado: EstadoDoc }) {
-  const c = ESTADO_CFG[estado] ?? ESTADO_CFG.FALTA
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", c.bg, c.border, c.text)}>
-      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
-      {c.label}
-    </span>
-  )
-}
-
-function ExigenciaRow({ item, onSubir, onHistorial }: {
-  item: Exigencia
-  onSubir: (e: Exigencia) => void
-  onHistorial: (e: Exigencia) => void
-}) {
-  const [expandido, setExpandido] = useState(false)
-  const estado = estadoDe(item)
-  const tieneBrecha = estado === "OBSERVADO" && !!item.mensaje_brecha
-  const vence = formatFecha(item.fecha_vigencia_hasta)
-
-  return (
-    <div className={cn(
-      "rounded-lg border transition-colors",
-      tieneBrecha ? "border-red-200 bg-red-50/30" : "border-slate-100 bg-white"
-    )}>
-      <div className="flex items-center gap-3 px-4 py-3">
-        <FileText size={14} className="text-slate-400 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-medium text-slate-900">{item.requisito_nombre}</p>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200">
-              {item.requisito_codigo}
-            </span>
-            {item.trabajador_nombre && (
-              <span className="text-[10px] text-slate-500 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
-                {item.trabajador_nombre}
-              </span>
-            )}
-            {item.servicio_nombre && (
-              <span className="text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
-                Servicio: {item.servicio_nombre}
-              </span>
-            )}
-          </div>
-          {vence && <p className="text-xs text-slate-400 mt-0.5">Vence: {vence}</p>}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <EstadoBadge estado={estado} />
-          {(estado === "OBSERVADO" || estado === "FALTA" || estado === "APROBADO") && (
-            <button
-              onClick={() => onSubir(item)}
-              className="flex items-center gap-1.5 text-xs font-medium border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
-            >
-              <Upload size={12} />
-              {estado === "FALTA" ? "Subir" : estado === "APROBADO" ? "Renovar" : "Resubir"}
-            </button>
-          )}
-          {item.documento_id && (
-            <button
-              onClick={() => onHistorial(item)}
-              title="Ver historial del expediente"
-              className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <History size={13} />
-            </button>
-          )}
-          {tieneBrecha && (
-            <button
-              onClick={() => setExpandido(!expandido)}
-              className="p-1.5 rounded-md hover:bg-red-100 text-red-400 transition-colors"
-            >
-              {expandido ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {tieneBrecha && expandido && (
-        <div className="mx-4 mb-3 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200">
-          <div className="flex items-start gap-2">
-            <AlertCircle size={13} className="text-red-500 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-red-800 mb-0.5">Motivo de observación</p>
-              <p className="text-xs text-red-700">{item.mensaje_brecha}</p>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 function PilarGrupo({ codigo, nombre, items, busqueda, onSubir, onHistorial }: {
   codigo: string

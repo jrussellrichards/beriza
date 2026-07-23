@@ -1,15 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
-  CheckCircle2, Clock, XCircle, AlertCircle,
-  ChevronDown, ChevronRight, Users, Upload, Plus,
-  FileText, Building2
+  CheckCircle2, Clock, XCircle,
+  ChevronDown, ChevronRight, Users, Plus, Building2, ArrowRight,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { getSession } from "@/shared/lib/auth"
+import { api } from "@/shared/lib/api"
 import { useAcreditacion } from "@/entities/contratista/use-acreditacion"
-import type { EstadoPilar, EstadoTrabajador } from "@/shared/types"
+import { type Exigencia } from "@/entities/documento/exigencia"
+import { ExigenciaRow } from "@/entities/documento/exigencia-row"
+import type { EstadoTrabajador } from "@/shared/types"
 
 // ── Config visual ────────────────────────────────────────────────────────────
 
@@ -68,51 +70,21 @@ function EstadoTag({ estado }: { estado: keyof typeof ESTADO_CONFIG }) {
   )
 }
 
-function PilarCard({ pilar, onSubir }: { pilar: EstadoPilar; onSubir?: () => void }) {
-  const cumple = pilar.cumple
+function VerEnDocumentos() {
   return (
-    <div className={cn(
-      "rounded-xl border p-4 space-y-3",
-      cumple ? "bg-white border-slate-200" : "bg-white border-red-200"
-    )}>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-800">{pilar.pilar_nombre}</p>
-        {cumple
-          ? <CheckCircle2 size={16} className="text-emerald-500" />
-          : <AlertCircle size={16} className="text-red-400" />
-        }
-      </div>
-
-      {!cumple && pilar.brechas.length > 0 && (
-        <ul className="space-y-1.5">
-          {pilar.brechas.map((b, i) => (
-            <li key={i} className="flex items-start gap-2 text-xs text-slate-500">
-              <span className="w-1 h-1 rounded-full bg-red-400 mt-1.5 shrink-0" />
-              {b}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {onSubir && (
-        <button
-          onClick={onSubir}
-          className={cn(
-            "w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border text-xs font-medium transition-colors",
-            cumple
-              ? "border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-              : "border-slate-200 text-slate-600 hover:bg-slate-50"
-          )}
-        >
-          <Upload size={12} />
-          {cumple ? "Actualizar documento" : "Subir documento"}
-        </button>
-      )}
-    </div>
+    <button
+      onClick={() => window.location.href = "/contratista/documentos"}
+      className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors"
+    >
+      Gestionar en Documentos <ArrowRight size={12} />
+    </button>
   )
 }
 
-function TrabajadorRow({ trabajador }: { trabajador: EstadoTrabajador }) {
+function TrabajadorRow({ trabajador, items }: {
+  trabajador: EstadoTrabajador
+  items: Exigencia[]
+}) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -140,14 +112,14 @@ function TrabajadorRow({ trabajador }: { trabajador: EstadoTrabajador }) {
       </button>
 
       {expanded && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 px-4 pb-4 pt-2 bg-slate-50/50 border-t border-slate-100">
-          {trabajador.pilares.map(pilar => (
-            <PilarCard
-              key={pilar.pilar_codigo}
-              pilar={pilar}
-              onSubir={!pilar.cumple ? () => { window.location.href = "/contratista/documentos" } : undefined}
-            />
-          ))}
+        <div className="space-y-1.5 px-4 pb-4 pt-2 bg-slate-50/50 border-t border-slate-100">
+          {items.length === 0 ? (
+            <p className="text-xs text-slate-400 py-2">Sin documentos exigidos para este trabajador todavía.</p>
+          ) : (
+            items.map((i, idx) => (
+              <ExigenciaRow key={`${i.requisito_id}-${i.servicio_id ?? "e"}-${idx}`} item={i} />
+            ))
+          )}
         </div>
       )}
     </div>
@@ -176,6 +148,7 @@ function LoadingState() {
 
 export default function DashboardContratistaPage() {
   const [session, setSession] = useState<{ contratista_id: string; mandante_id: string } | null>(null)
+  const [exigencias, setExigencias] = useState<Exigencia[]>([])
 
   useEffect(() => {
     const s = getSession()
@@ -186,6 +159,15 @@ export default function DashboardContratistaPage() {
     session?.contratista_id ?? "",
     session?.mandante_id ?? ""
   )
+
+  const cargarExigencias = useCallback(() => {
+    if (!session?.contratista_id || !session?.mandante_id) return
+    api.get<Exigencia[]>(`/api/v1/acreditacion/${session.contratista_id}/mandante/${session.mandante_id}/exigencias`)
+      .then(setExigencias)
+      .catch(() => setExigencias([]))
+  }, [session])
+
+  useEffect(() => { cargarExigencias() }, [cargarExigencias])
 
   if (!session || loading) return <LoadingState />
   if (error || !data) {
@@ -201,8 +183,8 @@ export default function DashboardContratistaPage() {
 
   const cfg = ESTADO_CONFIG[data.estado_global]
   const Icon = cfg.icon
-  const empresaCumple = data.pilares_empresa.every(p => p.cumple)
   const trabajadoresOk = data.trabajadores.filter(t => t.cumple).length
+  const itemsEmpresa = exigencias.filter(e => !e.trabajador_id)
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -243,20 +225,25 @@ export default function DashboardContratistaPage() {
           </div>
         </div>
 
-        {/* Pilares empresa */}
+        {/* Documentos empresa — solo lectura, gestión en /contratista/documentos */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Building2 size={15} className="text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Pilares — Empresa</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Building2 size={15} className="text-slate-400" />
+              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Documentos — Empresa</h2>
+            </div>
+            <VerEnDocumentos />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {data.pilares_empresa.map(pilar => (
-              <PilarCard
-                key={pilar.pilar_codigo}
-                pilar={pilar}
-                onSubir={() => { window.location.href = "/contratista/documentos" }}
-              />
-            ))}
+          <div className="space-y-1.5">
+            {itemsEmpresa.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
+                <p className="text-sm text-slate-400">No hay documentos de empresa exigidos todavía.</p>
+              </div>
+            ) : (
+              itemsEmpresa.map((i, idx) => (
+                <ExigenciaRow key={`${i.requisito_id}-${i.servicio_id ?? "e"}-${idx}`} item={i} />
+              ))
+            )}
           </div>
         </section>
 
@@ -295,7 +282,11 @@ export default function DashboardContratistaPage() {
           ) : (
             <div className="space-y-2">
               {data.trabajadores.map(t => (
-                <TrabajadorRow key={t.trabajador_id} trabajador={t} />
+                <TrabajadorRow
+                  key={t.trabajador_id}
+                  trabajador={t}
+                  items={exigencias.filter(e => e.trabajador_id === t.trabajador_id)}
+                />
               ))}
             </div>
           )}
