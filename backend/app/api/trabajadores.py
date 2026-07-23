@@ -53,8 +53,13 @@ def listar_trabajadores_empresa(
     db: Session = Depends(get_db),
     usuario=Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
 ):
-    """Lista todos los trabajadores activos de una empresa."""
-    return db.query(Trabajador).filter_by(empresa_id=empresa_id, activo=True).all()
+    """
+    Lista todos los trabajadores de una empresa (activos e inactivos --
+    el frontend distingue con el campo activo; si aquí se filtraran los
+    inactivos, un trabajador desactivado desaparecería sin forma de
+    reactivarlo desde la UI).
+    """
+    return db.query(Trabajador).filter_by(empresa_id=empresa_id).all()
 
 
 @router.patch("/{trabajador_id}/desactivar", status_code=status.HTTP_204_NO_CONTENT)
@@ -73,4 +78,20 @@ def desactivar_trabajador(
     if t.empresa_id != usuario.contratista_id:
         raise HTTPException(status_code=403, detail="No tiene permiso sobre este trabajador")
     t.activo = False
+    db.commit()
+
+
+@router.patch("/{trabajador_id}/reactivar", status_code=status.HTTP_204_NO_CONTENT)
+def reactivar_trabajador(
+    trabajador_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["contratista_admin"])),
+):
+    """Reactiva un trabajador previamente desactivado. Solo contratista_admin."""
+    t = db.get(Trabajador, trabajador_id)
+    if not t:
+        raise HTTPException(status_code=404, detail="Trabajador no encontrado")
+    if t.empresa_id != usuario.contratista_id:
+        raise HTTPException(status_code=403, detail="No tiene permiso sobre este trabajador")
+    t.activo = True
     db.commit()

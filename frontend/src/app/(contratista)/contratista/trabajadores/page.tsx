@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Briefcase, UserPlus, CheckCircle2, XCircle } from "lucide-react"
+import { Briefcase, UserPlus, CheckCircle2, XCircle, UserX, UserCheck } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { AgregarTrabajadorDialog } from "@/features/agregar-trabajador/agregar-trabajador-dialog"
 import { useTrabajadores } from "@/entities/trabajador/use-trabajadores"
 import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
 import type { Servicio } from "@/entities/servicio/types"
+import type { Trabajador } from "@/shared/types"
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
@@ -37,8 +38,9 @@ function useServiciosPorTrabajador() {
 }
 
 export default function TrabajadoresPage() {
-  const [session, setSession] = useState<{ contratista_id: string } | null>(null)
+  const [session, setSession] = useState<{ contratista_id: string; rol: string } | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [cambiandoId, setCambiandoId] = useState<string | null>(null)
 
   useEffect(() => {
     const s = getSession()
@@ -48,6 +50,28 @@ export default function TrabajadoresPage() {
   const { data: trabajadores, loading, error, refetch } = useTrabajadores(session?.contratista_id ?? "")
   const serviciosPor = useServiciosPorTrabajador()
   const isLoading = loading
+  const puedeGestionarEstado = session?.rol === "contratista_admin"
+
+  async function toggleActivo(t: Trabajador) {
+    if (t.activo) {
+      const servicios = serviciosPor[t.id] ?? []
+      const aviso = servicios.length > 0
+        ? `${t.nombre_completo} está asignado a ${servicios.length} servicio${servicios.length !== 1 ? "s" : ""} activo${servicios.length !== 1 ? "s" : ""} (${servicios.join(", ")}). ¿Desactivar de todas formas?`
+        : `¿Desactivar a ${t.nombre_completo}?`
+      if (!window.confirm(aviso)) return
+    } else {
+      if (!window.confirm(`¿Reactivar a ${t.nombre_completo}?`)) return
+    }
+    setCambiandoId(t.id)
+    try {
+      await api.patch(`/api/v1/trabajadores/${t.id}/${t.activo ? "desactivar" : "reactivar"}`, {})
+      refetch()
+    } catch {
+      // el error queda implícito: el estado no cambia y el usuario puede reintentar
+    } finally {
+      setCambiandoId(null)
+    }
+  }
 
   const activos = trabajadores.filter(t => t.activo).length
 
@@ -101,6 +125,9 @@ export default function TrabajadoresPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cargo</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Servicios asignados</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                  {puedeGestionarEstado && (
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -140,6 +167,24 @@ export default function TrabajadoresPage() {
                         {t.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
+                    {puedeGestionarEstado && (
+                      <td className="px-4 py-3.5 text-right">
+                        <button
+                          onClick={() => toggleActivo(t)}
+                          disabled={cambiandoId === t.id}
+                          title={t.activo ? "Desactivar trabajador" : "Reactivar trabajador"}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-50",
+                            t.activo
+                              ? "border-slate-200 text-slate-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600"
+                              : "border-slate-200 text-slate-500 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600"
+                          )}
+                        >
+                          {t.activo ? <UserX size={12} /> : <UserCheck size={12} />}
+                          {t.activo ? "Desactivar" : "Reactivar"}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
