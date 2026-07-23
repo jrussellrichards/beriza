@@ -547,6 +547,9 @@ def listar_requisitos_mandante(
         requisitos = []
         for sp in sorted(pilar.subpilares, key=lambda x: x.orden):
             for req in sp.requisitos:
+                # Requisito propio de OTRO mandante -- nunca visible aquí.
+                if req.mandante_id is not None and req.mandante_id != mandante_id:
+                    continue
                 cfg = configs.get(str(req.id))
                 requisitos.append({
                     "id": str(req.id),
@@ -556,6 +559,7 @@ def listar_requisitos_mandante(
                     "entidad": req.entidad_tipo,
                     "alcance": req.alcance,
                     "max_archivos": req.max_archivos,
+                    "es_propio": req.mandante_id is not None,
                     # Sin config en el perfil = el requisito NO se exige en él
                     "es_obligatorio": cfg.es_obligatorio if cfg else False,
                     "vigencia_max_dias": cfg.vigencia_max_dias if cfg else VIGENCIA_DEFAULT_DIAS,

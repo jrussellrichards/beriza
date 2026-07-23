@@ -34,7 +34,11 @@ class RequisitoDocumental(ModelBase):
     __tablename__ = "requisitos_documentales"
 
     subpilar_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subpilares.id"), nullable=False)
-    codigo: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)  # F30 | F30_1 | MIPER
+    codigo: Mapped[str] = mapped_column(String(50), nullable=False)  # F30 | F30_1 | MIPER
+    # NULL = catálogo global (BERISA, visible para todos). Con valor = requisito
+    # propio de ese mandante, visible solo para él. La unicidad de codigo se
+    # aplica por separado (global vs por mandante) via index parcial, ver migración.
+    mandante_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("mandantes.id"), nullable=True)
     nombre: Mapped[str] = mapped_column(String(255), nullable=False)
     # EMPRESA | TRABAJADOR — define a quién aplica el documento
     entidad_tipo: Mapped[str] = mapped_column(String(20), nullable=False)

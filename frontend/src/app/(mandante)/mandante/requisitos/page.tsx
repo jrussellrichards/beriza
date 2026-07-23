@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   Briefcase, ChevronDown, ChevronRight, CheckCircle2,
-  Circle, Layers, Lock, Plus, Save,
+  Circle, Layers, Lock, Plus, Save, Star, Trash2,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
@@ -15,6 +15,7 @@ import {
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
+import { RequisitoPanel, type RequisitoCatalogo } from "@/features/catalogo-requisitos/requisito-panel"
 
 // ── Tipos (espejo del backend) ────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ interface Requisito {
   es_obligatorio: boolean
   vigencia_max_dias: number
   umbral_deuda_max: number | null
+  es_propio: boolean
 }
 
 interface Pilar {
@@ -146,17 +148,19 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
-function RequisitoRow({ req, color, dirty, onChange }: {
+function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
   req: Requisito
   color: string
   dirty: boolean
   onChange: (id: string, cambios: Partial<Requisito>) => void
+  onEdit: (req: Requisito) => void
+  onDelete: (req: Requisito) => void
 }) {
   const c = COLOR_MAP[color] ?? COLOR_MAP.slate
 
   return (
     <div className={cn(
-      "rounded-lg border p-4 transition-colors",
+      "rounded-lg border p-4 transition-colors group",
       req.es_obligatorio ? "bg-white border-slate-200" : "bg-slate-50/60 border-slate-100",
       dirty && "border-amber-300"
     )}>
@@ -190,6 +194,11 @@ function RequisitoRow({ req, color, dirty, onChange }: {
             )}>
               {req.alcance === "SERVICIO" ? "Por cada servicio" : "Se acredita una vez"}
             </span>
+            {req.es_propio && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-violet-50 text-violet-600 border-violet-200 flex items-center gap-1">
+                <Star size={9} /> Propio
+              </span>
+            )}
             {dirty && (
               <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-amber-50 text-amber-700 border-amber-200">
                 Sin guardar
@@ -225,19 +234,42 @@ function RequisitoRow({ req, color, dirty, onChange }: {
           )}
         </div>
 
-        {req.es_obligatorio
-          ? <CheckCircle2 size={15} className="text-emerald-500 mt-0.5 shrink-0" />
-          : <Circle size={15} className="text-slate-300 mt-0.5 shrink-0" />
-        }
+        <div className="flex items-start gap-1.5 mt-0.5 shrink-0">
+          {req.es_propio && (
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => onEdit(req)}
+                title="Editar requisito propio"
+                className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <Layers size={11} />
+              </button>
+              <button
+                onClick={() => onDelete(req)}
+                title="Eliminar requisito propio"
+                className="p-1 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+              >
+                <Trash2 size={11} />
+              </button>
+            </div>
+          )}
+          {req.es_obligatorio
+            ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+            : <Circle size={15} className="text-slate-300 shrink-0" />
+          }
+        </div>
       </div>
     </div>
   )
 }
 
-function PilarSection({ pilar, dirties, onChange }: {
+function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequisito, onCrearPropio }: {
   pilar: Pilar
   dirties: Set<string>
   onChange: (reqId: string, cambios: Partial<Requisito>) => void
+  onEditRequisito: (req: Requisito) => void
+  onDeleteRequisito: (req: Requisito) => void
+  onCrearPropio: () => void
 }) {
   const [open, setOpen] = useState(true)
   const c = COLOR_MAP[pilar.color] ?? COLOR_MAP.slate
@@ -256,16 +288,29 @@ function PilarSection({ pilar, dirties, onChange }: {
       </button>
 
       {open && (
-        <div className="p-4 space-y-2 bg-white">
-          {pilar.requisitos.map(req => (
-            <RequisitoRow
-              key={req.id}
-              req={req}
-              color={pilar.color}
-              dirty={dirties.has(req.id)}
-              onChange={onChange}
-            />
-          ))}
+        <div className="bg-white">
+          <div className="p-4 space-y-2">
+            {pilar.requisitos.map(req => (
+              <RequisitoRow
+                key={req.id}
+                req={req}
+                color={pilar.color}
+                dirty={dirties.has(req.id)}
+                onChange={onChange}
+                onEdit={onEditRequisito}
+                onDelete={onDeleteRequisito}
+              />
+            ))}
+          </div>
+          <div className="px-5 py-3 border-t border-slate-100">
+            <button
+              onClick={onCrearPropio}
+              className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+            >
+              <Plus size={13} />
+              Crear requisito propio en {pilar.nombre}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -284,6 +329,7 @@ export default function PerfilesPage() {
   const [guardado, setGuardado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dialogPerfil, setDialogPerfil] = useState(false)
+  const [panel, setPanel] = useState<{ pilar: Pilar; requisito: RequisitoCatalogo | null } | null>(null)
 
   useEffect(() => {
     const s = getSession()
@@ -303,13 +349,26 @@ export default function PerfilesPage() {
     if (mandanteId) cargarPerfiles(mandanteId)
   }, [mandanteId, cargarPerfiles])
 
-  useEffect(() => {
+  const cargarRequisitos = useCallback(() => {
     if (!mandanteId || !perfilId) return
     setDirties(new Set())
     api.get<ConfigPerfil>(`/api/v1/mandantes/${mandanteId}/requisitos?perfil_id=${perfilId}`)
       .then((cfg) => setPilares(cfg.pilares))
       .catch(() => setPilares([]))
   }, [mandanteId, perfilId])
+
+  useEffect(() => { cargarRequisitos() }, [cargarRequisitos])
+
+  async function handleEliminarPropio(req: Requisito) {
+    setError(null)
+    if (!window.confirm(`¿Eliminar el requisito propio "${req.nombre}"? Esto no afecta el catálogo global.`)) return
+    try {
+      await api.delete(`/api/v1/pilares/requisitos/${req.id}`)
+      cargarRequisitos()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al eliminar")
+    }
+  }
 
   function handleChange(reqId: string, cambios: Partial<Requisito>) {
     setGuardado(false)
@@ -361,7 +420,7 @@ export default function PerfilesPage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
               <Lock size={12} className="text-slate-400" />
-              El catálogo lo gestiona BERISA
+              Catálogo global de BERISA + tus requisitos propios
             </div>
             <button
               onClick={handleGuardar}
@@ -422,9 +481,23 @@ export default function PerfilesPage() {
       </div>
 
       {/* Pilares */}
-      <div className="flex-1 overflow-auto px-8 py-6 space-y-4">
+      <div className={cn("flex-1 overflow-auto px-8 py-6 space-y-4 transition-all duration-300", panel ? "mr-96" : "")}>
         {pilares.map((pilar) => (
-          <PilarSection key={pilar.id} pilar={pilar} dirties={dirties} onChange={handleChange} />
+          <PilarSection
+            key={pilar.id}
+            pilar={pilar}
+            dirties={dirties}
+            onChange={handleChange}
+            onEditRequisito={(req) => setPanel({
+              pilar,
+              requisito: {
+                id: req.id, codigo: req.codigo, nombre: req.nombre, descripcion: req.descripcion,
+                entidad_tipo: req.entidad, alcance: req.alcance, max_archivos: req.max_archivos,
+              },
+            })}
+            onDeleteRequisito={handleEliminarPropio}
+            onCrearPropio={() => setPanel({ pilar, requisito: null })}
+          />
         ))}
         {pilares.length === 0 && (
           <div className="py-14 text-center bg-white rounded-xl border border-slate-200">
@@ -443,6 +516,22 @@ export default function PerfilesPage() {
           }}
         />
       )}
+
+      {/* Panel lateral — crear/editar requisito propio */}
+      <div className={cn(
+        "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
+        panel ? "translate-x-0" : "translate-x-full"
+      )}>
+        {panel && (
+          <RequisitoPanel
+            pilar={panel.pilar}
+            requisito={panel.requisito}
+            contexto="propio"
+            onClose={() => setPanel(null)}
+            onDone={cargarRequisitos}
+          />
+        )}
+      </div>
     </div>
   )
 }

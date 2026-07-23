@@ -1,7 +1,9 @@
 """
-Catálogo global de pilares y requisitos documentales.
-Lectura para cualquier rol autenticado; escritura solo berisa_admin
-(los mandantes configuran sus PERFILES, nunca el catálogo).
+Catálogo de pilares y requisitos documentales.
+Lectura para cualquier rol autenticado; escritura del catálogo global
+(mandante_id NULL) solo berisa_admin. Un mandante_admin puede crear,
+editar y eliminar requisitos PROPIOS (mandante_id = su mandante),
+visibles solo para su organización -- nunca para otros mandantes.
 """
 import uuid
 
@@ -15,6 +17,7 @@ from app.middleware.auth import require_rol
 from app.models.documento import Documento
 from app.models.pilar import Pilar, Subpilar, RequisitoDocumental
 from app.models.servicio import PerfilRequisitoConfig
+from app.models.usuario import Usuario
 
 router = APIRouter()
 
@@ -24,9 +27,13 @@ COLOR_MAP = {"LEGAL": "blue", "HSE": "amber", "COMPLIANCE": "purple"}
 @router.get("/")
 def listar_pilares(
     db: Session = Depends(get_db),
-    _=Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
 ):
-    """Catálogo completo: pilares → subpilares → requisitos documentales."""
+    """
+    Catálogo: pilares → subpilares → requisitos documentales.
+    Incluye el catálogo global más, si el usuario pertenece a un
+    mandante, los requisitos propios de ESE mandante únicamente.
+    """
     pilares = (
         db.query(Pilar)
         .options(
@@ -40,6 +47,10 @@ def listar_pilares(
     for p in pilares:
         subpilares = []
         for sp in sorted(p.subpilares, key=lambda x: x.orden):
+            visibles = [
+                r for r in sp.requisitos
+                if r.mandante_id is None or r.mandante_id == usuario.mandante_id
+            ]
             requisitos = [
                 {
                     "id": str(r.id),
@@ -49,8 +60,9 @@ def listar_pilares(
                     "entidad_tipo": r.entidad_tipo,
                     "alcance": r.alcance,
                     "max_archivos": r.max_archivos,
+                    "es_propio": r.mandante_id is not None,
                 }
-                for r in sp.requisitos
+                for r in visibles
             ]
             subpilares.append({
                 "id": str(sp.id),
@@ -74,14 +86,23 @@ def crear_requisito(
     pilar_id: uuid.UUID,
     body: CrearRequisitoCatalogoRequest,
     db: Session = Depends(get_db),
-    _=Depends(require_rol(["berisa_admin"])),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
-    """Agrega un requisito al catálogo global, dentro del primer subpilar del pilar."""
+    """
+    Agrega un requisito, dentro del primer subpilar del pilar.
+    berisa_admin lo agrega al catálogo global; mandante_admin crea un
+    requisito propio (mandante_id fijado desde el token, nunca desde
+    el body) visible solo para su organización.
+    """
     pilar = db.get(Pilar, pilar_id)
     if not pilar or not pilar.subpilares:
         raise HTTPException(status_code=404, detail="Pilar no encontrado o sin subpilares")
-    if db.query(RequisitoDocumental).filter_by(codigo=body.codigo).first():
-        raise HTTPException(status_code=400, detail=f"Ya existe un requisito con código {body.codigo}")
+
+    mandante_id = usuario.mandante_id if usuario.rol == "mandante_admin" else None
+    duplicado = db.query(RequisitoDocumental).filter_by(codigo=body.codigo.strip().upper(), mandante_id=mandante_id).first()
+    if duplicado:
+        ambito = "tu organización" if mandante_id else "el catálogo global"
+        raise HTTPException(status_code=400, detail=f"Ya existe un requisito con código {body.codigo} en {ambito}")
     if body.entidad_tipo not in (EntidadTipo.EMPRESA, EntidadTipo.TRABAJADOR):
         raise HTTPException(status_code=400, detail="entidad_tipo debe ser EMPRESA o TRABAJADOR")
     if body.alcance not in (Alcance.ENTIDAD, Alcance.SERVICIO):
@@ -90,6 +111,7 @@ def crear_requisito(
     subpilar = sorted(pilar.subpilares, key=lambda x: x.orden)[0]
     req = RequisitoDocumental(
         subpilar_id=subpilar.id,
+        mandante_id=mandante_id,
         codigo=body.codigo.strip().upper(),
         nombre=body.nombre,
         descripcion=body.descripcion,
@@ -100,7 +122,8 @@ def crear_requisito(
     db.add(req)
     db.commit()
     db.refresh(req)
-    return {"id": str(req.id), "mensaje": "Requisito agregado al catálogo"}
+    mensaje = "Requisito propio creado" if mandante_id else "Requisito agregado al catálogo"
+    return {"id": str(req.id), "mensaje": mensaje}
 
 
 @router.patch("/requisitos/{requisito_id}")
@@ -108,12 +131,14 @@ def actualizar_requisito(
     requisito_id: uuid.UUID,
     body: ActualizarRequisitoCatalogoRequest,
     db: Session = Depends(get_db),
-    _=Depends(require_rol(["berisa_admin"])),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
     """Actualiza nombre, descripción, alcance o límite de archivos de un requisito."""
     req = db.get(RequisitoDocumental, requisito_id)
     if not req:
         raise HTTPException(status_code=404, detail="Requisito no encontrado")
+    if usuario.rol == "mandante_admin" and req.mandante_id != usuario.mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede editar requisitos propios de su organización")
 
     if body.nombre is not None:
         req.nombre = body.nombre
@@ -135,15 +160,18 @@ def actualizar_requisito(
 def eliminar_requisito(
     requisito_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _=Depends(require_rol(["berisa_admin"])),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
     """
-    Elimina un requisito del catálogo SOLO si ningún perfil lo exige y no
-    tiene expedientes — el catálogo con historia es evidencia, no se borra.
+    Elimina un requisito SOLO si ningún perfil lo exige y no tiene
+    expedientes — el catálogo con historia es evidencia, no se borra.
+    mandante_admin solo puede eliminar requisitos propios de su organización.
     """
     req = db.get(RequisitoDocumental, requisito_id)
     if not req:
         raise HTTPException(status_code=404, detail="Requisito no encontrado")
+    if usuario.rol == "mandante_admin" and req.mandante_id != usuario.mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede eliminar requisitos propios de su organización")
 
     en_perfiles = db.query(PerfilRequisitoConfig).filter_by(requisito_documental_id=requisito_id).count()
     con_documentos = db.query(Documento).filter_by(requisito_id=requisito_id).count()
