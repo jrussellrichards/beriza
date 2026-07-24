@@ -4,7 +4,9 @@ export default function ContratistaLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-screen bg-slate-50">
       <SidebarContratista />
-      <main className="flex-1 p-6 overflow-auto">{children}</main>
+      {/* En teléfono el contenido esquiva la cabecera y la barra inferior fijas.
+          Cada página maneja su propio padding horizontal. */}
+      <main className="flex-1 min-w-0 pt-14 pb-20 md:pt-0 md:pb-0">{children}</main>
     </div>
   )
 }
