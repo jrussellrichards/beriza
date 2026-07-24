@@ -42,6 +42,7 @@ class RequisitoAvance:
     fecha_vigencia_hasta: date | None
     mensaje_brecha: str | None
     documento_id: uuid.UUID | None
+    numero_version: int | None = None   # version que ESTE mandante revisa
     trabajador_id: uuid.UUID | None = None
     trabajador_nombre: str | None = None
     servicio_id: uuid.UUID | None = None
@@ -421,6 +422,7 @@ def _item_para(
         fecha_vigencia_hasta=vigencia,
         mensaje_brecha=acred.mensaje_brecha if acred else None,
         documento_id=acred.id if acred else None,
+        numero_version=acred.numero_version if acred else None,
         trabajador_id=trabajador.id if trabajador else None,
         trabajador_nombre=trabajador.nombre_completo if trabajador else None,
         servicio_id=servicio.id if es_por_servicio else None,
@@ -571,6 +573,7 @@ class EstadoPorMandante:
     estado: int | None                 # None = exigido pero sin subir
     mensaje_brecha: str | None
     documento_id: uuid.UUID | None     # id de la Acreditacion (para historial/descarga)
+    numero_version: int | None         # que version tiene fijada: dos mandantes pueden diferir
     fecha_vigencia_hasta: date | None  # de la entrega que ESE mandante tiene fijada
 
 
@@ -636,6 +639,7 @@ def vista_documental(db: Session, contratista_id: uuid.UUID) -> list[DocumentoCo
                 estado=item.estado,
                 mensaje_brecha=item.mensaje_brecha,
                 documento_id=item.documento_id,
+                numero_version=item.numero_version,
                 fecha_vigencia_hasta=item.fecha_vigencia_hasta,
             ))
 

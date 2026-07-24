@@ -374,6 +374,7 @@ class EstadoPorMandanteResponse(BaseModel):
     estado: int | None
     mensaje_brecha: str | None
     documento_id: uuid.UUID | None
+    numero_version: int | None
     fecha_vigencia_hasta: date | None
 
 

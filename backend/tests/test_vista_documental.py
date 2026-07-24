@@ -140,6 +140,32 @@ def run():
         assert e.status_code == 400
     print("PASS: usuario sin contratista -> 400")
 
+    # ── Mandantes anclados a versiones DISTINTAS ─────────────────────────────
+    # Codelco aprobo la v1 y sigue vigente; el contratista sube una v2 y
+    # Falabella la observa. El pin es explicito: subir la v2 NO debe mover a
+    # Codelco, porque eso lo desacreditaria mientras su v1 sigue vigente.
+    v2 = Entrega(expediente_id=exp.id, numero_version=2); db.add(v2); db.flush()
+    acred_fal = (db.query(Acreditacion)
+                 .filter_by(expediente_id=exp.id, mandante_id=falabella.id).first())
+    acred_fal.entrega_id = v2.id
+    acred_fal.numero_version = 2
+    acred_fal.estado = EstadoDocumento.OBSERVADO
+    acred_fal.mensaje_brecha = "Ilegible"
+    db.commit()
+
+    f = next(d for d in acreditacion_service.vista_documental(db, c.id)
+             if d.requisito_codigo == "F30")
+    por_nombre = {m.mandante_razon_social: m for m in f.mandantes}
+
+    assert len(f.mandantes) == 2, "sigue siendo UNA fila aunque miren versiones distintas"
+    assert por_nombre["Codelco"].numero_version == 1, "Codelco no debe moverse de su v1"
+    assert por_nombre["Codelco"].estado == EstadoDocumento.APROBADO, \
+        "que otro mandante rechace la v2 no puede desacreditar al que aprobo la v1"
+    assert por_nombre["Falabella"].numero_version == 2
+    assert por_nombre["Falabella"].estado == EstadoDocumento.OBSERVADO
+    assert por_nombre["Falabella"].mensaje_brecha == "Ilegible"
+    print("PASS: cada mandante conserva SU version (v1 aprobada vs v2 observada)")
+
     print("TODOS LOS TESTS DE VISTA DOCUMENTAL PASARON")
 
 
