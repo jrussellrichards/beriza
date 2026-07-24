@@ -9,7 +9,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.schemas import SolicitudAutorizacionResponse
+from app.api.schemas import DefinirSensibilidadRequest, SolicitudAutorizacionResponse
 from app.core.exceptions import DocumentoNoEncontrado, EstadoDocumentoInvalido
 from app.domain import reutilizacion_service
 from app.infrastructure.database import get_db
@@ -30,6 +30,32 @@ def _acreditacion_del_contratista(db: Session, acreditacion_id: uuid.UUID, usuar
     if not usuario.contratista_id or empresa_id != usuario.contratista_id:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
     return acred
+
+
+@router.patch("/expedientes/{expediente_id}/sensibilidad", status_code=status.HTTP_204_NO_CONTENT)
+def definir_sensibilidad(
+    expediente_id: uuid.UUID,
+    body: DefinirSensibilidadRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["contratista_admin"])),
+):
+    """
+    El contratista decide si este documento suyo se comparte con un mandante
+    nuevo sin preguntarle. `null` vuelve al default del catálogo.
+
+    Relajar solo se permite en documentos de empresa: los de trabajador llevan
+    datos personales de un tercero.
+    """
+    if not usuario.contratista_id:
+        raise HTTPException(status_code=400, detail="El usuario no está asociado a un contratista")
+    try:
+        reutilizacion_service.definir_sensibilidad(
+            db, expediente_id, usuario.contratista_id, body.sensible
+        )
+    except DocumentoNoEncontrado:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    except EstadoDocumentoInvalido as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/solicitudes", response_model=list[SolicitudAutorizacionResponse])

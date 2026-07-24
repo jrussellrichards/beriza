@@ -398,6 +398,11 @@ class DocumentoContratistaResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DefinirSensibilidadRequest(BaseModel):
+    """None = usar el default del catálogo; True = endurecer; False = relajar."""
+    sensible: bool | None = None
+
+
 class SolicitudAutorizacionResponse(BaseModel):
     """Documento sensible que un mandante nuevo quiere ver por reutilización."""
     acreditacion_id: uuid.UUID

@@ -46,6 +46,17 @@ class Expediente(ModelBase):
     # NOT NULL solo si el requisito es de alcance SERVICIO (validado en dominio)
     servicio_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("servicios.id"), nullable=True, index=True)
 
+    # Decisión del CONTRATISTA sobre compartir este documento suyo, que pisa el
+    # default del catálogo (RequisitoDocumental.sensible, fijado por BERISA o el
+    # mandante). NULL = usar el default.
+    #   True  → endurecer: exigir autorización aunque el catálogo no lo pida.
+    #   False → relajar: compartir sin preguntar. SOLO se permite en documentos
+    #           de entidad EMPRESA. En los de TRABAJADOR el contenido es dato
+    #           personal de un tercero (salud, en un examen ocupacional), y el
+    #           contratista no puede renunciar a una protección que no es suya.
+    # La regla se aplica en el dominio (ver reutilizacion_service.es_sensible).
+    sensible_override: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
     # Soft delete — nunca DELETE físico (evidencia de auditoría)
     eliminado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

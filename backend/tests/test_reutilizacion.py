@@ -35,9 +35,11 @@ from app.models.expediente import Acreditacion, Entrega, Expediente
 from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio
+from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
 from app.api import reutilizacion as api_reuso
 from app.domain import reutilizacion_service
+from app.core.exceptions import DocumentoNoEncontrado, EstadoDocumentoInvalido
 from app.domain.estados import EstadoAcreditacion, EstadoDocumento, EstadoServicio
 
 # El servicio usa date.today() (no recibe `hoy`), así que las fechas del test
@@ -172,6 +174,57 @@ def run():
     except HTTPException as e:
         assert e.status_code == 404, f"debio ser 404 (no revelar existencia), fue {e.status_code}"
     print("PASS: contratista ajeno -> 404 (aislamiento multi-tenant)")
+
+    # ── Sensibilidad decidida por el contratista ─────────────────────────────
+    # Endurecer: un requisito generico pasa a exigir autorizacion porque el
+    # contratista lo decidio para SU documento.
+    req_end = _requisito(db, sub, "BALANCE", sensible=False)
+    exp_end = _expediente_vigente(db, req_end, c)
+    reutilizacion_service.definir_sensibilidad(db, exp_end.id, c.id, True)
+    assert reutilizacion_service.es_sensible(exp_end, req_end) is True
+    print("PASS: el contratista puede endurecer un requisito generico")
+
+    # Relajar un documento de EMPRESA: es su secreto, puede renunciar a el.
+    reutilizacion_service.definir_sensibilidad(db, exp_sens.id, c.id, False)
+    assert reutilizacion_service.es_sensible(exp_sens, req_sens) is False
+    print("PASS: puede relajar un documento de su empresa")
+
+    # Relajar un documento de TRABAJADOR: son datos de un tercero, se rechaza.
+    req_trab = RequisitoDocumental(subpilar_id=sub.id, codigo="EXAM_MED", nombre="EXAM_MED",
+                                   entidad_tipo="TRABAJADOR", alcance="ENTIDAD", sensible=True)
+    db.add(req_trab); db.flush()
+    trab = Trabajador(empresa_id=c.id, rut="11.1-1", nombre_completo="Juan", activo=True)
+    db.add(trab); db.flush()
+    exp_trab = Expediente(requisito_id=req_trab.id, trabajador_id=trab.id)
+    db.add(exp_trab); db.flush()
+    e = Entrega(expediente_id=exp_trab.id, numero_version=1, fecha_vigencia_hasta=FUTURO)
+    db.add(e); db.commit()
+
+    try:
+        reutilizacion_service.definir_sensibilidad(db, exp_trab.id, c.id, False)
+        raise AssertionError("no debio poder relajar datos de un trabajador")
+    except EstadoDocumentoInvalido:
+        pass
+    assert reutilizacion_service.es_sensible(exp_trab, req_trab) is True
+    print("PASS: NO puede relajar datos de un trabajador (dato personal de un tercero)")
+
+    # Endurecer un documento de trabajador si se permite: protege mas, no menos.
+    reutilizacion_service.definir_sensibilidad(db, exp_trab.id, c.id, True)
+    assert reutilizacion_service.es_sensible(exp_trab, req_trab) is True
+    print("PASS: si puede endurecer un documento de trabajador")
+
+    # Volver al default del catalogo.
+    reutilizacion_service.definir_sensibilidad(db, exp_end.id, c.id, None)
+    assert reutilizacion_service.es_sensible(exp_end, req_end) is False
+    print("PASS: None vuelve al default del catalogo")
+
+    # Aislamiento: no se puede tocar el expediente de otro contratista.
+    try:
+        reutilizacion_service.definir_sensibilidad(db, exp_end.id, otro.id, True)
+        raise AssertionError("un contratista ajeno no debio poder cambiar la sensibilidad")
+    except DocumentoNoEncontrado:
+        pass
+    print("PASS: contratista ajeno no puede cambiar la sensibilidad -> 404")
 
     # ── Propagación a TODOS los mandantes ────────────────────────────────────
     # Un segundo mandante que ya exige el F30 debe recibirlo sin que el

@@ -31,22 +31,19 @@ ROLES_CREABLES = {
 
 
 def _crear_token(usuario: Usuario, db: Session | None = None) -> str:
-    mandante_id = usuario.mandante_id
-
-    # Para contratistas: incluir el primer mandante activo en el token
-    # para que el frontend sepa ante quién está acreditando
-    if not mandante_id and usuario.contratista_id and db:
-        from app.models.contratista import ContratistaMandante
-        vinculo = db.query(ContratistaMandante).filter_by(
-            contratista_id=usuario.contratista_id
-        ).first()
-        if vinculo:
-            mandante_id = vinculo.mandante_id
-
+    # `mandante_id` solo aplica a usuarios DE un mandante. Antes, para un
+    # contratista, se metía aquí "el primer vínculo" con un .first() sin
+    # order_by: un contratista con tres clientes veía uno al azar y sin forma de
+    # cambiarlo, y todo su portal quedaba cableado a ese. Un contratista no
+    # pertenece a un mandante — trabaja para varios. Sus endpoints se derivan de
+    # contratista_id (ver /mis-documentos y /mi-resumen).
+    #
+    # El backend nunca leyó este claim: get_usuario_actual carga el Usuario de
+    # la BD por `sub`, así que quitarlo no afecta autorización.
     payload = {
         "sub": str(usuario.id),
         "rol": usuario.rol,
-        "mandante_id": str(mandante_id) if mandante_id else None,
+        "mandante_id": str(usuario.mandante_id) if usuario.mandante_id else None,
         "contratista_id": str(usuario.contratista_id) if usuario.contratista_id else None,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES),
     }
