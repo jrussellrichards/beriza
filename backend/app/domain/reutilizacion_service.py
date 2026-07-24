@@ -1,0 +1,159 @@
+"""
+Reutilización documental entre mandantes (Fase 2).
+
+Cuando un mandante empieza a exigir un requisito de alcance ENTIDAD que el
+contratista ya tiene resuelto (un F30, un examen médico), se crea la Acreditación
+faltante reutilizando el documento existente, sin re-subirlo:
+
+  - requisito genérico  -> Acreditación ENVIADO apuntando a la entrega vigente
+    (el mandante la revisa con su propia config; nunca pre-aprobada).
+  - requisito sensible  -> Acreditación PENDIENTE_AUTORIZACION, sin compartir el
+    archivo, hasta que el contratista autorice explícitamente.
+
+Los requisitos de alcance SERVICIO no se reutilizan entre mandantes (son
+específicos de cada faena). Se dispara al crear un servicio (ver servicio_service).
+"""
+import uuid
+
+from sqlalchemy.orm import Session
+
+from app.core.exceptions import DocumentoNoEncontrado, EstadoDocumentoInvalido
+from app.domain.estados import (
+    Alcance, EntidadTipo, EstadoDocumento, EstadoServicio, TipoEvento, validar_transicion,
+)
+from app.models.contratista import ContratistaMandante
+from app.models.expediente import Acreditacion, AcreditacionEvento, Expediente
+from app.models.servicio import PerfilRequisitoConfig
+from app.models.trabajador import Trabajador
+
+
+def reconciliar_reutilizacion(
+    db: Session, contratista_id: uuid.UUID, mandante_id: uuid.UUID
+) -> list[Acreditacion]:
+    """
+    Crea las acreditaciones que faltan para el mandante reutilizando los
+    expedientes ENTIDAD vigentes del contratista. Devuelve las creadas.
+    """
+    creadas: list[Acreditacion] = []
+    for req in _requisitos_exigidos_entidad(db, contratista_id, mandante_id):
+        for exp in _expedientes_con_entrega(db, req, contratista_id):
+            ya_existe = (
+                db.query(Acreditacion)
+                .filter_by(expediente_id=exp.id, mandante_id=mandante_id, eliminado_en=None)
+                .first()
+            )
+            if ya_existe:
+                continue
+            creadas.append(_crear_reutilizada(db, exp, mandante_id, req))
+    if creadas:
+        db.commit()
+    return creadas
+
+
+def autorizar_compartir(db: Session, acreditacion_id: uuid.UUID, usuario_id: uuid.UUID) -> None:
+    """El contratista autoriza compartir un documento sensible: fija la entrega
+    vigente y pasa a ENVIADO (queda a revisión del mandante)."""
+    acred = db.get(Acreditacion, acreditacion_id)
+    if not acred or acred.eliminado_en is not None:
+        raise DocumentoNoEncontrado(f"Acreditación {acreditacion_id} no encontrada.")
+    if acred.estado != EstadoDocumento.PENDIENTE_AUTORIZACION:
+        raise EstadoDocumentoInvalido("La acreditación no está pendiente de autorización.")
+    entregas = acred.expediente.entregas
+    if not entregas:
+        raise EstadoDocumentoInvalido("El expediente no tiene ninguna entrega para compartir.")
+
+    vigente = entregas[-1]
+    validar_transicion(acred.estado, EstadoDocumento.ENVIADO)
+    acred.entrega_id = vigente.id
+    acred.numero_version = vigente.numero_version
+    acred.estado = EstadoDocumento.ENVIADO
+    db.add(AcreditacionEvento(
+        acreditacion_id=acred.id, tipo_evento=TipoEvento.AUTORIZACION_COMPARTIR,
+        estado_anterior=EstadoDocumento.PENDIENTE_AUTORIZACION, estado_nuevo=EstadoDocumento.ENVIADO,
+        actor_usuario_id=usuario_id, detalle=None,
+    ))
+    db.commit()
+
+
+def acreditaciones_pendientes_autorizacion(db: Session, contratista_id: uuid.UUID) -> list[Acreditacion]:
+    """Solicitudes de acceso a documentos sensibles del contratista (bandeja)."""
+    empresa_expedientes = db.query(Expediente.id).filter_by(empresa_id=contratista_id)
+    trab_ids = [t.id for t in db.query(Trabajador).filter_by(empresa_id=contratista_id).all()]
+    trab_expedientes = db.query(Expediente.id).filter(Expediente.trabajador_id.in_(trab_ids)) if trab_ids else None
+    exp_ids = [e[0] for e in empresa_expedientes.all()]
+    if trab_expedientes is not None:
+        exp_ids += [e[0] for e in trab_expedientes.all()]
+    if not exp_ids:
+        return []
+    return (
+        db.query(Acreditacion)
+        .filter(
+            Acreditacion.expediente_id.in_(exp_ids),
+            Acreditacion.estado == EstadoDocumento.PENDIENTE_AUTORIZACION,
+            Acreditacion.eliminado_en.is_(None),
+        )
+        .all()
+    )
+
+
+def _requisitos_exigidos_entidad(db, contratista_id, mandante_id):
+    rel = (
+        db.query(ContratistaMandante)
+        .filter_by(contratista_id=contratista_id, mandante_id=mandante_id)
+        .first()
+    )
+    if not rel:
+        return []
+    servicios = [s for s in rel.servicios if s.estado == EstadoServicio.ACTIVO]
+    reqs = {}
+    for s in servicios:
+        configs = db.query(PerfilRequisitoConfig).filter_by(
+            perfil_id=s.perfil_requisitos_id, es_obligatorio=True
+        ).all()
+        for cfg in configs:
+            if cfg.requisito.alcance == Alcance.ENTIDAD:
+                reqs[cfg.requisito.id] = cfg.requisito
+    return list(reqs.values())
+
+
+def _expedientes_con_entrega(db, req, contratista_id):
+    if req.entidad_tipo == EntidadTipo.EMPRESA:
+        query = db.query(Expediente).filter_by(
+            requisito_id=req.id, empresa_id=contratista_id, servicio_id=None, eliminado_en=None
+        )
+    else:
+        trab_ids = [t.id for t in db.query(Trabajador).filter_by(empresa_id=contratista_id, activo=True).all()]
+        if not trab_ids:
+            return []
+        query = db.query(Expediente).filter(
+            Expediente.requisito_id == req.id,
+            Expediente.trabajador_id.in_(trab_ids),
+            Expediente.servicio_id.is_(None),
+            Expediente.eliminado_en.is_(None),
+        )
+    return [e for e in query.all() if e.entregas]
+
+
+def _crear_reutilizada(db, exp, mandante_id, req) -> Acreditacion:
+    if req.sensible:
+        acred = Acreditacion(
+            mandante_id=mandante_id, expediente_id=exp.id,
+            estado=EstadoDocumento.PENDIENTE_AUTORIZACION,
+        )
+        estado_nuevo = EstadoDocumento.PENDIENTE_AUTORIZACION
+        detalle = {"sensible": True}
+    else:
+        vigente = exp.entregas[-1]
+        acred = Acreditacion(
+            mandante_id=mandante_id, expediente_id=exp.id, entrega_id=vigente.id,
+            numero_version=vigente.numero_version, estado=EstadoDocumento.ENVIADO,
+        )
+        estado_nuevo = EstadoDocumento.ENVIADO
+        detalle = {"version": vigente.numero_version}
+    db.add(acred)
+    db.flush()
+    db.add(AcreditacionEvento(
+        acreditacion_id=acred.id, tipo_evento=TipoEvento.REUTILIZACION,
+        estado_anterior=None, estado_nuevo=estado_nuevo, actor_usuario_id=None, detalle=detalle,
+    ))
+    return acred

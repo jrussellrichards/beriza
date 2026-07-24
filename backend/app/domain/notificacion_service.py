@@ -2,8 +2,10 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from app.domain.estados import EstadoDocumento
 from app.infrastructure.email import Email, get_email_cliente
 from app.models.expediente import Acreditacion
+from app.models.mandante import Mandante
 from app.models.pilar import RequisitoDocumental
 from app.models.usuario import Usuario
 
@@ -38,6 +40,49 @@ def notificar_proximos_vencimientos(db: Session, contratista_id: uuid.UUID, item
         destinatario=admin.email,
         asunto=f"Acredita — {len(items)} documento(s) por vencer",
         cuerpo_html=cuerpo,
+    ))
+
+
+def notificar_reutilizacion(
+    db: Session,
+    contratista_id: uuid.UUID,
+    mandante_id: uuid.UUID,
+    creadas: list[Acreditacion],
+) -> None:
+    """
+    Avisa al contratista que un mandante nuevo empezó a ver (o solicitó) sus
+    documentos ya existentes, tras reutilizarlos automáticamente al crear un
+    servicio. Transparencia sin fricción: los genéricos se comparten y se
+    informan; los sensibles quedan pendientes de su autorización explícita.
+    """
+    admin = _contratista_admin(db, contratista_id)
+    if not admin or not creadas:
+        return
+
+    mandante = db.get(Mandante, mandante_id)
+    nombre_m = mandante.razon_social if mandante else "un mandante"
+
+    compartidos = [a for a in creadas if a.estado == EstadoDocumento.ENVIADO]
+    pendientes = [a for a in creadas if a.estado == EstadoDocumento.PENDIENTE_AUTORIZACION]
+
+    partes = ""
+    if compartidos:
+        partes += (
+            f"<p><strong>{nombre_m}</strong> ahora puede revisar "
+            f"{len(compartidos)} de tus documentos vigentes. Se reutilizaron "
+            f"automáticamente — no necesitas volver a subirlos.</p>"
+        )
+    if pendientes:
+        partes += (
+            f"<p>{len(pendientes)} documento(s) marcado(s) como sensible(s) "
+            f"requieren tu autorización antes de compartirse con {nombre_m}. "
+            f"Ingresa a Acredita para autorizar o rechazar cada solicitud.</p>"
+        )
+
+    get_email_cliente().enviar(Email(
+        destinatario=admin.email,
+        asunto=f"Acredita — documentos aplicados a {nombre_m}",
+        cuerpo_html=f"<h2>Documentos reutilizados</h2>{partes}",
     ))
 
 

@@ -17,6 +17,7 @@ class EstadoDocumento(IntEnum):
     OBSERVADO = 3     # lo asigna el sistema IA con el mensaje exacto de brecha
     APROBADO = 4      # lo asigna el sistema IA o el mandante (excepción manual)
     VENCIDO = 5       # lo asigna el cron cuando la vigencia expiró sin renovación válida
+    PENDIENTE_AUTORIZACION = 6  # reutilización de un doc sensible: espera autorización del contratista
 
 
 # Transiciones permitidas del ciclo: 1 → 2 → 4 (pipeline IA) | 1 → 3/4 (revisión
@@ -35,6 +36,8 @@ TRANSICIONES_VALIDAS: dict[EstadoDocumento, frozenset[EstadoDocumento]] = {
     EstadoDocumento.APROBADO: frozenset({EstadoDocumento.ENVIADO, EstadoDocumento.VENCIDO}),
     # Desde VENCIDO: renovación (nueva versión o auto-repin del cron → ENVIADO)
     EstadoDocumento.VENCIDO: frozenset({EstadoDocumento.ENVIADO}),
+    # Desde PENDIENTE_AUTORIZACION: el contratista autoriza compartir → ENVIADO
+    EstadoDocumento.PENDIENTE_AUTORIZACION: frozenset({EstadoDocumento.ENVIADO}),
 }
 
 
@@ -87,4 +90,6 @@ class TipoEvento(StrEnum):
     EXCEPCION_APROBADA = "EXCEPCION_APROBADA"
     VENCIMIENTO = "VENCIMIENTO"           # el cron marcó la acreditación vencida
     RENOVACION_AUTO = "RENOVACION_AUTO"   # el cron re-ancló a una entrega vigente posterior
+    REUTILIZACION = "REUTILIZACION"       # se reutilizó un documento vigente para un mandante nuevo
+    AUTORIZACION_COMPARTIR = "AUTORIZACION_COMPARTIR"  # el contratista autorizó compartir un doc sensible
     ELIMINACION = "ELIMINACION"

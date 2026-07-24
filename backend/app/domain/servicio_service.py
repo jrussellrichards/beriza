@@ -137,6 +137,19 @@ def crear_servicio(
     db.add(servicio)
     db.commit()
     db.refresh(servicio)
+
+    # Reutilización documental: los expedientes ENTIDAD vigentes del contratista
+    # se aplican automáticamente a las exigencias de este mandante (los sensibles
+    # quedan pendientes de autorización). Best-effort: un fallo aquí no debe
+    # revertir la creación del servicio, que ya está confirmada.
+    from app.domain import notificacion_service, reutilizacion_service
+    try:
+        creadas = reutilizacion_service.reconciliar_reutilizacion(db, contratista_id, mandante_id)
+        if creadas:
+            notificacion_service.notificar_reutilizacion(db, contratista_id, mandante_id, creadas)
+    except Exception:
+        db.rollback()
+
     return servicio
 
 

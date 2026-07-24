@@ -59,8 +59,8 @@ jobs:
       - name: Seed idempotente (dos corridas)
         run: cd backend && python scripts/seed.py && python scripts/seed.py
 
-      - name: Smoke tests (autorización, flujo de expediente, vencimientos)
-        run: cd backend && python tests/test_tenant.py && python tests/test_expediente_flujo.py && python tests/test_vencimiento.py
+      - name: Smoke tests (autorización, flujo de expediente, vencimientos, reutilización)
+        run: cd backend && python tests/test_tenant.py && python tests/test_expediente_flujo.py && python tests/test_vencimiento.py && python tests/test_reutilizacion.py
 
   deploy-prod:
     needs: [build, backend-test]
