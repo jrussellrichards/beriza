@@ -30,7 +30,10 @@ from app.domain import acreditacion_service, archivo_service, documento_service
 from app.domain.archivo_service import ArchivoEntrada
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
-from app.middleware.tenant import verificar_acceso_documento, verificar_puede_subir_para
+from app.middleware.tenant import (
+    entrega_visible, puede_ver_todas_las_entregas,
+    verificar_acceso_documento, verificar_puede_subir_para,
+)
 from app.models.expediente import Acreditacion, Archivo, Entrega
 from app.models.usuario import Usuario
 
@@ -199,9 +202,14 @@ def historial_documento(
     verificar_acceso_documento(db, acred, usuario)
     # Versiones = entregas del expediente (uploads del contratista); bitácora =
     # eventos de ESTA acreditación (no se filtran las revisiones de otro mandante).
+    ve_todas = puede_ver_todas_las_entregas(db, acred, usuario)
     return HistorialDocumentoResponse(
         documento_id=acred.id,
-        versiones=[_version_response(e, acred) for e in acred.expediente.entregas],
+        versiones=[
+            _version_response(e, acred)
+            for e in acred.expediente.entregas
+            if entrega_visible(acred, e, ve_todas)
+        ],
         eventos=[DocumentoEventoResponse.model_validate(ev) for ev in acred.eventos],
     )
 
@@ -270,6 +278,11 @@ def url_descarga_archivo(
     verificar_acceso_documento(db, acred, usuario)
     archivo = db.get(Archivo, archivo_id)
     if not archivo or archivo.entrega.expediente_id != acred.expediente_id:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    # Pertenecer al expediente NO alcanza: el mandante solo puede bajar archivos
+    # de la entrega que tiene fijada. Sin esto, una acreditación en
+    # PENDIENTE_AUTORIZACION entregaba una URL firmada del documento sensible.
+    if not entrega_visible(acred, archivo.entrega, puede_ver_todas_las_entregas(db, acred, usuario)):
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
     return UrlDescargaResponse(url=archivo_service.url_descarga(archivo.storage_key))
 
