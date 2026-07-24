@@ -62,6 +62,7 @@ def crear_servicio(
             contratista_id=body.contratista_id,
             perfil_requisitos_id=body.perfil_requisitos_id,
             nombre=body.nombre,
+            tipo=body.tipo,
             fecha_inicio=body.fecha_inicio,
             codigo_referencia=body.codigo_referencia,
             descripcion=body.descripcion,
@@ -94,6 +95,7 @@ def listar_servicios(
         ServicioListItemResponse(
             id=s.id,
             nombre=s.nombre,
+            tipo=s.tipo,
             codigo_referencia=s.codigo_referencia,
             estado=s.estado,
             fecha_inicio=s.fecha_inicio,
@@ -101,6 +103,8 @@ def listar_servicios(
             contratista_id=s.relacion.contratista_id,
             contratista_razon_social=s.relacion.contratista.razon_social,
             contratista_rut=s.relacion.contratista.rut,
+            mandante_id=s.relacion.mandante_id,
+            mandante_razon_social=s.relacion.mandante.razon_social,
             perfil_nombre=s.perfil.nombre,
             trabajadores_asignados=sum(1 for a in s.trabajadores_asignados if a.activo),
         )

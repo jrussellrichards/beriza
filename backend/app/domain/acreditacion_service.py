@@ -733,3 +733,196 @@ def _expediente_del_item(db: Session, item: RequisitoAvance, contratista_id: uui
     q = (q.filter(Expediente.servicio_id == item.servicio_id)
          if item.servicio_id else q.filter(Expediente.servicio_id.is_(None)))
     return q.first()
+
+
+# ── Bandeja unificada de pendientes (portal del contratista) ──────────────────
+#
+# Todo lo que requiere una acción del contratista, en una sola lista ordenada
+# por urgencia. Antes cada tipo vivía en su propia pantalla —o en ninguna— y el
+# contratista tenía que recorrer el portal para descubrir qué le faltaba.
+
+
+@dataclass
+class Pendiente:
+    """Algo que el contratista debe resolver. `accion` la interpreta la UI."""
+    tipo: str              # AUTORIZACION | OBSERVADO | POR_VENCER | TRABAJADOR_INCOMPLETO
+    titulo: str
+    detalle: str | None
+    urgencia: int          # menor = más urgente; ordena la bandeja
+    documento_id: uuid.UUID | None = None
+    trabajador_id: uuid.UUID | None = None
+    servicio_id: uuid.UUID | None = None
+    requisito_id: uuid.UUID | None = None
+
+
+def pendientes_del_contratista(db: Session, contratista_id: uuid.UUID) -> list[Pendiente]:
+    """
+    Los cuatro tipos de pendiente, unificados y priorizados.
+
+    Cada uno se enuncia por su CONSECUENCIA, no por su estado técnico: al
+    contratista le importa que un trabajador no podrá entrar a la faena, no que
+    a un expediente le falte una acreditación.
+    """
+    from app.domain import reutilizacion_service
+
+    hoy = date.today()
+    pendientes: list[Pendiente] = []
+    documentos = vista_documental(db, contratista_id)
+
+    # 1. Documentos sensibles esperando autorización — lo más urgente: hay un
+    #    cliente detenido esperando una decisión que solo el contratista puede tomar.
+    for acred in reutilizacion_service.acreditaciones_pendientes_autorizacion(db, contratista_id):
+        exp = acred.expediente
+        pendientes.append(Pendiente(
+            tipo="AUTORIZACION",
+            titulo=f"{acred.mandante.razon_social} quiere revisar tu {exp.requisito.nombre.lower()}",
+            detalle="Lo marcaste como sensible",
+            urgencia=0,
+            documento_id=acred.id,
+            requisito_id=exp.requisito_id,
+        ))
+
+    for doc in documentos:
+        etiqueta = f" · {doc.trabajador_nombre}" if doc.trabajador_nombre else ""
+        for m in doc.mandantes:
+            # 2. Observados: el mandante los rechazó y el contratista debe corregir.
+            if m.estado == EstadoDocumento.OBSERVADO:
+                pendientes.append(Pendiente(
+                    tipo="OBSERVADO",
+                    titulo=f"{doc.requisito_nombre}{etiqueta} observado por {m.mandante_razon_social}",
+                    detalle=m.mensaje_brecha,
+                    urgencia=1,
+                    documento_id=m.documento_id,
+                    trabajador_id=doc.trabajador_id,
+                    requisito_id=doc.requisito_id,
+                ))
+            # 3. Por vencer: se avisa por cliente porque cada uno puede estar
+            #    anclado a una versión distinta, con vigencias distintas.
+            elif m.estado == EstadoDocumento.APROBADO and m.fecha_vigencia_hasta:
+                dias = (m.fecha_vigencia_hasta - hoy).days
+                if 0 <= dias <= 30:
+                    if dias == 0:
+                        cuando = "hoy"
+                    elif dias == 1:
+                        cuando = "en 1 día"
+                    else:
+                        cuando = f"en {dias} días"
+                    pendientes.append(Pendiente(
+                        tipo="POR_VENCER",
+                        titulo=(f"{doc.requisito_nombre}{etiqueta} vence {cuando}"
+                                f" · {m.mandante_razon_social}"),
+                        detalle=f"Vigente hasta {m.fecha_vigencia_hasta.isoformat()}",
+                        urgencia=2 if dias <= 7 else 3,
+                        documento_id=m.documento_id,
+                        trabajador_id=doc.trabajador_id,
+                        requisito_id=doc.requisito_id,
+                    ))
+
+    # 4. Trabajadores asignados a un servicio que no cumplen SUS requisitos.
+    #    Es el pendiente más operativo: esa persona no entra a la faena.
+    for servicio, trabajador, faltantes in _trabajadores_no_habilitados(db, contratista_id):
+        pendientes.append(Pendiente(
+            tipo="TRABAJADOR_INCOMPLETO",
+            titulo=f"{trabajador.nombre_completo} está asignado a {servicio.nombre} sin {faltantes[0].lower()}",
+            detalle="No podrá ingresar a la faena",
+            urgencia=1,
+            trabajador_id=trabajador.id,
+            servicio_id=servicio.id,
+        ))
+
+    return sorted(pendientes, key=lambda p: (p.urgencia, p.titulo))
+
+
+def _trabajadores_no_habilitados(db: Session, contratista_id: uuid.UUID):
+    """(servicio, trabajador, requisitos que le faltan) por cada incumplimiento."""
+    resultado = []
+    relaciones = db.query(ContratistaMandante).filter_by(contratista_id=contratista_id).all()
+    for rel in relaciones:
+        for servicio in rel.servicios:
+            if servicio.estado != EstadoServicio.ACTIVO:
+                continue
+            avance = obtener_avance_servicio(db, servicio.id)
+            for pilar in avance.pilares:
+                for item in pilar.requisitos:
+                    if item.trabajador_id and item.estado in (None, EstadoDocumento.OBSERVADO):
+                        trabajador = db.get(Trabajador, item.trabajador_id)
+                        if trabajador:
+                            resultado.append((servicio, trabajador, [item.requisito_nombre]))
+    return resultado
+
+
+# ── Habilitación de trabajadores por servicio ─────────────────────────────────
+
+
+@dataclass
+class HabilitacionServicio:
+    """Si un trabajador puede ingresar a UN servicio, y qué le falta si no."""
+    servicio_id: uuid.UUID
+    servicio_nombre: str
+    servicio_tipo: str
+    mandante_razon_social: str
+    habilitado: bool
+    faltantes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class TrabajadorHabilitacion:
+    trabajador_id: uuid.UUID
+    nombre_completo: str
+    rut: str
+    cargo: str | None
+    activo: bool
+    servicios: list[HabilitacionServicio] = field(default_factory=list)
+
+
+def habilitacion_trabajadores(db: Session, contratista_id: uuid.UUID) -> list[TrabajadorHabilitacion]:
+    """
+    Por cada trabajador, si puede ingresar a cada servicio al que está asignado.
+
+    La habilitación es POR SERVICIO, no por mandante: dos servicios del mismo
+    cliente pueden referenciar perfiles distintos, y los requisitos de alcance
+    SERVICIO son específicos de cada faena. Un trabajador puede estar habilitado
+    en una obra y bloqueado en otra del mismo mandante.
+    """
+    trabajadores = {
+        t.id: TrabajadorHabilitacion(
+            trabajador_id=t.id, nombre_completo=t.nombre_completo, rut=t.rut,
+            cargo=t.cargo, activo=t.activo,
+        )
+        for t in db.query(Trabajador).filter_by(empresa_id=contratista_id).all()
+    }
+
+    for rel in db.query(ContratistaMandante).filter_by(contratista_id=contratista_id).all():
+        for servicio in rel.servicios:
+            if servicio.estado != EstadoServicio.ACTIVO:
+                continue
+            avance = obtener_avance_servicio(db, servicio.id)
+            faltan_por_trabajador: dict[uuid.UUID, list[str]] = {}
+            asignados: set[uuid.UUID] = set()
+            for pilar in avance.pilares:
+                for item in pilar.requisitos:
+                    if not item.trabajador_id:
+                        continue
+                    asignados.add(item.trabajador_id)
+                    if item.estado != EstadoDocumento.APROBADO:
+                        faltan_por_trabajador.setdefault(item.trabajador_id, []).append(
+                            item.requisito_nombre
+                        )
+            for tid in asignados:
+                if tid not in trabajadores:
+                    continue
+                faltantes = faltan_por_trabajador.get(tid, [])
+                trabajadores[tid].servicios.append(HabilitacionServicio(
+                    servicio_id=servicio.id,
+                    servicio_nombre=servicio.nombre,
+                    servicio_tipo=servicio.tipo,
+                    mandante_razon_social=rel.mandante.razon_social,
+                    habilitado=not faltantes,
+                    faltantes=faltantes,
+                ))
+
+    # Los bloqueados primero: son los que necesitan acción.
+    return sorted(
+        trabajadores.values(),
+        key=lambda t: (not any(not s.habilitado for s in t.servicios), t.nombre_completo),
+    )

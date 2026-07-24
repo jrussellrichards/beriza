@@ -138,6 +138,7 @@ class CrearServicioRequest(BaseModel):
     contratista_id: uuid.UUID
     perfil_requisitos_id: uuid.UUID
     nombre: str
+    tipo: str = "SERVICIO"  # OBRA | FAENA | SERVICIO
     fecha_inicio: date
     codigo_referencia: str | None = None
     descripcion: str | None = None
@@ -151,6 +152,7 @@ class ServicioResponse(BaseModel):
     contratista_mandante_id: uuid.UUID
     perfil_requisitos_id: uuid.UUID
     nombre: str
+    tipo: str
     codigo_referencia: str | None
     descripcion: str | None
     fecha_inicio: date
@@ -164,6 +166,7 @@ class ServicioListItemResponse(BaseModel):
     """Item del listado de servicios, enriquecido con contratista y perfil."""
     id: uuid.UUID
     nombre: str
+    tipo: str
     codigo_referencia: str | None
     estado: str
     fecha_inicio: date
@@ -171,6 +174,10 @@ class ServicioListItemResponse(BaseModel):
     contratista_id: uuid.UUID
     contratista_razon_social: str
     contratista_rut: str
+    # El contratista necesita saber DE QUE CLIENTE es cada servicio; antes solo
+    # se le mandaba su propia razon social, que para el es inutil.
+    mandante_id: uuid.UUID
+    mandante_razon_social: str
     perfil_nombre: str
     trabajadores_asignados: int
 
@@ -363,6 +370,43 @@ class ResumenMandanteResponse(BaseModel):
     brechas: list[str]
     trabajadores_total: int
     trabajadores_ok: int
+
+    model_config = {"from_attributes": True}
+
+
+class HabilitacionServicioResponse(BaseModel):
+    servicio_id: uuid.UUID
+    servicio_nombre: str
+    servicio_tipo: str
+    mandante_razon_social: str
+    habilitado: bool
+    faltantes: list[str]
+
+    model_config = {"from_attributes": True}
+
+
+class TrabajadorHabilitacionResponse(BaseModel):
+    """Un trabajador con su habilitación en cada servicio donde está asignado."""
+    trabajador_id: uuid.UUID
+    nombre_completo: str
+    rut: str
+    cargo: str | None
+    activo: bool
+    servicios: list[HabilitacionServicioResponse]
+
+    model_config = {"from_attributes": True}
+
+
+class PendienteResponse(BaseModel):
+    """Algo que el contratista debe resolver. La UI interpreta `tipo`."""
+    tipo: str
+    titulo: str
+    detalle: str | None
+    urgencia: int
+    documento_id: uuid.UUID | None
+    trabajador_id: uuid.UUID | None
+    servicio_id: uuid.UUID | None
+    requisito_id: uuid.UUID | None
 
     model_config = {"from_attributes": True}
 

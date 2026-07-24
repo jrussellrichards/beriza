@@ -20,7 +20,7 @@ from app.core.exceptions import (
     ServicioNoEncontrado,
     TrabajadorNoEncontrado,
 )
-from app.domain.estados import EstadoServicio
+from app.domain.estados import EstadoServicio, TipoServicio
 from app.models.contratista import ContratistaMandante
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
@@ -133,6 +133,7 @@ def crear_servicio(
     perfil_requisitos_id: uuid.UUID,
     nombre: str,
     fecha_inicio: date,
+    tipo: str = TipoServicio.SERVICIO,
     codigo_referencia: str | None = None,
     descripcion: str | None = None,
     fecha_termino: date | None = None,
@@ -159,6 +160,7 @@ def crear_servicio(
         contratista_mandante_id=relacion.id,
         perfil_requisitos_id=perfil_requisitos_id,
         nombre=nombre,
+        tipo=tipo,
         codigo_referencia=codigo_referencia,
         descripcion=descripcion,
         fecha_inicio=fecha_inicio,

@@ -3,13 +3,35 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.schemas import AgregarTrabajadorRequest, TrabajadorResponse
+from app.api.schemas import (
+    AgregarTrabajadorRequest, TrabajadorHabilitacionResponse, TrabajadorResponse,
+)
+from app.domain import acreditacion_service
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
 from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
 
 router = APIRouter()
+
+
+@router.get("/mis-trabajadores", response_model=list[TrabajadorHabilitacionResponse])
+def mis_trabajadores(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["contratista_admin", "prevencionista"])),
+):
+    """
+    La dotación del contratista con la habilitación de cada persona en cada
+    servicio donde está asignada. Responde "¿puede entrar Pedro a esta faena?",
+    que es la pregunta operativa del día a día y antes no se podía contestar.
+
+    Es POR SERVICIO: dos servicios del mismo cliente pueden exigir cosas
+    distintas, así que un trabajador puede estar habilitado en uno y no en otro.
+    """
+    if not usuario.contratista_id:
+        raise HTTPException(status_code=400, detail="El usuario no está asociado a un contratista")
+    return acreditacion_service.habilitacion_trabajadores(db, usuario.contratista_id)
+
 
 
 @router.post("/", response_model=TrabajadorResponse, status_code=status.HTTP_201_CREATED)
