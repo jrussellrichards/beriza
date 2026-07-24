@@ -14,7 +14,7 @@ Los requisitos de alcance SERVICIO no se reutilizan entre mandantes (son
 específicos de cada faena). Se dispara al crear un servicio (ver servicio_service).
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -23,7 +23,7 @@ from app.domain.estados import (
     Alcance, EntidadTipo, EstadoDocumento, EstadoServicio, TipoEvento, validar_transicion,
 )
 from app.models.contratista import ContratistaMandante
-from app.models.expediente import Acreditacion, AcreditacionEvento, Expediente
+from app.models.expediente import Acreditacion, AcreditacionEvento, Entrega, Expediente
 from app.models.servicio import PerfilRequisitoConfig
 from app.models.trabajador import Trabajador
 
@@ -35,9 +35,13 @@ def reconciliar_reutilizacion(
     Crea las acreditaciones que faltan para el mandante reutilizando los
     expedientes ENTIDAD vigentes del contratista. Devuelve las creadas.
     """
+    hoy = date.today()
     creadas: list[Acreditacion] = []
     for req in _requisitos_exigidos_entidad(db, contratista_id, mandante_id):
-        for exp in _expedientes_con_entrega(db, req, contratista_id):
+        for exp in _expedientes_de(db, req, contratista_id):
+            vigente = _entrega_vigente(exp, req, hoy)
+            if vigente is None:
+                continue  # sin nada vigente que reutilizar: queda como brecha
             # Sin filtrar eliminado_en: si el contratista ya rechazó compartir
             # este expediente con este mandante, no se le vuelve a proponer.
             ya_existe = (
@@ -47,7 +51,7 @@ def reconciliar_reutilizacion(
             )
             if ya_existe:
                 continue
-            creadas.append(_crear_reutilizada(db, exp, mandante_id, req))
+            creadas.append(_crear_reutilizada(db, exp, mandante_id, req, vigente))
     if creadas:
         db.commit()
     return creadas
@@ -61,11 +65,15 @@ def autorizar_compartir(db: Session, acreditacion_id: uuid.UUID, usuario_id: uui
         raise DocumentoNoEncontrado(f"Acreditación {acreditacion_id} no encontrada.")
     if acred.estado != EstadoDocumento.PENDIENTE_AUTORIZACION:
         raise EstadoDocumentoInvalido("La acreditación no está pendiente de autorización.")
-    entregas = acred.expediente.entregas
-    if not entregas:
-        raise EstadoDocumentoInvalido("El expediente no tiene ninguna entrega para compartir.")
+    exp = acred.expediente
+    # Se comparte lo vigente AL AUTORIZAR, no lo que había al solicitarse: entre
+    # ambos momentos el contratista pudo renovar el documento.
+    vigente = _entrega_vigente(exp, exp.requisito, date.today())
+    if vigente is None:
+        raise EstadoDocumentoInvalido(
+            "El documento no tiene una versión vigente para compartir. Sube una renovación."
+        )
 
-    vigente = entregas[-1]
     validar_transicion(acred.estado, EstadoDocumento.ENVIADO)
     acred.entrega_id = vigente.id
     acred.numero_version = vigente.numero_version
@@ -139,7 +147,7 @@ def _requisitos_exigidos_entidad(db, contratista_id, mandante_id):
     return list(reqs.values())
 
 
-def _expedientes_con_entrega(db, req, contratista_id):
+def _expedientes_de(db, req, contratista_id):
     if req.entidad_tipo == EntidadTipo.EMPRESA:
         query = db.query(Expediente).filter_by(
             requisito_id=req.id, empresa_id=contratista_id, servicio_id=None, eliminado_en=None
@@ -154,10 +162,24 @@ def _expedientes_con_entrega(db, req, contratista_id):
             Expediente.servicio_id.is_(None),
             Expediente.eliminado_en.is_(None),
         )
-    return [e for e in query.all() if e.entregas]
+    return query.all()
 
 
-def _crear_reutilizada(db, exp, mandante_id, req) -> Acreditacion:
+def _entrega_vigente(exp, req, hoy: date) -> Entrega | None:
+    """
+    Última entrega que aún sirve para acreditar. Un documento caducado no se
+    reutiliza: compartirlo solo produciría una observación en el mandante nuevo.
+    Vigencia nula = todavía sin revisar, no hay fecha que haya expirado.
+    """
+    for entrega in reversed(exp.entregas):   # entregas viene ordenada por versión
+        if (req.sin_vencimiento
+                or entrega.fecha_vigencia_hasta is None
+                or entrega.fecha_vigencia_hasta >= hoy):
+            return entrega
+    return None
+
+
+def _crear_reutilizada(db, exp, mandante_id, req, vigente: Entrega) -> Acreditacion:
     if req.sensible:
         acred = Acreditacion(
             mandante_id=mandante_id, expediente_id=exp.id,
@@ -166,7 +188,6 @@ def _crear_reutilizada(db, exp, mandante_id, req) -> Acreditacion:
         estado_nuevo = EstadoDocumento.PENDIENTE_AUTORIZACION
         detalle = {"sensible": True}
     else:
-        vigente = exp.entregas[-1]
         acred = Acreditacion(
             mandante_id=mandante_id, expediente_id=exp.id, entrega_id=vigente.id,
             numero_version=vigente.numero_version, estado=EstadoDocumento.ENVIADO,

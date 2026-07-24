@@ -40,8 +40,11 @@ from app.api import reutilizacion as api_reuso
 from app.domain import reutilizacion_service
 from app.domain.estados import EstadoAcreditacion, EstadoDocumento, EstadoServicio
 
-HOY = date(2026, 7, 24)
+# El servicio usa date.today() (no recibe `hoy`), así que las fechas del test
+# son relativas al día real — si no, el test caduca solo.
+HOY = date.today()
 FUTURO = HOY + timedelta(days=180)
+PASADO = HOY - timedelta(days=30)
 
 
 def _requisito(db, sub, codigo, alcance="ENTIDAD", sensible=False):
@@ -51,10 +54,11 @@ def _requisito(db, sub, codigo, alcance="ENTIDAD", sensible=False):
     return r
 
 
-def _expediente_vigente(db, req, empresa):
+def _expediente_vigente(db, req, empresa, vigencia=None):
     exp = Expediente(requisito_id=req.id, empresa_id=empresa.id)
     db.add(exp); db.flush()
-    e = Entrega(expediente_id=exp.id, numero_version=1, fecha_vigencia_hasta=FUTURO)
+    e = Entrega(expediente_id=exp.id, numero_version=1,
+                fecha_vigencia_hasta=vigencia if vigencia is not None else FUTURO)
     db.add(e); db.flush()
     return exp
 
@@ -86,15 +90,18 @@ def run():
     req_sens = _requisito(db, sub, "CARPETA_TRIB", sensible=True)        # sensible -> autorizado
     req_sens2 = _requisito(db, sub, "FINIQUITOS", sensible=True)         # sensible -> rechazado
     req_srv = _requisito(db, sub, "MIPER", alcance="SERVICIO")           # SERVICIO -> ignorado
+    req_exp = _requisito(db, sub, "DAS", sensible=False)                 # caducado -> ignorado
 
-    # El contratista ya tiene resueltos los tres ENTIDAD (no el de servicio).
+    # El contratista ya tiene resueltos los ENTIDAD (no el de servicio); el DAS
+    # lo tiene pero caducado, así que no hay nada vigente que reutilizar.
     exp_gen = _expediente_vigente(db, req_gen, c)
     exp_sens = _expediente_vigente(db, req_sens, c)
     exp_sens2 = _expediente_vigente(db, req_sens2, c)
+    _expediente_vigente(db, req_exp, c, vigencia=PASADO)
 
-    # Perfil del mandante nuevo que exige los cuatro requisitos + un servicio activo.
+    # Perfil del mandante nuevo que exige los cinco requisitos + un servicio activo.
     perfil = PerfilRequisitos(mandante_id=m.id, nombre="Obras"); db.add(perfil); db.flush()
-    for r in (req_gen, req_sens, req_sens2, req_srv):
+    for r in (req_gen, req_sens, req_sens2, req_srv, req_exp):
         db.add(PerfilRequisitoConfig(perfil_id=perfil.id, requisito_documental_id=r.id,
                                      es_obligatorio=True, vigencia_max_dias=365))
     db.add(Servicio(contratista_mandante_id=rel.id, perfil_requisitos_id=perfil.id,
@@ -115,10 +122,11 @@ def run():
     assert a_sens.entrega_id is None, "el sensible NO debe compartir la entrega antes de autorizar"
     print("PASS: requisito sensible -> PENDIENTE_AUTORIZACION sin compartir la entrega")
 
-    # El de alcance SERVICIO no genera acreditación reutilizada.
+    # Ni el de alcance SERVICIO ni el caducado generan acreditación reutilizada.
     assert db.query(Acreditacion).filter_by(mandante_id=m.id).count() == 3, \
-        "el requisito de alcance SERVICIO no debe reutilizarse"
+        "ni el alcance SERVICIO ni el documento caducado deben reutilizarse"
     print("PASS: alcance SERVICIO -> no se reutiliza entre mandantes")
+    print("PASS: documento caducado -> no se reutiliza (queda como brecha)")
 
     # Idempotencia: reconciliar de nuevo no duplica.
     creadas2 = reutilizacion_service.reconciliar_reutilizacion(db, c.id, m.id)
