@@ -57,6 +57,32 @@ def reconciliar_reutilizacion(
     return creadas
 
 
+def reconciliar_todos_los_mandantes(
+    db: Session, contratista_id: uuid.UUID, excepto_mandante_id: uuid.UUID | None = None
+) -> dict[uuid.UUID, list[Acreditacion]]:
+    """
+    Aplica el documento recién subido a TODOS los mandantes del contratista, no
+    solo a aquel para el que lo subió: es la promesa del modelo ("se sube una
+    vez y vale para todos"). Sin esto, un F30 subido para Codelco nunca llegaría
+    a Falabella, que ya tiene servicio y lo exige igual.
+
+    No mueve acreditaciones existentes: `reconciliar_reutilizacion` las salta, así
+    que un mandante que ya aprobó la v1 sigue anclado a la v1 hasta que su
+    vigencia expire (ahí actúa el auto-repin del cron). El pin es explícito.
+
+    `excepto_mandante_id` omite al mandante que ya se atendió en el upload.
+    """
+    resultado: dict[uuid.UUID, list[Acreditacion]] = {}
+    relaciones = db.query(ContratistaMandante).filter_by(contratista_id=contratista_id).all()
+    for rel in relaciones:
+        if excepto_mandante_id and rel.mandante_id == excepto_mandante_id:
+            continue
+        creadas = reconciliar_reutilizacion(db, contratista_id, rel.mandante_id)
+        if creadas:
+            resultado[rel.mandante_id] = creadas
+    return resultado
+
+
 def autorizar_compartir(db: Session, acreditacion_id: uuid.UUID, usuario_id: uuid.UUID) -> None:
     """El contratista autoriza compartir un documento sensible: fija la entrega
     vigente y pasa a ENVIADO (queda a revisión del mandante)."""

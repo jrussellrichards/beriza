@@ -93,7 +93,35 @@ def configurar_requisito_perfil(
 
     db.commit()
     db.refresh(config)
+
+    # Si el mandante empieza a exigir un requisito que sus contratistas ya tienen
+    # resuelto, se les aplica de inmediato en vez de pedírselo de nuevo.
+    if es_obligatorio:
+        _reconciliar_contratistas_del_perfil(db, perfil_id)
+
     return config
+
+
+def _reconciliar_contratistas_del_perfil(db: Session, perfil_id: uuid.UUID) -> None:
+    """Reutilización para los contratistas con servicio activo bajo este perfil."""
+    from app.domain import reutilizacion_service
+
+    perfil = db.get(PerfilRequisitos, perfil_id)
+    servicios = (
+        db.query(Servicio)
+        .filter_by(perfil_requisitos_id=perfil_id, estado=EstadoServicio.ACTIVO)
+        .all()
+    )
+    contratistas = {s.relacion.contratista_id for s in servicios}
+    for contratista_id in contratistas:
+        try:
+            reutilizacion_service.reconciliar_reutilizacion(db, contratista_id, perfil.mandante_id)
+        except Exception:
+            db.rollback()
+            logger.exception(
+                "Falló la reutilización del contratista %s tras configurar el perfil %s",
+                contratista_id, perfil_id,
+            )
 
 
 # ── Servicios ─────────────────────────────────────────────────────────────────

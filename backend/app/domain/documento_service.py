@@ -13,6 +13,7 @@ Los nombres públicos (subir_entrega, revisar_documento, aprobar_por_excepcion,
 obtener_documento, listar_pendientes_revision) se mantienen para la capa API;
 "documento_id" en esa capa es ahora el id de la Acreditacion.
 """
+import logging
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -34,6 +35,8 @@ from app.models.expediente import Acreditacion, AcreditacionEvento, Archivo, Ent
 from app.models.pilar import RequisitoDocumental
 from app.models.servicio import Servicio
 from app.models.trabajador import Trabajador
+
+logger = logging.getLogger("acredita")
 
 
 @dataclass
@@ -165,6 +168,22 @@ def subir_entrega(
         detalle={"version": entrega.numero_version, "archivos": [a.nombre_original for a in archivos]},
     )
     db.commit()
+
+    # Un documento de alcance ENTIDAD vale para todos los mandantes, no solo para
+    # aquel al que se le subió. Best-effort: la entrega ya está confirmada y no
+    # debe perderse porque la propagación falle.
+    if requisito.alcance == Alcance.ENTIDAD:
+        from app.domain import reutilizacion_service
+        try:
+            reutilizacion_service.reconciliar_todos_los_mandantes(
+                db, empresa_efectiva_id, excepto_mandante_id=mandante_id
+            )
+        except Exception:
+            db.rollback()
+            logger.exception(
+                "Falló la propagación de %s del contratista %s al resto de sus mandantes",
+                requisito.codigo, empresa_efectiva_id,
+            )
 
     if entrega_creada and settings.IA_HABILITADA and settings.VISION_LLM_API_KEY:
         from app.tasks.procesar_documento import procesar_documento_task

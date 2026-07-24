@@ -173,6 +173,41 @@ def run():
         assert e.status_code == 404, f"debio ser 404 (no revelar existencia), fue {e.status_code}"
     print("PASS: contratista ajeno -> 404 (aislamiento multi-tenant)")
 
+    # ── Propagación a TODOS los mandantes ────────────────────────────────────
+    # Un segundo mandante que ya exige el F30 debe recibirlo sin que el
+    # contratista lo vuelva a subir. Es la promesa "se sube una vez".
+    m2 = Mandante(razon_social="Codelco", rut="3-5", slug="codelco", plan="Pro")
+    db.add(m2); db.flush()
+    rel2 = ContratistaMandante(contratista_id=c.id, mandante_id=m2.id,
+                               estado_acreditacion=EstadoAcreditacion.PENDIENTE)
+    db.add(rel2); db.flush()
+    perfil2 = PerfilRequisitos(mandante_id=m2.id, nombre="Mantención"); db.add(perfil2); db.flush()
+    db.add(PerfilRequisitoConfig(perfil_id=perfil2.id, requisito_documental_id=req_gen.id,
+                                 es_obligatorio=True, vigencia_max_dias=365))
+    db.add(Servicio(contratista_mandante_id=rel2.id, perfil_requisitos_id=perfil2.id,
+                    nombre="Faena 2", fecha_inicio=HOY, estado=EstadoServicio.ACTIVO))
+    db.commit()
+
+    assert _acred_de(db, exp_gen, m2) is None, "precondición: Codelco aún no ve el F30"
+    propagadas = reutilizacion_service.reconciliar_todos_los_mandantes(db, c.id)
+    assert m2.id in propagadas, "el F30 ya subido debio propagarse a Codelco"
+
+    a_gen_m2 = _acred_de(db, exp_gen, m2)
+    assert a_gen_m2.estado == EstadoDocumento.ENVIADO and a_gen_m2.entrega_id is not None
+    print("PASS: propagación -> un mandante nuevo recibe el documento ya subido")
+
+    # El pin del primer mandante NO se movió: sigue anclado a lo que él revisaba.
+    entrega_previa = a_gen.entrega_id
+    db.refresh(a_gen)
+    assert a_gen.entrega_id == entrega_previa, \
+        "la propagación no debe mover el pin de un mandante que ya tenía acreditación"
+    print("PASS: propagación no mueve el pin de los mandantes existentes")
+
+    # excepto_mandante_id omite al mandante ya atendido en el upload.
+    solo_otros = reutilizacion_service.reconciliar_todos_los_mandantes(db, c.id, excepto_mandante_id=m2.id)
+    assert m2.id not in solo_otros, "excepto_mandante_id debe omitir a ese mandante"
+    print("PASS: excepto_mandante_id omite al mandante ya atendido")
+
     print("TODOS LOS TESTS DE REUTILIZACIÓN PASARON")
 
 
