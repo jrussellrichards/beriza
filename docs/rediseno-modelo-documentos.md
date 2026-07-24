@@ -114,8 +114,19 @@ Un F30 vigente vale para todos los mandantes: el contratista no lo sube N veces.
     no se comparte hasta que el contratista autorice.
 - Los requisitos de alcance SERVICIO no se reutilizan entre mandantes: son
   específicos de la faena (un MIPER por obra).
-- **Trigger:** `servicio_service.crear_servicio`, best-effort — un fallo de la
-  reconciliación no revierte la creación del servicio, que ya está confirmada.
+- **Tres triggers**, todos best-effort con `logger.exception` (lo que ya se
+  confirmó —la entrega, el servicio, la config— no se pierde si falla la
+  propagación):
+  1. `crear_servicio` — un mandante nuevo hereda lo que el contratista ya tiene.
+  2. `subir_entrega` (solo alcance ENTIDAD) — el documento recién subido se
+     propaga al resto de los mandantes del contratista. **Sin este trigger la
+     promesa "se sube una vez" no se cumple:** un F30 subido para Codelco nunca
+     llegaría a Falabella, que ya tiene servicio y lo exige igual.
+  3. `configurar_requisito_perfil` — si un mandante empieza a exigir algo que
+     sus contratistas ya tienen resuelto, se les aplica en vez de pedirlo.
+- La propagación **no mueve acreditaciones existentes**: un mandante anclado a
+  la v1 sigue en la v1 hasta que su vigencia expire (ahí actúa el auto-repin del
+  cron). El pin explícito de Fase 1 se respeta.
 - **Bandeja:** `/api/v1/reutilizacion/solicitudes` + `/contratista/solicitudes`.
   Autorizar ancla la entrega vigente y pasa a ENVIADO. Rechazar descarta la
   acreditación y **el rechazo es durable**: `reconciliar_reutilizacion` no
