@@ -8,6 +8,39 @@ from app.models.pilar import RequisitoDocumental
 from app.models.usuario import Usuario
 
 
+def _contratista_admin(db: Session, contratista_id: uuid.UUID) -> Usuario | None:
+    return (
+        db.query(Usuario)
+        .filter_by(contratista_id=contratista_id, rol="contratista_admin", activo=True)
+        .first()
+    )
+
+
+def notificar_proximos_vencimientos(db: Session, contratista_id: uuid.UUID, items: list[dict]) -> None:
+    """Digest al contratista con los documentos que vencen pronto (30/15/7/1 días)."""
+    admin = _contratista_admin(db, contratista_id)
+    if not admin or not items:
+        return
+
+    filas = "".join(
+        f"<li><strong>{i['requisito']}</strong> — vence el {i['vence']} "
+        f"(en {i['dias']} día{'s' if i['dias'] != 1 else ''})</li>"
+        for i in sorted(items, key=lambda x: x["dias"])
+    )
+    cuerpo = f"""
+    <h2>Documentos por vencer</h2>
+    <p>Los siguientes documentos vencen pronto. Renuévalos antes de que caduquen
+    para no quedar bloqueado:</p>
+    <ul>{filas}</ul>
+    <p>Ingresa a Acredita para subir la versión renovada.</p>
+    """
+    get_email_cliente().enviar(Email(
+        destinatario=admin.email,
+        asunto=f"Acredita — {len(items)} documento(s) por vencer",
+        cuerpo_html=cuerpo,
+    ))
+
+
 def notificar_resultado_acreditacion(
     db: Session,
     contratista_id: uuid.UUID,

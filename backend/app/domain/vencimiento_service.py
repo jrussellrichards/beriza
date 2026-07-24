@@ -13,13 +13,17 @@ Ignora los requisitos marcados sin_vencimiento. Función pura sobre la BD; la
 dispara el cron (Celery beat) y también es llamable a mano. No envía emails —
 eso lo orquesta el cron con el resultado.
 """
-from datetime import date, datetime, timezone
+from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
 from app.domain.estados import EstadoDocumento, TipoEvento, validar_transicion
 from app.models.expediente import Acreditacion, AcreditacionEvento, Entrega, Expediente
 from app.models.pilar import RequisitoDocumental
+
+# Días antes del vencimiento en los que se alerta (solo en el día exacto del
+# umbral, para no spamear).
+UMBRALES_ALERTA = (30, 15, 7, 1)
 
 
 def procesar_vencimientos(db: Session, hoy: date | None = None) -> dict[str, int]:
@@ -63,6 +67,42 @@ def procesar_vencimientos(db: Session, hoy: date | None = None) -> dict[str, int
         acreditacion_service.recalcular_estado_global(db, contratista_id, mandante_id)
 
     return {"renovadas": renovadas, "vencidas": vencidas}
+
+
+def alertas_de_vencimiento(db: Session, hoy: date | None = None) -> dict:
+    """
+    Documentos aprobados que vencen EXACTAMENTE en 30/15/7/1 días, agrupados por
+    contratista, para el digest de alertas. {contratista_id: [{requisito, vence, dias}]}.
+    """
+    hoy = hoy or date.today()
+    fechas = [hoy + timedelta(days=d) for d in UMBRALES_ALERTA]
+
+    candidatas = (
+        db.query(Acreditacion)
+        .join(Entrega, Acreditacion.entrega_id == Entrega.id)
+        .join(Expediente, Acreditacion.expediente_id == Expediente.id)
+        .join(RequisitoDocumental, Expediente.requisito_id == RequisitoDocumental.id)
+        .filter(
+            Acreditacion.estado == EstadoDocumento.APROBADO,
+            Acreditacion.eliminado_en.is_(None),
+            RequisitoDocumental.sin_vencimiento.is_(False),
+            Entrega.fecha_vigencia_hasta.in_(fechas),
+        )
+        .all()
+    )
+
+    por_contratista: dict = {}
+    for acred in candidatas:
+        exp = acred.expediente
+        contratista_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+        if not contratista_id:
+            continue
+        por_contratista.setdefault(contratista_id, []).append({
+            "requisito": exp.requisito.codigo,
+            "vence": acred.entrega.fecha_vigencia_hasta,
+            "dias": (acred.entrega.fecha_vigencia_hasta - hoy).days,
+        })
+    return por_contratista
 
 
 def _sucesora_vigente(acred: Acreditacion, hoy: date) -> Entrega | None:

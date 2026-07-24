@@ -71,6 +71,20 @@ services:
       - db
       - redis
 
+  beat:
+    build: ./backend
+    command: celery -A app.worker beat --loglevel=info
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://acredita:${DB_PASSWORD}@db:5432/acredita
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+      - JWT_SECRET=${JWT_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+    depends_on:
+      - db
+      - redis
+
 volumes:
   postgres_data:
   uploads_data:

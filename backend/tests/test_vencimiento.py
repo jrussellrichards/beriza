@@ -99,6 +99,16 @@ def run():
     assert res2 == {"renovadas": 0, "vencidas": 0}, f"segunda corrida debio ser no-op: {res2}"
     print("PASS: idempotente (segunda corrida no-op)")
 
+    # Alertas: un doc aprobado que vence en EXACTAMENTE 30 días aparece en el digest
+    req_alerta = _requisito(db, sub, "RIOHS", sin_venc=False)
+    _expediente_aprobado(db, req_alerta, c, m, HOY + timedelta(days=30), con_sucesora=False)
+    db.commit()
+    alertas = vencimiento_service.alertas_de_vencimiento(db, hoy=HOY)
+    assert c.id in alertas, "el contratista debio tener alertas"
+    assert any(x["requisito"] == "RIOHS" and x["dias"] == 30 for x in alertas[c.id]), \
+        "el doc que vence en 30 días debio estar en el digest"
+    print("PASS: alerta a 30 días en el digest del contratista")
+
     print("TODOS LOS TESTS DE VENCIMIENTO PASARON")
 
 
