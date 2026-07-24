@@ -95,6 +95,7 @@ class CrearRequisitoCatalogoRequest(BaseModel):
     alcance: str = "ENTIDAD"  # ENTIDAD | SERVICIO
     max_archivos: int = 1
     sin_vencimiento: bool = False
+    sensible: bool = False
 
 
 class ActualizarRequisitoCatalogoRequest(BaseModel):
@@ -103,6 +104,7 @@ class ActualizarRequisitoCatalogoRequest(BaseModel):
     alcance: str | None = None
     max_archivos: int | None = None
     sin_vencimiento: bool | None = None
+    sensible: bool | None = None
 
 
 # ── Perfiles de requisitos ───────────────────────────────────────────────────

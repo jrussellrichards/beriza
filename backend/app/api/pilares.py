@@ -61,6 +61,7 @@ def listar_pilares(
                     "alcance": r.alcance,
                     "max_archivos": r.max_archivos,
                     "sin_vencimiento": r.sin_vencimiento,
+                    "sensible": r.sensible,
                     "es_propio": r.mandante_id is not None,
                 }
                 for r in visibles
@@ -132,6 +133,7 @@ def crear_requisito(
         alcance=body.alcance,
         max_archivos=body.max_archivos,
         sin_vencimiento=body.sin_vencimiento,
+        sensible=body.sensible,
     )
     db.add(req)
     db.commit()
@@ -168,6 +170,8 @@ def actualizar_requisito(
         req.max_archivos = body.max_archivos
     if body.sin_vencimiento is not None:
         req.sin_vencimiento = body.sin_vencimiento
+    if body.sensible is not None:
+        req.sensible = body.sensible
     db.commit()
     return {"mensaje": "Requisito actualizado"}
 
