@@ -821,10 +821,19 @@ def pendientes_del_contratista(db: Session, contratista_id: uuid.UUID) -> list[P
     # 4. Trabajadores asignados a un servicio que no cumplen SUS requisitos.
     #    Es el pendiente más operativo: esa persona no entra a la faena.
     for servicio, trabajador, faltantes in _trabajadores_no_habilitados(db, contratista_id):
+        # El nombre del servicio se repite entre clientes ("General" en varios),
+        # asi que sin el mandante dos pendientes distintos se ven identicos.
+        cliente = servicio.relacion.mandante.razon_social
+        if len(faltantes) == 1:
+            que_falta = f"le falta {faltantes[0].lower()}"
+        else:
+            que_falta = f"le faltan {len(faltantes)} documentos"
         pendientes.append(Pendiente(
             tipo="TRABAJADOR_INCOMPLETO",
-            titulo=f"{trabajador.nombre_completo} está asignado a {servicio.nombre} sin {faltantes[0].lower()}",
-            detalle="No podrá ingresar a la faena",
+            # Redaccion sin genero: el nombre no dice como se refiere a si misma
+            # la persona, y "asignado/asignada" obligaria a adivinarlo.
+            titulo=f"{trabajador.nombre_completo}: {que_falta} para {servicio.nombre} · {cliente}",
+            detalle="No podrá ingresar mientras siga pendiente",
             urgencia=1,
             trabajador_id=trabajador.id,
             servicio_id=servicio.id,
@@ -842,12 +851,17 @@ def _trabajadores_no_habilitados(db: Session, contratista_id: uuid.UUID):
             if servicio.estado != EstadoServicio.ACTIVO:
                 continue
             avance = obtener_avance_servicio(db, servicio.id)
+            # Se agrupa por trabajador: un pendiente por persona y servicio, no
+            # uno por cada documento que le falta.
+            faltan: dict[uuid.UUID, list[str]] = {}
             for pilar in avance.pilares:
                 for item in pilar.requisitos:
-                    if item.trabajador_id and item.estado in (None, EstadoDocumento.OBSERVADO):
-                        trabajador = db.get(Trabajador, item.trabajador_id)
-                        if trabajador:
-                            resultado.append((servicio, trabajador, [item.requisito_nombre]))
+                    if item.trabajador_id and item.estado != EstadoDocumento.APROBADO:
+                        faltan.setdefault(item.trabajador_id, []).append(item.requisito_nombre)
+            for tid, faltantes in faltan.items():
+                trabajador = db.get(Trabajador, tid)
+                if trabajador:
+                    resultado.append((servicio, trabajador, faltantes))
     return resultado
 
 

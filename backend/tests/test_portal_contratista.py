@@ -116,8 +116,12 @@ def run():
     incompletos = [x for x in pend if x.tipo == "TRABAJADOR_INCOMPLETO"]
     assert any("Pedro" in x.titulo and "Obra Norte" in x.titulo for x in incompletos), \
         f"debio aparecer Pedro sin habilitar en Obra Norte: {[x.titulo for x in incompletos]}"
-    assert all(x.detalle == "No podrá ingresar a la faena" for x in incompletos), \
-        "el pendiente debe enunciar la CONSECUENCIA, no el estado tecnico"
+    assert all("No podrá ingresar" in (x.detalle or "") for x in incompletos), (
+        "el pendiente debe enunciar la CONSECUENCIA, no el estado tecnico")
+    # El nombre del servicio se repite entre clientes: sin el mandante dos
+    # pendientes distintos se verian identicos en la bandeja.
+    assert all("Codelco" in x.titulo for x in incompletos), "el titulo debe identificar al cliente"
+    assert len(incompletos) == 1, f"debio ser 1 pendiente agrupado, fueron {len(incompletos)}"
     print("PASS: la bandeja lista al trabajador que no podra ingresar")
 
     # 4. Y NO aparece por Obra Sur, donde si cumple.
