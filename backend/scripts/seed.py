@@ -632,6 +632,54 @@ def seed_otros_mandantes(session: Session, mandantes: dict, reqs: dict):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+DOCS_CONDOR_EMPRESA = ["F30", "F30_1", "MIPER", "RIOHS", "DAS",
+                       "CARPETA_TRIBUTARIA", "VIGENCIA_SOCIEDAD", "DJ_CONFLICTO"]
+DOCS_CONDOR_TRABAJADOR = ["CONTRATO", "EXAM_MED"]
+
+
+def seed_documentos_condor(session: Session, codelco: Mandante, reqs: dict):
+    """
+    Asegura los documentos del contratista de demo, uno por uno.
+
+    `seed_codelco_contratistas` es todo-o-nada: su guard salta la función entera
+    si Cóndor ya existe. Basta **un** expediente suelto para que los otros
+    catorce nunca se creen — que es exactamente lo que pasó en producción, donde
+    la demo quedó con 1 de 15 documentos y el portal vacío.
+
+    Acá la idempotencia es por documento: se crea solo lo que falta.
+    """
+    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
+    if not condor:
+        return
+
+    def falta(req, trabajador_id=None):
+        q = session.query(Expediente).filter_by(
+            requisito_id=req.id, eliminado_en=None,
+            **({"trabajador_id": trabajador_id} if trabajador_id else {"empresa_id": condor.id}),
+        )
+        return q.first() is None
+
+    creados = 0
+    for codigo in DOCS_CONDOR_EMPRESA:
+        req = reqs.get(codigo)
+        if req and falta(req):
+            _doc_empresa(session, req, codelco.id, condor.id, 4, 90)
+            creados += 1
+
+    for trabajador in session.query(Trabajador).filter_by(empresa_id=condor.id).all():
+        for codigo in DOCS_CONDOR_TRABAJADOR:
+            req = reqs.get(codigo)
+            if req and falta(req, trabajador_id=trabajador.id):
+                _doc_trabajador(session, req, codelco.id, trabajador.id, 4, 365)
+                creados += 1
+
+    session.commit()
+    if creados:
+        print(f"  OK {creados} documento(s) de Cóndor creado(s).")
+    else:
+        print("  OK Documentos de Cóndor completos, saltando.")
+
+
 def seed_segundo_mandante_condor(session: Session):
     """
     Vincula al contratista de demo (Cóndor) con un SEGUNDO mandante y reutiliza
@@ -651,32 +699,31 @@ def seed_segundo_mandante_condor(session: Session):
     if not condor or not pelambres:
         return
 
-    existe = session.query(ContratistaMandante).filter_by(
+    rel = session.query(ContratistaMandante).filter_by(
         contratista_id=condor.id, mandante_id=pelambres.id
     ).first()
-    if existe:
-        print("  OK Cóndor ya está vinculado a Los Pelambres, saltando.")
-        return
 
-    session.add(ContratistaMandante(
-        contratista_id=condor.id, mandante_id=pelambres.id, estado_acreditacion="PENDIENTE",
-    ))
-    session.commit()
+    if not rel:
+        session.add(ContratistaMandante(
+            contratista_id=condor.id, mandante_id=pelambres.id, estado_acreditacion="PENDIENTE",
+        ))
+        session.commit()
+        perfil = session.query(PerfilRequisitos).filter_by(
+            mandante_id=pelambres.id, nombre="General"
+        ).first()
+        if perfil:
+            # Vía crear_servicio (no INSERT directo) para que dispare la
+            # reconciliación de reutilización, igual que en producción.
+            servicio_service.crear_servicio(
+                db=session, mandante_id=pelambres.id, contratista_id=condor.id,
+                perfil_requisitos_id=perfil.id, nombre="Ampliación Planta Concentradora",
+                fecha_inicio=HOY, codigo_referencia="LP-2026-004",
+            )
 
-    perfil = session.query(PerfilRequisitos).filter_by(
-        mandante_id=pelambres.id, nombre="General"
-    ).first()
-    if perfil:
-        # Vía crear_servicio (no INSERT directo) para que dispare la
-        # reconciliación de reutilización, igual que en producción.
-        servicio_service.crear_servicio(
-            db=session, mandante_id=pelambres.id, contratista_id=condor.id,
-            perfil_requisitos_id=perfil.id, nombre="Ampliación Planta Concentradora",
-            fecha_inicio=HOY, codigo_referencia="LP-2026-004",
-        )
-    else:
-        # Sin perfil no hay servicio ni trigger; se reconcilia a mano.
-        reutilizacion_service.reconciliar_reutilizacion(session, condor.id, pelambres.id)
+    # La reconciliación corre SIEMPRE, no solo al crear la relación: los
+    # documentos pueden haberse creado después (seed_documentos_condor) y sin
+    # esto nunca se reutilizarían. Es idempotente, así que repetirla no duplica.
+    reutilizacion_service.reconciliar_reutilizacion(session, condor.id, pelambres.id)
 
     # Se cuenta el resultado real: llamar de nuevo a reconciliar sería no-op
     # (es idempotente) y reportaría cero.
@@ -704,6 +751,9 @@ def main():
         session.flush()
         seed_perfiles_y_servicios(session, reqs)
         session.commit()
+        # Los documentos van DESPUÉS de los perfiles y servicios: los de alcance
+        # SERVICIO (MIPER) se anclan al servicio "General", que se crea ahí.
+        seed_documentos_condor(session, mandantes["codelco-demo"], reqs)
         seed_segundo_mandante_condor(session)
     print("\nCredenciales de acceso:")
     print("  admin@berisa.cl       / admin123  (berisa_admin)")
