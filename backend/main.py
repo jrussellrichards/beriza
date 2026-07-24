@@ -4,7 +4,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import settings
-from app.api import acreditacion, admin, documentos, mandantes, pilares, servicios, trabajadores, usuarios
+from app.api import (
+    acreditacion, admin, documentos, mandantes, pilares, reutilizacion,
+    servicios, trabajadores, usuarios,
+)
 
 logger = logging.getLogger("acredita")
 
@@ -44,6 +47,7 @@ app.include_router(trabajadores.router, prefix="/api/v1/trabajadores", tags=["tr
 app.include_router(usuarios.router,     prefix="/api/v1/usuarios",     tags=["usuarios"])
 app.include_router(admin.router,        prefix="/api/v1/admin",        tags=["admin"])
 app.include_router(pilares.router,      prefix="/api/v1/pilares",      tags=["pilares"])
+app.include_router(reutilizacion.router, prefix="/api/v1/reutilizacion", tags=["reutilizacion"])
 
 
 @app.get("/api/health")

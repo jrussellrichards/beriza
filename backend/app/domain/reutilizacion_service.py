@@ -14,6 +14,7 @@ Los requisitos de alcance SERVICIO no se reutilizan entre mandantes (son
 específicos de cada faena). Se dispara al crear un servicio (ver servicio_service).
 """
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -37,9 +38,11 @@ def reconciliar_reutilizacion(
     creadas: list[Acreditacion] = []
     for req in _requisitos_exigidos_entidad(db, contratista_id, mandante_id):
         for exp in _expedientes_con_entrega(db, req, contratista_id):
+            # Sin filtrar eliminado_en: si el contratista ya rechazó compartir
+            # este expediente con este mandante, no se le vuelve a proponer.
             ya_existe = (
                 db.query(Acreditacion)
-                .filter_by(expediente_id=exp.id, mandante_id=mandante_id, eliminado_en=None)
+                .filter_by(expediente_id=exp.id, mandante_id=mandante_id)
                 .first()
             )
             if ya_existe:
@@ -71,6 +74,26 @@ def autorizar_compartir(db: Session, acreditacion_id: uuid.UUID, usuario_id: uui
         acreditacion_id=acred.id, tipo_evento=TipoEvento.AUTORIZACION_COMPARTIR,
         estado_anterior=EstadoDocumento.PENDIENTE_AUTORIZACION, estado_nuevo=EstadoDocumento.ENVIADO,
         actor_usuario_id=usuario_id, detalle=None,
+    ))
+    db.commit()
+
+
+def rechazar_compartir(db: Session, acreditacion_id: uuid.UUID, usuario_id: uuid.UUID) -> None:
+    """El contratista rechaza compartir un documento sensible: la acreditación
+    reutilizada se descarta. El requisito queda como brecha para ese mandante
+    hasta que el contratista suba el documento explícitamente. No se vuelve a
+    proponer automáticamente (reconciliar_reutilizacion respeta el rechazo)."""
+    acred = db.get(Acreditacion, acreditacion_id)
+    if not acred or acred.eliminado_en is not None:
+        raise DocumentoNoEncontrado(f"Acreditación {acreditacion_id} no encontrada.")
+    if acred.estado != EstadoDocumento.PENDIENTE_AUTORIZACION:
+        raise EstadoDocumentoInvalido("La acreditación no está pendiente de autorización.")
+
+    acred.eliminado_en = datetime.now(timezone.utc)
+    db.add(AcreditacionEvento(
+        acreditacion_id=acred.id, tipo_evento=TipoEvento.ELIMINACION,
+        estado_anterior=EstadoDocumento.PENDIENTE_AUTORIZACION, estado_nuevo=None,
+        actor_usuario_id=usuario_id, detalle={"rechazo_compartir": True},
     ))
     db.commit()
 

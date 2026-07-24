@@ -1,4 +1,4 @@
-export type EstadoDoc = "APROBADO" | "EN_ANALISIS" | "OBSERVADO" | "ENVIADO" | "VENCIDO" | "FALTA"
+export type EstadoDoc = "APROBADO" | "EN_ANALISIS" | "OBSERVADO" | "ENVIADO" | "VENCIDO" | "PENDIENTE_AUTORIZACION" | "FALTA"
 
 export interface Exigencia {
   requisito_id: string
@@ -19,7 +19,7 @@ export interface Exigencia {
   pilar_nombre: string
 }
 
-export const ESTADO_NUM: Record<number, EstadoDoc> = { 1: "ENVIADO", 2: "EN_ANALISIS", 3: "OBSERVADO", 4: "APROBADO", 5: "VENCIDO" }
+export const ESTADO_NUM: Record<number, EstadoDoc> = { 1: "ENVIADO", 2: "EN_ANALISIS", 3: "OBSERVADO", 4: "APROBADO", 5: "VENCIDO", 6: "PENDIENTE_AUTORIZACION" }
 export const estadoDe = (e: Exigencia): EstadoDoc => (e.estado ? ESTADO_NUM[e.estado] ?? "FALTA" : "FALTA")
 
 export const ESTADO_CFG: Record<EstadoDoc, { label: string; dot: string; text: string; bg: string; border: string }> = {
@@ -28,6 +28,7 @@ export const ESTADO_CFG: Record<EstadoDoc, { label: string; dot: string; text: s
   OBSERVADO:   { label: "Observado",   dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
   ENVIADO:     { label: "En revisión", dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
   VENCIDO:     { label: "Vencido",     dot: "bg-orange-500",  text: "text-orange-700",  bg: "bg-orange-50",  border: "border-orange-200" },
+  PENDIENTE_AUTORIZACION: { label: "Requiere autorización", dot: "bg-violet-400", text: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200" },
   FALTA:       { label: "Falta",       dot: "bg-slate-300",   text: "text-slate-500",   bg: "bg-slate-50",   border: "border-slate-200" },
 }
 

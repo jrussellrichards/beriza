@@ -354,6 +354,19 @@ class UrlDescargaResponse(BaseModel):
     expira_en_segundos: int = 3600
 
 
+class SolicitudAutorizacionResponse(BaseModel):
+    """Documento sensible que un mandante nuevo quiere ver por reutilización."""
+    acreditacion_id: uuid.UUID
+    mandante_razon_social: str
+    requisito_codigo: str
+    requisito_nombre: str
+    pilar_nombre: str
+    trabajador_nombre: str | None
+    numero_version_vigente: int | None
+    fecha_vigencia_hasta: date | None
+    solicitado_en: datetime
+
+
 # ── Acreditación ─────────────────────────────────────────────────────────────
 
 class EstadoPilarResponse(BaseModel):
