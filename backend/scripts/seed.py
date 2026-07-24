@@ -29,7 +29,7 @@ from app.models.contratista import EmpresaContratista, ContratistaMandante
 from app.models.pilar import Pilar, Subpilar, RequisitoDocumental
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
-from app.models.documento import ArchivoDocumento, Documento, DocumentoEvento, DocumentoVersion
+from app.models.expediente import Acreditacion, AcreditacionEvento, Archivo, Entrega, Expediente
 
 engine = create_engine(settings.DATABASE_URL)
 
@@ -270,26 +270,24 @@ def seed_perfiles_y_servicios(session: Session, reqs: dict[str, RequisitoDocumen
                     asignaciones_creadas += 1
     session.flush()
 
-    # Ligar expedientes de requisitos alcance SERVICIO a su servicio "General"
-    docs_sin_servicio = (
-        session.query(Documento)
-        .join(RequisitoDocumental, Documento.requisito_id == RequisitoDocumental.id)
-        .filter(Documento.servicio_id.is_(None), RequisitoDocumental.alcance == Alcance.SERVICIO)
+    # Ligar expedientes de alcance SERVICIO a su servicio "General". Se crean en
+    # seed_*_contratistas ANTES de que existan los servicios, asi que aqui (ya
+    # creados) se les asigna el servicio; el mandante lo aporta su acreditacion.
+    exps_sin_servicio = (
+        session.query(Expediente)
+        .join(RequisitoDocumental, Expediente.requisito_id == RequisitoDocumental.id)
+        .filter(Expediente.servicio_id.is_(None), RequisitoDocumental.alcance == Alcance.SERVICIO)
         .all()
     )
     ligados = 0
-    for doc in docs_sin_servicio:
-        empresa_id = doc.empresa_id or session.get(Trabajador, doc.trabajador_id).empresa_id
-        rel = session.query(ContratistaMandante).filter_by(
-            mandante_id=doc.mandante_id, contratista_id=empresa_id
-        ).first()
-        if not rel:
+    for exp in exps_sin_servicio:
+        empresa_id = exp.empresa_id or session.get(Trabajador, exp.trabajador_id).empresa_id
+        acred = session.query(Acreditacion).filter_by(expediente_id=exp.id).first()
+        if not acred:
             continue
-        servicio = session.query(Servicio).filter_by(
-            contratista_mandante_id=rel.id, nombre="General"
-        ).first()
-        if servicio:
-            doc.servicio_id = servicio.id
+        serv = _servicio_general(session, acred.mandante_id, empresa_id)
+        if serv:
+            exp.servicio_id = serv.id
             ligados += 1
     if ligados:
         print(f"  OK {ligados} expediente(s) de alcance SERVICIO ligados a su servicio General.")
@@ -303,36 +301,56 @@ def seed_perfiles_y_servicios(session: Session, reqs: dict[str, RequisitoDocumen
 
 # ── Helpers documentos ────────────────────────────────────────────────────────
 
+def _servicio_general(session: Session, mandante_id, empresa_id):
+    rel = session.query(ContratistaMandante).filter_by(
+        mandante_id=mandante_id, contratista_id=empresa_id
+    ).first()
+    if not rel:
+        return None
+    return session.query(Servicio).filter_by(
+        contratista_mandante_id=rel.id, nombre="General"
+    ).first()
+
+
 def _crear_expediente(session: Session, req: RequisitoDocumental, mandante_id,
                       estado: int, vigencia_dias: int | None, brecha: str | None,
                       empresa_id=None, trabajador_id=None):
-    """Crea el expediente completo: documento + versión 1 + archivo demo + evento."""
+    """Crea Expediente + Entrega v1 + archivo demo + Acreditacion del mandante + evento."""
     fecha_vig = _vigencia(vigencia_dias) if vigencia_dias and estado == 4 else None
-    doc = Documento(
-        requisito_id=req.id, mandante_id=mandante_id,
-        empresa_id=empresa_id, trabajador_id=trabajador_id,
-        estado=estado, fecha_vigencia_hasta=fecha_vig, mensaje_brecha=brecha,
-    )
-    session.add(doc); session.flush()
+    empresa_efectiva = empresa_id or session.get(Trabajador, trabajador_id).empresa_id
 
-    version = DocumentoVersion(
-        documento_id=doc.id, numero_version=1, estado=estado,
-        mensaje_brecha=brecha, fecha_vigencia_hasta=fecha_vig,
+    # Alcance SERVICIO: el expediente se ancla al servicio "General" de la relación.
+    servicio_id = None
+    if req.alcance == Alcance.SERVICIO:
+        serv = _servicio_general(session, mandante_id, empresa_efectiva)
+        servicio_id = serv.id if serv else None
+
+    exp = Expediente(
+        requisito_id=req.id, empresa_id=empresa_id,
+        trabajador_id=trabajador_id, servicio_id=servicio_id,
     )
-    session.add(version); session.flush()
+    session.add(exp); session.flush()
+
+    entrega = Entrega(expediente_id=exp.id, numero_version=1, fecha_vigencia_hasta=fecha_vig)
+    session.add(entrega); session.flush()
 
     entidad = str(empresa_id or trabajador_id)[:8]
-    session.add(ArchivoDocumento(
-        documento_version_id=version.id, orden=0,
+    session.add(Archivo(
+        entrega_id=entrega.id, orden=0,
         storage_key=f"demo/documentos/{req.codigo.lower()}_{entidad}_{uuid_lib.uuid4().hex}.pdf",
         nombre_original=f"{req.codigo.lower()}.pdf",
         mime_type="application/pdf", tamaño_bytes=0, hash_sha256="0" * 64,
     ))
-    session.add(DocumentoEvento(
-        documento_id=doc.id, documento_version_id=version.id,
-        tipo_evento=TipoEvento.SUBIDA, estado_nuevo=estado, detalle={"seed": True},
+
+    acred = Acreditacion(
+        mandante_id=mandante_id, expediente_id=exp.id, entrega_id=entrega.id,
+        numero_version=1, estado=estado, mensaje_brecha=brecha,
+    )
+    session.add(acred); session.flush()
+    session.add(AcreditacionEvento(
+        acreditacion_id=acred.id, tipo_evento=TipoEvento.SUBIDA,
+        estado_nuevo=estado, detalle={"seed": True},
     ))
-    doc.version_vigente_id = version.id
 
 
 def _doc_empresa(session: Session, req: RequisitoDocumental, mandante_id, empresa_id,
@@ -345,16 +363,17 @@ def _doc_trabajador(session: Session, req: RequisitoDocumental, mandante_id, tra
     _crear_expediente(session, req, mandante_id, estado, vigencia_dias, brecha, trabajador_id=trabajador_id)
 
 
-def _eliminar_documentos(session: Session, docs: list[Documento]):
+def _eliminar_expedientes(session: Session, expedientes: list[Expediente]):
     """Borra expedientes completos respetando las FKs (solo para limpieza de seed)."""
-    for doc in docs:
-        session.query(DocumentoEvento).filter_by(documento_id=doc.id).delete()
-        doc.version_vigente_id = None
+    for exp in expedientes:
+        for acred in session.query(Acreditacion).filter_by(expediente_id=exp.id).all():
+            session.query(AcreditacionEvento).filter_by(acreditacion_id=acred.id).delete()
+            session.delete(acred)
         session.flush()
-        for v in session.query(DocumentoVersion).filter_by(documento_id=doc.id).all():
-            session.query(ArchivoDocumento).filter_by(documento_version_id=v.id).delete()
-            session.delete(v)
-        session.delete(doc)
+        for entrega in session.query(Entrega).filter_by(expediente_id=exp.id).all():
+            session.query(Archivo).filter_by(entrega_id=entrega.id).delete()
+            session.delete(entrega)
+        session.delete(exp)
 
 
 # ── Contratistas Codelco ──────────────────────────────────────────────────────
@@ -370,9 +389,9 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     for rel in session.query(ContratistaMandante).filter_by(mandante_id=codelco.id).all():
         empresa = session.get(EmpresaContratista, rel.contratista_id)
         # Borrar servicios, documentos, trabajadores, usuarios y la relación
-        _eliminar_documentos(session, session.query(Documento).filter_by(empresa_id=empresa.id).all())
+        _eliminar_expedientes(session, session.query(Expediente).filter_by(empresa_id=empresa.id).all())
         for t in session.query(Trabajador).filter_by(empresa_id=empresa.id).all():
-            _eliminar_documentos(session, session.query(Documento).filter_by(trabajador_id=t.id).all())
+            _eliminar_expedientes(session, session.query(Expediente).filter_by(trabajador_id=t.id).all())
         for s in session.query(Servicio).filter_by(contratista_mandante_id=rel.id).all():
             session.query(ServicioTrabajador).filter_by(servicio_id=s.id).delete()
             session.delete(s)

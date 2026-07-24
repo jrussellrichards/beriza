@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
 from app.models.contratista import ContratistaMandante
-from app.models.documento import Documento
+from app.models.expediente import Acreditacion
 from app.models.mandante import Mandante
 from app.models.usuario import Usuario
 
@@ -27,7 +27,9 @@ def stats_globales(
     total_mandantes = db.query(Mandante).count()
     total_contratistas = db.query(ContratistaMandante).count()
     acreditadas = db.query(ContratistaMandante).filter_by(estado_acreditacion="ACREDITADA").count()
-    docs_procesados = db.query(Documento).filter(Documento.estado.in_([3, 4])).count()
+    docs_procesados = db.query(Acreditacion).filter(
+        Acreditacion.estado.in_([3, 4]), Acreditacion.eliminado_en.is_(None)
+    ).count()
     tasa = round((acreditadas / total_contratistas * 100) if total_contratistas else 0, 1)
 
     return {
@@ -105,10 +107,11 @@ def actividad_reciente(
     db: Session = Depends(get_db),
     _=Depends(require_rol(["berisa_admin"])),
 ):
-    """Últimos 10 documentos procesados como feed de actividad cross-mandante."""
+    """Últimas 10 acreditaciones como feed de actividad cross-mandante."""
     docs = (
-        db.query(Documento)
-        .order_by(Documento.created_at.desc())
+        db.query(Acreditacion)
+        .filter(Acreditacion.eliminado_en.is_(None))
+        .order_by(Acreditacion.created_at.desc())
         .limit(10)
         .all()
     )
@@ -117,18 +120,19 @@ def actividad_reciente(
     for doc in docs:
         mandante = db.get(Mandante, doc.mandante_id)
         mandante_nombre = mandante.razon_social.split(" ")[0] if mandante else "—"
+        codigo = doc.expediente.requisito.codigo
 
         if doc.estado == 4:
-            accion = f"Documento {doc.requisito.codigo} aprobado"
+            accion = f"Documento {codigo} aprobado"
             tipo = "ok"
         elif doc.estado == 3:
-            accion = f"Documento {doc.requisito.codigo} rechazado por IA"
+            accion = f"Documento {codigo} rechazado por IA"
             tipo = "warn"
         elif doc.estado == 2:
-            accion = f"Documento {doc.requisito.codigo} en análisis"
+            accion = f"Documento {codigo} en análisis"
             tipo = "info"
         else:
-            accion = f"Documento {doc.requisito.codigo} enviado"
+            accion = f"Documento {codigo} enviado"
             tipo = "info"
 
         delta = ahora - doc.created_at.replace(tzinfo=timezone.utc)

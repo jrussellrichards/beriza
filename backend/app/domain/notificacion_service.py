@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.infrastructure.email import Email, get_email_cliente
-from app.models.documento import Documento
+from app.models.expediente import Acreditacion
 from app.models.pilar import RequisitoDocumental
 from app.models.usuario import Usuario
 
@@ -72,11 +72,12 @@ def notificar_documento_observado(
     Envía email al contratista cuando un documento específico es rechazado.
     Incluye el mensaje exacto de la brecha y el link directo al documento.
     """
-    doc = db.get(Documento, documento_id)
+    doc = db.get(Acreditacion, documento_id)
     if not doc:
         return
 
-    empresa_id = doc.empresa_id or (doc.trabajador.empresa_id if doc.trabajador_id else None)
+    exp = doc.expediente
+    empresa_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
     if not empresa_id:
         return
 
@@ -88,7 +89,7 @@ def notificar_documento_observado(
     if not admin:
         return
 
-    requisito = db.get(RequisitoDocumental, doc.requisito_id)
+    requisito = db.get(RequisitoDocumental, exp.requisito_id)
     nombre_req = requisito.nombre if requisito else "Documento"
 
     cuerpo = f"""
@@ -113,11 +114,12 @@ def notificar_excepcion_aprobada(
     Notifica al contratista que el mandante aprobó manualmente
     un documento que estaba observado.
     """
-    doc = db.get(Documento, documento_id)
+    doc = db.get(Acreditacion, documento_id)
     if not doc:
         return
 
-    empresa_id = doc.empresa_id or (doc.trabajador.empresa_id if doc.trabajador_id else None)
+    exp = doc.expediente
+    empresa_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
     if not empresa_id:
         return
 
@@ -129,7 +131,7 @@ def notificar_excepcion_aprobada(
     if not admin:
         return
 
-    requisito = db.get(RequisitoDocumental, doc.requisito_id)
+    requisito = db.get(RequisitoDocumental, exp.requisito_id)
     nombre_req = requisito.nombre if requisito else "Documento"
 
     cuerpo = f"""

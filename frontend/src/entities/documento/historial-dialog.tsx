@@ -111,7 +111,12 @@ export function HistorialDialog({ documentoId, titulo, onClose }: {
               </p>
               <div className="space-y-2">
                 {[...historial.versiones].reverse().map((v) => {
-                  const e = ESTADO_LABEL[String(v.estado)] ?? { label: `Estado ${v.estado}`, cls: "bg-slate-50 text-slate-600 border-slate-200" }
+                  // estado 0 = versión histórica (el estado vive en la acreditación,
+                  // solo aplica a la versión vigente que el mandante revisa)
+                  const e = ESTADO_LABEL[String(v.estado)] ?? {
+                    label: v.estado === 0 ? "Versión anterior" : `Estado ${v.estado}`,
+                    cls: "bg-slate-50 text-slate-600 border-slate-200",
+                  }
                   return (
                     <div key={v.id} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
                       <div className="flex items-center justify-between">

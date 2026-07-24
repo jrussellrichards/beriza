@@ -23,7 +23,7 @@ from app.middleware.tenant import (
     verificar_puede_subir_para,
 )
 from app.models.contratista import ContratistaMandante
-from app.models.documento import Documento
+from app.models.expediente import Acreditacion, Expediente
 from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
 
@@ -78,19 +78,19 @@ class _FakeDB:
 
 
 def test_acceso_documento_empresa():
-    doc = Documento(mandante_id=M_A, empresa_id=C_A, trabajador_id=None)
-    verificar_acceso_documento(_FakeDB(), doc, _mandante(M_A))     # mandante que lo exige
-    verificar_acceso_documento(_FakeDB(), doc, _contratista(C_A))  # contratista dueño
-    verificar_acceso_documento(_FakeDB(), doc, _admin())           # berisa transversal
-    _expect_403(lambda: verificar_acceso_documento(_FakeDB(), doc, _mandante(M_B)))
-    _expect_403(lambda: verificar_acceso_documento(_FakeDB(), doc, _contratista(C_B)))
+    acred = Acreditacion(mandante_id=M_A, expediente=Expediente(empresa_id=C_A, trabajador_id=None))
+    verificar_acceso_documento(_FakeDB(), acred, _mandante(M_A))     # mandante de la acreditación
+    verificar_acceso_documento(_FakeDB(), acred, _contratista(C_A))  # contratista dueño
+    verificar_acceso_documento(_FakeDB(), acred, _admin())           # berisa transversal
+    _expect_403(lambda: verificar_acceso_documento(_FakeDB(), acred, _mandante(M_B)))
+    _expect_403(lambda: verificar_acceso_documento(_FakeDB(), acred, _contratista(C_B)))
 
 
 def test_acceso_documento_trabajador():
-    doc = Documento(mandante_id=M_A, empresa_id=None, trabajador_id=uuid.uuid4())
+    acred = Acreditacion(mandante_id=M_A, expediente=Expediente(empresa_id=None, trabajador_id=uuid.uuid4()))
     db = _FakeDB(get_result=Trabajador(empresa_id=C_A, rut="1-9", nombre_completo="Juan"))
-    verificar_acceso_documento(db, doc, _contratista(C_A))
-    _expect_403(lambda: verificar_acceso_documento(db, doc, _contratista(C_B)))
+    verificar_acceso_documento(db, acred, _contratista(C_A))
+    _expect_403(lambda: verificar_acceso_documento(db, acred, _contratista(C_B)))
 
 
 def test_acceso_relacion():

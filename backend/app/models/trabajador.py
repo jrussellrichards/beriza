@@ -14,4 +14,3 @@ class Trabajador(ModelBase):
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
 
     empresa: Mapped["EmpresaContratista"] = relationship(back_populates="trabajadores")
-    documentos: Mapped[list["Documento"]] = relationship(back_populates="trabajador")

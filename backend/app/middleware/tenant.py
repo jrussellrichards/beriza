@@ -19,34 +19,35 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.contratista import ContratistaMandante
-from app.models.documento import Documento
+from app.models.expediente import Acreditacion
 from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
 
 
-def _empresa_duena_de(db: Session, documento: Documento) -> uuid.UUID | None:
-    """Empresa contratista dueña del documento (directa, o vía su trabajador)."""
-    if documento.empresa_id:
-        return documento.empresa_id
-    if documento.trabajador_id:
-        trabajador = db.get(Trabajador, documento.trabajador_id)
+def _empresa_duena_de(db: Session, acreditacion: Acreditacion) -> uuid.UUID | None:
+    """Empresa contratista dueña del expediente (directa, o vía su trabajador)."""
+    exp = acreditacion.expediente
+    if exp.empresa_id:
+        return exp.empresa_id
+    if exp.trabajador_id:
+        trabajador = db.get(Trabajador, exp.trabajador_id)
         return trabajador.empresa_id if trabajador else None
     return None
 
 
-def verificar_acceso_documento(db: Session, documento: Documento, usuario: Usuario) -> None:
+def verificar_acceso_documento(db: Session, acreditacion: Acreditacion, usuario: Usuario) -> None:
     """
-    Autoriza a ver/descargar un documento. Acceso permitido a:
+    Autoriza a ver/descargar la acreditación de un documento. Acceso permitido a:
       - berisa_admin (transversal),
-      - el mandante que lo exige (documento.mandante_id),
+      - el mandante de la acreditación (acreditacion.mandante_id),
       - la empresa contratista dueña del expediente.
     Lanza 403 en cualquier otro caso.
     """
     if usuario.rol == "berisa_admin":
         return
-    if usuario.mandante_id and documento.mandante_id == usuario.mandante_id:
+    if usuario.mandante_id and acreditacion.mandante_id == usuario.mandante_id:
         return
-    if usuario.contratista_id and _empresa_duena_de(db, documento) == usuario.contratista_id:
+    if usuario.contratista_id and _empresa_duena_de(db, acreditacion) == usuario.contratista_id:
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,

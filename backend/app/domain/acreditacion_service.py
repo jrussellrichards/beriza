@@ -23,7 +23,7 @@ from app.domain.estados import (
     EstadoServicio,
 )
 from app.models.contratista import ContratistaMandante
-from app.models.documento import Documento
+from app.models.expediente import Acreditacion, Expediente
 from app.models.pilar import RequisitoDocumental, Subpilar
 from app.models.servicio import PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
@@ -152,11 +152,7 @@ def obtener_avance_servicio(db: Session, servicio_id: uuid.UUID) -> AvanceServic
 
     trabajadores = _trabajadores_asignados(db, [servicio_id])
 
-    docs_empresa = _docs_por_requisito_y_servicio(
-        db.query(Documento)
-        .filter_by(empresa_id=empresa_id, mandante_id=mandante_id, eliminado_en=None)
-        .all()
-    )
+    docs_empresa = _acreds_por_clave(_acreds_de_entidad(db, mandante_id, empresa_id=empresa_id))
 
     items: list[RequisitoAvance] = []
     for cfg in configs_empresa:
@@ -164,11 +160,7 @@ def obtener_avance_servicio(db: Session, servicio_id: uuid.UUID) -> AvanceServic
 
     avance_trabajadores: list[TrabajadorAvance] = []
     for t in trabajadores:
-        docs_t = _docs_por_requisito_y_servicio(
-            db.query(Documento)
-            .filter_by(trabajador_id=t.id, mandante_id=mandante_id, eliminado_en=None)
-            .all()
-        )
+        docs_t = _acreds_por_clave(_acreds_de_entidad(db, mandante_id, trabajador_id=t.id))
         items_t = [
             _item_para(docs_t, cfg.requisito, servicio, trabajador=t)
             for cfg in configs_trabajador
@@ -224,11 +216,7 @@ def evaluar_relacion(
         c for cfgs in configs_por_servicio.values() for c in cfgs
     ]
 
-    docs_empresa = _docs_por_requisito_y_servicio(
-        db.query(Documento)
-        .filter_by(empresa_id=contratista_id, mandante_id=mandante_id, eliminado_en=None)
-        .all()
-    )
+    docs_empresa = _acreds_por_clave(_acreds_de_entidad(db, mandante_id, empresa_id=contratista_id))
 
     evaluacion.items_empresa = _items_de_entidad(
         docs_empresa, servicios_activos, configs_por_servicio, EntidadTipo.EMPRESA
@@ -254,11 +242,7 @@ def evaluar_relacion(
         trabajadores[a.trabajador_id] = a.trabajador
 
     for t in trabajadores.values():
-        docs_t = _docs_por_requisito_y_servicio(
-            db.query(Documento)
-            .filter_by(trabajador_id=t.id, mandante_id=mandante_id, eliminado_en=None)
-            .all()
-        )
+        docs_t = _acreds_por_clave(_acreds_de_entidad(db, mandante_id, trabajador_id=t.id))
         servicios_del_t = [
             s for s in servicios_activos if s.id in servicios_por_trabajador[t.id]
         ]
@@ -377,28 +361,53 @@ def _trabajadores_asignados(db: Session, servicio_ids: list[uuid.UUID]) -> list[
     return list(vistos.values())
 
 
-def _docs_por_requisito_y_servicio(documentos: list[Documento]) -> dict[tuple[str, str | None], Documento]:
+def _acreds_de_entidad(
+    db: Session,
+    mandante_id: uuid.UUID,
+    empresa_id: uuid.UUID | None = None,
+    trabajador_id: uuid.UUID | None = None,
+) -> list[Acreditacion]:
+    """Acreditaciones vivas de un mandante sobre los expedientes de una empresa o trabajador."""
+    query = (
+        db.query(Acreditacion)
+        .join(Expediente, Acreditacion.expediente_id == Expediente.id)
+        .filter(
+            Acreditacion.mandante_id == mandante_id,
+            Acreditacion.eliminado_en.is_(None),
+            Expediente.eliminado_en.is_(None),
+        )
+        .options(joinedload(Acreditacion.expediente), joinedload(Acreditacion.entrega))
+    )
+    if empresa_id:
+        query = query.filter(Expediente.empresa_id == empresa_id)
+    else:
+        query = query.filter(Expediente.trabajador_id == trabajador_id)
+    return query.all()
+
+
+def _acreds_por_clave(acreditaciones: list[Acreditacion]) -> dict[tuple[str, str | None], Acreditacion]:
     """
-    Indexa expedientes vivos por (requisito_id, servicio_id|None).
+    Indexa acreditaciones vivas por (requisito_id, servicio_id|None) de su expediente.
     La identidad única está garantizada por los índices parciales de BD.
     """
     return {
-        (str(d.requisito_id), str(d.servicio_id) if d.servicio_id else None): d
-        for d in documentos
+        (str(a.expediente.requisito_id), str(a.expediente.servicio_id) if a.expediente.servicio_id else None): a
+        for a in acreditaciones
     }
 
 
 def _item_para(
-    docs: dict[tuple[str, str | None], Documento],
+    docs: dict[tuple[str, str | None], Acreditacion],
     requisito: RequisitoDocumental,
     servicio: Servicio | None,
     trabajador: Trabajador | None = None,
 ) -> RequisitoAvance:
-    """Item de avance para un requisito: busca el expediente según su alcance."""
+    """Item de avance para un requisito: busca la acreditación según su alcance."""
     es_por_servicio = requisito.alcance == Alcance.SERVICIO and servicio is not None
     clave = (str(requisito.id), str(servicio.id) if es_por_servicio else None)
-    doc = docs.get(clave)
+    acred = docs.get(clave)
     pilar = requisito.subpilar.pilar
+    vigencia = acred.entrega.fecha_vigencia_hasta if (acred and acred.entrega) else None
     return RequisitoAvance(
         pilar_codigo=pilar.codigo,
         pilar_nombre=pilar.nombre,
@@ -408,10 +417,10 @@ def _item_para(
         requisito_nombre=requisito.nombre,
         entidad_tipo=requisito.entidad_tipo,
         alcance=requisito.alcance,
-        estado=doc.estado if doc else None,
-        fecha_vigencia_hasta=doc.fecha_vigencia_hasta if doc else None,
-        mensaje_brecha=doc.mensaje_brecha if doc else None,
-        documento_id=doc.id if doc else None,
+        estado=acred.estado if acred else None,
+        fecha_vigencia_hasta=vigencia,
+        mensaje_brecha=acred.mensaje_brecha if acred else None,
+        documento_id=acred.id if acred else None,
         trabajador_id=trabajador.id if trabajador else None,
         trabajador_nombre=trabajador.nombre_completo if trabajador else None,
         servicio_id=servicio.id if es_por_servicio else None,
@@ -420,7 +429,7 @@ def _item_para(
 
 
 def _items_de_entidad(
-    docs: dict[tuple[str, str | None], Documento],
+    docs: dict[tuple[str, str | None], Acreditacion],
     servicios: list[Servicio],
     configs_por_servicio: dict[uuid.UUID, list[PerfilRequisitoConfig]],
     entidad_tipo: str,
