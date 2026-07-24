@@ -2,82 +2,91 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  CheckCircle2, Clock, XCircle, CalendarClock,
-  ChevronDown, ChevronRight, Users, Plus, Building2, ArrowRight,
+  AlertCircle, ArrowRight, Building2, CalendarClock, CheckCircle2, Clock, ShieldQuestion,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
-import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
-import { useAcreditacion } from "@/entities/contratista/use-acreditacion"
-import { type Exigencia, diasParaVencer, formatFecha, porVencer } from "@/entities/documento/exigencia"
-import { ExigenciaRow } from "@/entities/documento/exigencia-row"
-import type { EstadoTrabajador } from "@/shared/types"
+import {
+  ESTADO_GLOBAL_CFG,
+  type DocumentoContratista, type ResumenMandante,
+} from "@/entities/contratista/resumen"
+import { diasParaVencer, formatFecha } from "@/entities/documento/exigencia"
 
-// ── Config visual ────────────────────────────────────────────────────────────
+// ── Piezas ───────────────────────────────────────────────────────────────────
 
-const ESTADO_CONFIG = {
-  PENDIENTE: {
-    label: "Pendiente",
-    icon: Clock,
-    iconColor: "text-slate-400",
-    border: "border-slate-200",
-    bg: "bg-slate-50",
-    dot: "bg-slate-400",
-    text: "text-slate-600",
-    badgeBg: "bg-slate-50 border-slate-200",
-  },
-  ACREDITADA: {
-    label: "Acreditada",
-    icon: CheckCircle2,
-    iconColor: "text-emerald-500",
-    border: "border-emerald-200",
-    bg: "bg-emerald-50",
-    dot: "bg-emerald-500",
-    text: "text-emerald-700",
-    badgeBg: "bg-emerald-50 border-emerald-200",
-  },
-  EN_PROCESO: {
-    label: "En Proceso",
-    icon: Clock,
-    iconColor: "text-amber-500",
-    border: "border-amber-200",
-    bg: "bg-amber-50",
-    dot: "bg-amber-500",
-    text: "text-amber-700",
-    badgeBg: "bg-amber-50 border-amber-200",
-  },
-  BLOQUEADA: {
-    label: "Bloqueada",
-    icon: XCircle,
-    iconColor: "text-red-500",
-    border: "border-red-200",
-    bg: "bg-red-50",
-    dot: "bg-red-500",
-    text: "text-red-700",
-    badgeBg: "bg-red-50 border-red-200",
-  },
-}
+function MandanteCard({ r }: { r: ResumenMandante }) {
+  const c = ESTADO_GLOBAL_CFG[r.estado_global] ?? ESTADO_GLOBAL_CFG.PENDIENTE
+  const Icono = r.estado_global === "ACREDITADA" ? CheckCircle2 : Clock
 
-// ── Componentes pequeños ─────────────────────────────────────────────────────
-
-function EstadoTag({ estado }: { estado: keyof typeof ESTADO_CONFIG }) {
-  const c = ESTADO_CONFIG[estado]
   return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", c.badgeBg, c.text)}>
-      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
-      {c.label}
-    </span>
+    <div className={cn(
+      "rounded-xl border bg-white p-4",
+      r.estado_global === "BLOQUEADA" ? "border-red-200" : "border-slate-200"
+    )}>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <p className="text-sm font-semibold text-slate-900 leading-tight">{r.mandante_razon_social}</p>
+        <span className={cn(
+          "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0",
+          c.bg, c.border, c.text
+        )}>
+          <span className={cn("w-1.5 h-1.5 rounded-full", c.dot)} />
+          {c.label}
+        </span>
+      </div>
+
+      <p className="text-xs text-slate-500">
+        {r.servicios_activos === 0
+          ? "Sin servicios activos"
+          : `${r.servicios_activos} servicio${r.servicios_activos === 1 ? "" : "s"}`}
+        {r.trabajadores_total > 0 && ` · ${r.trabajadores_ok}/${r.trabajadores_total} trabajadores`}
+      </p>
+
+      <div className="mt-3 pt-3 border-t border-slate-100">
+        {r.brechas.length === 0 ? (
+          <p className="text-xs text-emerald-700 flex items-center gap-1.5">
+            <Icono size={13} /> Sin brechas
+          </p>
+        ) : (
+          <>
+            <p className="text-xs text-red-700 flex items-center gap-1.5 font-medium">
+              <AlertCircle size={13} />
+              {r.brechas.length} brecha{r.brechas.length === 1 ? "" : "s"}
+            </p>
+            <ul className="mt-1.5 space-y-0.5">
+              {r.brechas.slice(0, 2).map((b, i) => (
+                <li key={i} className="text-[11px] text-slate-500 truncate">{b}</li>
+              ))}
+              {r.brechas.length > 2 && (
+                <li className="text-[10px] text-slate-400">y {r.brechas.length - 2} más</li>
+              )}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 
 /**
- * Aviso preventivo: lo que caduca pronto. Sin esto, un vencimiento solo se ve
- * en la app cuando ya venció (badge VENCIDO) — el aviso previo llegaba únicamente
- * por email, y perderlo significa quedar bloqueado en faena sin haberlo visto.
+ * Documentos que caducan pronto, por CLIENTE afectado.
+ *
+ * Un mismo documento puede vencer en fechas distintas según el mandante: si
+ * Codelco quedó anclado a la v1 y Falabella a la v2, la v1 caduca antes. Decir
+ * solo "el F30 vence en 5 días" ocultaría que el problema es con Codelco y que
+ * con Falabella no hay nada que hacer.
  */
-function AvisoPorVencer({ items }: { items: Exigencia[] }) {
+function AvisoPorVencer({ docs }: { docs: DocumentoContratista[] }) {
+  const items = docs
+    .flatMap(doc => doc.mandantes.map(m => ({
+      doc,
+      mandante: m.mandante_razon_social,
+      vence: m.fecha_vigencia_hasta,
+      dias: diasParaVencer(m.fecha_vigencia_hasta),
+    })))
+    .filter(x => x.dias !== null && x.dias >= 0 && x.dias <= 30)
+    .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0))
+
   if (items.length === 0) return null
-  const criticos = items.slice(0, 4)
 
   return (
     <div className="rounded-xl border border-orange-200 bg-orange-50 px-5 py-4">
@@ -85,270 +94,157 @@ function AvisoPorVencer({ items }: { items: Exigencia[] }) {
         <CalendarClock size={18} className="text-orange-500 mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-slate-900">
-            {items.length === 1
-              ? "Tienes 1 documento por vencer"
-              : `Tienes ${items.length} documentos por vencer`}
+            {items.length === 1 ? "1 documento por vencer" : `${items.length} documentos por vencer`}
           </p>
           <p className="text-xs text-slate-500 mt-0.5">
             Renuévalos antes de que caduquen para no perder la acreditación.
           </p>
           <ul className="mt-3 space-y-1.5">
-            {criticos.map((i, idx) => {
-              const dias = diasParaVencer(i.fecha_vigencia_hasta) ?? 0
-              return (
-                <li key={`${i.requisito_id}-${i.trabajador_id ?? "e"}-${idx}`} className="flex items-baseline gap-2 text-xs">
-                  <span className={cn(
-                    "font-medium tabular-nums shrink-0",
-                    dias <= 7 ? "text-red-600" : "text-orange-700"
-                  )}>
-                    {dias === 0 ? "hoy" : dias === 1 ? "1 día" : `${dias} días`}
-                  </span>
-                  <span className="text-slate-600 truncate">
-                    {i.requisito_nombre}
-                    {i.trabajador_nombre && <span className="text-slate-400"> · {i.trabajador_nombre}</span>}
-                  </span>
-                  <span className="text-slate-400 shrink-0 ml-auto">{formatFecha(i.fecha_vigencia_hasta)}</span>
-                </li>
-              )
-            })}
+            {items.slice(0, 4).map(({ doc, mandante, vence, dias }) => (
+              <li key={`${doc.clave}:${mandante}`} className="flex items-baseline gap-2 text-xs">
+                <span className={cn(
+                  "font-medium tabular-nums shrink-0",
+                  (dias ?? 0) <= 7 ? "text-red-600" : "text-orange-700"
+                )}>
+                  {dias === 0 ? "hoy" : dias === 1 ? "1 día" : `${dias} días`}
+                </span>
+                <span className="text-slate-600 truncate">
+                  {doc.requisito_nombre}
+                  {doc.trabajador_nombre && <span className="text-slate-400"> · {doc.trabajador_nombre}</span>}
+                  <span className="text-slate-400"> — {mandante}</span>
+                </span>
+                <span className="text-slate-400 shrink-0 ml-auto">{formatFecha(vence)}</span>
+              </li>
+            ))}
           </ul>
-          {items.length > criticos.length && (
-            <p className="text-[10px] text-slate-400 mt-2">
-              y {items.length - criticos.length} más
-            </p>
+          {items.length > 4 && (
+            <p className="text-[10px] text-slate-400 mt-2">y {items.length - 4} más</p>
           )}
         </div>
-        <VerEnDocumentos />
       </div>
     </div>
   )
 }
-
-function VerEnDocumentos() {
-  return (
-    <button
-      onClick={() => window.location.href = "/contratista/documentos"}
-      className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors"
-    >
-      Gestionar en Documentos <ArrowRight size={12} />
-    </button>
-  )
-}
-
-function TrabajadorRow({ trabajador, items }: {
-  trabajador: EstadoTrabajador
-  items: Exigencia[]
-}) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <div className={cn("rounded-xl border overflow-hidden transition-colors", expanded ? "border-slate-300" : "border-slate-200")}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-50/70 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center shrink-0">
-            {trabajador.nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()}
-          </div>
-          <div className="text-left">
-            <p className="text-sm font-medium text-slate-900">{trabajador.nombre}</p>
-            <p className="text-xs text-slate-400 font-mono">{trabajador.rut}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <EstadoTag estado={trabajador.cumple ? "ACREDITADA" : "EN_PROCESO"} />
-          {expanded
-            ? <ChevronDown size={14} className="text-slate-400" />
-            : <ChevronRight size={14} className="text-slate-400" />
-          }
-        </div>
-      </button>
-
-      {expanded && (
-        <div className="space-y-1.5 px-4 pb-4 pt-2 bg-slate-50/50 border-t border-slate-100">
-          {items.length === 0 ? (
-            <p className="text-xs text-slate-400 py-2">Sin documentos exigidos para este trabajador todavía.</p>
-          ) : (
-            items.map((i, idx) => (
-              <ExigenciaRow key={`${i.requisito_id}-${i.servicio_id ?? "e"}-${idx}`} item={i} />
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Skeleton ─────────────────────────────────────────────────────────────────
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-slate-200 rounded-lg", className)} />
 }
 
-function LoadingState() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-24 rounded-xl" />
-      <div className="grid grid-cols-3 gap-4">
-        <Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" />
-      </div>
-      <Skeleton className="h-48 rounded-xl" />
-    </div>
-  )
-}
+// ── Página ───────────────────────────────────────────────────────────────────
 
-// ── Página principal ──────────────────────────────────────────────────────────
-
+/**
+ * Dashboard del contratista: un RESUMEN, no un inventario.
+ *
+ * Responde tres preguntas: con qué cliente estoy mal, qué vence pronto y qué
+ * espera una acción mía. El inventario vive en /contratista/documentos.
+ *
+ * Antes listaba todos los documentos de un único mandante —elegido al azar en
+ * el token— sin decir cuál era, así que duplicaba /documentos con menos
+ * capacidades y ocultaba que el contratista tiene varios clientes.
+ */
 export default function DashboardContratistaPage() {
-  const [session, setSession] = useState<{ contratista_id: string; mandante_id: string } | null>(null)
-  const [exigencias, setExigencias] = useState<Exigencia[]>([])
+  const [resumen, setResumen] = useState<ResumenMandante[] | null>(null)
+  const [docs, setDocs] = useState<DocumentoContratista[]>([])
+  const [solicitudes, setSolicitudes] = useState(0)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const s = getSession()
-    if (s) setSession(s)
+  const cargar = useCallback(() => {
+    Promise.all([
+      api.get<ResumenMandante[]>("/api/v1/acreditacion/mi-resumen"),
+      api.get<DocumentoContratista[]>("/api/v1/documentos/mis-documentos"),
+      api.get<unknown[]>("/api/v1/reutilizacion/solicitudes").catch(() => []),
+    ])
+      .then(([r, d, s]) => { setResumen(r); setDocs(d); setSolicitudes(s.length) })
+      .catch(e => { setResumen([]); setError(e instanceof Error ? e.message : "Error al cargar") })
   }, [])
 
-  const { data, loading, error } = useAcreditacion(
-    session?.contratista_id ?? "",
-    session?.mandante_id ?? ""
-  )
+  useEffect(() => { cargar() }, [cargar])
 
-  const cargarExigencias = useCallback(() => {
-    if (!session?.contratista_id || !session?.mandante_id) return
-    api.get<Exigencia[]>(`/api/v1/acreditacion/${session.contratista_id}/mandante/${session.mandante_id}/exigencias`)
-      .then(setExigencias)
-      .catch(() => setExigencias([]))
-  }, [session])
-
-  useEffect(() => { cargarExigencias() }, [cargarExigencias])
-
-  if (!session || loading) return <LoadingState />
-  if (error || !data) {
+  if (resumen === null) {
     return (
-      <div className="p-8">
-        <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4">
-          <p className="text-sm font-medium text-red-800">No se pudo cargar tu estado de acreditación</p>
-          <p className="text-xs text-red-600 mt-1">{error ?? "Intenta recargar la página."}</p>
+      <div className="p-8 space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-3 gap-4">
+          <Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" />
         </div>
+        <Skeleton className="h-24 rounded-xl" />
       </div>
     )
   }
 
-  const cfg = ESTADO_CONFIG[data.estado_global]
-  const Icon = cfg.icon
-  const trabajadoresOk = data.trabajadores.filter(t => t.cumple).length
-  const itemsEmpresa = exigencias.filter(e => !e.trabajador_id)
-  const itemsPorVencer = porVencer(exigencias)
+  const bloqueadas = resumen.filter(r => r.estado_global === "BLOQUEADA").length
+  const acreditadas = resumen.filter(r => r.estado_global === "ACREDITADA").length
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Header */}
       <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Mi Acreditación</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Estado de cumplimiento ante el mandante</p>
-        </div>
+        <h1 className="text-xl font-semibold text-slate-900">Mi acreditación</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          {resumen.length === 0
+            ? "Aún no tienes clientes vinculados"
+            : bloqueadas > 0
+              ? `${bloqueadas} de tus ${resumen.length} clientes tiene brechas que te bloquean`
+              : `Estás acreditado con ${acreditadas} de ${resumen.length} clientes`}
+        </p>
       </div>
 
       <div className="flex-1 overflow-auto px-8 py-6 space-y-6">
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+        )}
 
-        {/* Banner estado global */}
-        <div className={cn("rounded-xl border p-5 flex items-center gap-4", cfg.bg, cfg.border)}>
-          <Icon size={36} className={cfg.iconColor} />
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-1">
-              <p className="text-base font-semibold text-slate-900">Estado global de acreditación</p>
-              <EstadoTag estado={data.estado_global} />
+        {solicitudes > 0 && (
+          <button
+            onClick={() => window.location.href = "/contratista/solicitudes"}
+            className="w-full rounded-xl border border-violet-200 bg-violet-50 px-5 py-4 flex items-center gap-3 text-left hover:bg-violet-100/70 transition-colors"
+          >
+            <ShieldQuestion size={18} className="text-violet-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-900">
+                {solicitudes === 1
+                  ? "1 solicitud de acceso espera tu autorización"
+                  : `${solicitudes} solicitudes de acceso esperan tu autorización`}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Un cliente quiere revisar documentos que marcaste como sensibles.
+              </p>
             </div>
-            <p className="text-sm text-slate-500">
-              {data.estado_global === "ACREDITADA"
-                ? "Tu empresa cumple todos los requisitos exigidos. Los trabajadores pueden ingresar a la faena."
-                : data.estado_global === "BLOQUEADA"
-                  ? "Hay brechas críticas que impiden el acceso a la obra. Corrígelas lo antes posible."
-                  : data.estado_global === "PENDIENTE"
-                    ? "Aún no tienes servicios activos con este mandante — no hay requisitos exigibles todavía."
-                    : "Hay documentos pendientes o en revisión. El acceso está condicionado."
-              }
-            </p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-xs text-slate-400 mb-1">Trabajadores OK</p>
-            <p className={cn("text-2xl font-semibold", trabajadoresOk === data.trabajadores.length ? "text-emerald-600" : "text-amber-600")}>
-              {trabajadoresOk}/{data.trabajadores.length}
-            </p>
-          </div>
-        </div>
+            <ArrowRight size={15} className="text-slate-400 shrink-0" />
+          </button>
+        )}
 
-        <AvisoPorVencer items={itemsPorVencer} />
+        <AvisoPorVencer docs={docs} />
 
-        {/* Documentos empresa — solo lectura, gestión en /contratista/documentos */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Building2 size={15} className="text-slate-400" />
-              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Documentos — Empresa</h2>
-            </div>
-            <VerEnDocumentos />
-          </div>
-          <div className="space-y-1.5">
-            {itemsEmpresa.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
-                <p className="text-sm text-slate-400">No hay documentos de empresa exigidos todavía.</p>
-              </div>
-            ) : (
-              itemsEmpresa.map((i, idx) => (
-                <ExigenciaRow key={`${i.requisito_id}-${i.servicio_id ?? "e"}-${idx}`} item={i} />
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* Divider */}
-        <div className="border-t border-slate-100" />
-
-        {/* Trabajadores */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users size={15} className="text-slate-400" />
               <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                Trabajadores ({data.trabajadores.length})
+                Mis clientes ({resumen.length})
               </h2>
             </div>
             <button
-              onClick={() => window.location.href = "/contratista/trabajadores"}
-              className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
+              onClick={() => window.location.href = "/contratista/documentos"}
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors"
             >
-              Ver todos →
+              Ver mis documentos <ArrowRight size={12} />
             </button>
           </div>
 
-          {data.trabajadores.length === 0 ? (
+          {resumen.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center">
-              <Users size={28} className="text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-500 mb-3">No hay trabajadores registrados</p>
-              <button
-                onClick={() => window.location.href = "/contratista/trabajadores"}
-                className="flex items-center gap-2 mx-auto bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
-              >
-                <Plus size={14} />
-                Agregar trabajador
-              </button>
+              <Building2 size={26} className="text-slate-300 mx-auto mb-3" />
+              <p className="text-sm text-slate-500">Todavía ningún mandante te ha vinculado</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Cuando te inviten y creen un servicio, verás aquí tu estado con cada uno.
+              </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {data.trabajadores.map(t => (
-                <TrabajadorRow
-                  key={t.trabajador_id}
-                  trabajador={t}
-                  items={exigencias.filter(e => e.trabajador_id === t.trabajador_id)}
-                />
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {resumen.map(r => <MandanteCard key={r.mandante_id} r={r} />)}
             </div>
           )}
         </section>
-
       </div>
     </div>
   )

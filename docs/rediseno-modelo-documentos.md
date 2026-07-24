@@ -140,10 +140,61 @@ Un F30 vigente vale para todos los mandantes: el contratista no lo sube N veces.
 Tests: `backend/tests/test_vencimiento.py` y `test_reutilizacion.py`, ambos en
 el job `backend-test` de CI que gatea el deploy.
 
+## Portal del contratista — vista por documento
+
+Rama `portal-contratista-documentos`. La UI seguía reflejando el modelo viejo
+(un documento por mandante) mientras el backend ya separaba Expediente de
+Acreditación. Además el portal estaba **cableado a un solo mandante**: en
+`_crear_token` un `.first()` sin `order_by` metía "el primer vínculo" como
+`mandante_id` de un contratista, así que uno con tres clientes veía uno al azar
+y sin forma de cambiarlo. Ese claim se eliminó — el backend nunca lo leyó
+(`get_usuario_actual` carga el `Usuario` de la BD por `sub`).
+
+**Eje elegido: por documento, no por mandante.** Un F30 no es "mi F30 de
+Codelco": es mi F30, que Codelco aprobó, Falabella tiene en revisión y Anglo ni
+exige. El cliente es un *filtro* opcional, nunca un modo.
+
+- `GET /documentos/mis-documentos` → `vista_documental`: una fila por documento
+  con el estado de cada mandante. ENTIDAD se unifica entre mandantes; SERVICIO
+  nunca (el servicio pertenece a un solo mandante).
+- `GET /acreditacion/mi-resumen` → `resumen_por_mandante`: una fila por cliente,
+  ordenada por urgencia. El dashboard dejó de listar documentos.
+- Ambos derivan el contratista **del token, nunca del path**, y reusan
+  `evaluar_relacion` / `obtener_estado_acreditacion` — cero lógica duplicada.
+
+**Versiones divergentes entre mandantes.** Codelco puede tener aprobada la v1
+vigente mientras Falabella observa la v2. El badge muestra el número de versión
+**solo cuando los mandantes difieren** (si todos miran la misma, es ruido), y el
+aviso de vencimiento nombra al cliente afectado, porque sus vigencias difieren.
+
+**`subir_entrega` avanza el pin de quien lo necesita.** Sin esto, subir una
+corrección para un cliente dejaba a los demás mirando la versión ya rechazada.
+Dos excepciones deliberadas (ver `_avanzar_otros_mandantes`):
+- el que tiene **APROBADA una entrega aún vigente** no se mueve — moverlo lo
+  devolvería a revisión y lo desacreditaría con un documento válido; de ese se
+  encarga el auto-repin del cron al expirar;
+- un `PENDIENTE_AUTORIZACION` tampoco — sería compartir un documento sensible
+  por la puerta trasera.
+
+Tests: `backend/tests/test_vista_documental.py`, en el job `backend-test` de CI.
+
 ## Decisiones de producto
 
 - **A (aceptada):** cron con auto-repin a renovación vigente antes de VENCIDO.
 - **B (aceptada):** flag de sensibilidad para gatear el compartir.
+- **B2 (aceptada):** el **contratista** decide la sensibilidad de sus documentos
+  (`Expediente.sensible_override`), pisando el default del catálogo que fijan
+  BERISA o el mandante. El flag protege al contratista, así que no puede quedar
+  solo en manos de quien quiere ver el documento.
+  **Relajar solo se permite en documentos de entidad EMPRESA.** La distinción no
+  es de permisos sino de *de quién son los datos*: un F30 o una carpeta
+  tributaria son secretos del contratista y puede renunciar a protegerlos; un
+  examen médico ocupacional lleva datos de salud del **trabajador** —dato
+  sensible bajo Ley 19.628— y no es del contratista renunciar a una protección
+  que no es suya. En los de TRABAJADOR puede endurecer, nunca relajar.
+  Se descartó dejarlo solo en manos del contratista (desprotege al usuario
+  pasivo, que es el que más lo necesita) y dejarlo solo en el catálogo (le quita
+  al contratista el control sobre lo suyo).
 - **C (aceptada):** subcontratistas con **revisión delegada completa**. El
   mandante revisa los documentos del subcontratista directamente — es él quien
   responde ante la Ley 20.123, así que no puede delegar la verificación en el

@@ -1,130 +1,186 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
-  AlertCircle, Building2, CheckCircle2, ChevronDown, ChevronRight,
-  FileText, RefreshCw, Search, Users,
+  Briefcase, Building2, ChevronDown, ChevronRight, FileText,
+  Lock, LockOpen, RotateCcw, Search, Upload, Users,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { SubirDocumentoDialog, type RequisitoSubida } from "@/features/subir-documento/subir-documento-dialog"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
-import { type Exigencia, type EstadoDoc, estadoDe, PILAR_COLOR, PILAR_DEFAULT } from "@/entities/documento/exigencia"
-import { ExigenciaRow } from "@/entities/documento/exigencia-row"
+import { BadgesMandante } from "@/entities/documento/badges-mandante"
+import { PILAR_COLOR, PILAR_DEFAULT } from "@/entities/documento/exigencia"
+import type { DocumentoContratista, EstadoPorMandante } from "@/entities/contratista/resumen"
 import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
 
 type Ambito = "EMPRESA" | "TRABAJADORES"
 
-// ── Componentes ───────────────────────────────────────────────────────────────
-
-function ContadorGrupo({ items }: { items: Exigencia[] }) {
-  const aprobados = items.filter(i => estadoDe(i) === "APROBADO").length
-  const pendientes = items.length - aprobados
+/**
+ * Un documento del contratista, con el estado de cada cliente que lo exige.
+ *
+ * Antes había una fila por (documento, mandante) y la página mostraba un solo
+ * mandante — el que el token eligiera al azar. Ahora el F30 es UNA fila con N
+ * badges: es lo que hace visible que se sube una vez y sirve para todos.
+ */
+function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad }: {
+  doc: DocumentoContratista
+  onSubir: (d: DocumentoContratista) => void
+  onHistorial: (d: DocumentoContratista, m: EstadoPorMandante) => void
+  onSensibilidad: (d: DocumentoContratista) => void
+}) {
   return (
-    <div className="flex items-center gap-3 text-xs shrink-0">
-      {aprobados > 0 && (
-        <span className="flex items-center gap-1 text-emerald-600 font-medium">
-          <CheckCircle2 size={11} /> {aprobados} aprobado{aprobados !== 1 ? "s" : ""}
-        </span>
-      )}
-      {pendientes > 0 && (
-        <span className="flex items-center gap-1 text-red-500 font-medium">
-          <AlertCircle size={11} /> {pendientes} pendiente{pendientes !== 1 ? "s" : ""}
-        </span>
-      )}
+    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3.5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <p className="text-sm font-medium text-slate-900">{doc.requisito_nombre}</p>
+            <span className="text-[10px] font-mono text-slate-400">{doc.requisito_codigo}</span>
+            {doc.servicio_nombre && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+                <Briefcase size={10} /> {doc.servicio_nombre}
+              </span>
+            )}
+            {doc.sensible && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-200">
+                <Lock size={9} /> sensible
+              </span>
+            )}
+          </div>
+          <div className="mt-2">
+            <BadgesMandante mandantes={doc.mandantes} onSelect={m => onHistorial(doc, m)} />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {doc.expediente_id && (
+            <button
+              onClick={() => onSensibilidad(doc)}
+              title="Definir si se comparte sin pedirte autorización"
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              {doc.sensible ? <Lock size={14} /> : <LockOpen size={14} />}
+            </button>
+          )}
+          <button
+            onClick={() => onSubir(doc)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+          >
+            <Upload size={12} />
+            Subir
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
 
-/** Grupo de requisitos de un pilar (ámbito Empresa). */
-function PilarGrupo({ codigo, nombre, items, onSubir, onHistorial }: {
-  codigo: string
-  nombre: string
-  items: Exigencia[]
-  onSubir: (e: Exigencia) => void
-  onHistorial: (e: Exigencia) => void
+function Grupo({ titulo, color, docs, children }: {
+  titulo: string
+  color: string | null
+  docs: DocumentoContratista[]
+  children: (d: DocumentoContratista) => React.ReactNode
 }) {
   const [open, setOpen] = useState(true)
-  const c = PILAR_COLOR[codigo] ?? PILAR_DEFAULT
+  const c = (color && PILAR_COLOR[color]) || PILAR_DEFAULT
 
   return (
-    <div className={cn("rounded-xl border overflow-hidden", c.border)}>
+    <div>
       <button
         onClick={() => setOpen(!open)}
-        className={cn("w-full flex items-center gap-3 px-5 py-4 text-left hover:opacity-90 transition-opacity", c.bg)}
+        className={cn("w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg transition-opacity hover:opacity-90", c.bg)}
       >
-        <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
-        <p className={cn("text-sm font-bold flex-1 text-left", c.text)}>{nombre}</p>
-        <ContadorGrupo items={items} />
-        {open ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+        <span className={cn("w-2 h-2 rounded-full shrink-0", c.dot)} />
+        <p className={cn("text-xs font-semibold flex-1 uppercase tracking-wider", c.text)}>{titulo}</p>
+        <span className="text-[10px] text-slate-500">{docs.length}</span>
+        {open ? <ChevronDown size={13} className="text-slate-400" /> : <ChevronRight size={13} className="text-slate-400" />}
       </button>
-
-      {open && (
-        <div className="bg-white p-4 space-y-1.5">
-          {items.map((i, idx) => (
-            <ExigenciaRow key={`${i.requisito_id}-${i.servicio_id ?? "e"}-${idx}`} item={i} onSubir={onSubir} onHistorial={onHistorial} />
-          ))}
-        </div>
-      )}
+      {open && <div className="space-y-2 mt-2">{docs.map(children)}</div>}
     </div>
   )
 }
 
-/** Grupo de requisitos de un trabajador (ámbito Trabajadores), sub-agrupados por pilar. */
-function TrabajadorGrupo({ nombre, items, onSubir, onHistorial }: {
-  nombre: string
-  items: Exigencia[]
-  onSubir: (e: Exigencia) => void
-  onHistorial: (e: Exigencia) => void
+/** El contratista decide si este documento suyo se comparte sin preguntarle. */
+function SensibilidadDialog({ doc, onClose, onDone }: {
+  doc: DocumentoContratista
+  onClose: () => void
+  onDone: () => void
 }) {
-  const [open, setOpen] = useState(true)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const porPilar: { codigo: string; nombre: string; items: Exigencia[] }[] = []
-  for (const e of items) {
-    let g = porPilar.find(p => p.codigo === e.pilar_codigo)
-    if (!g) {
-      g = { codigo: e.pilar_codigo, nombre: e.pilar_nombre, items: [] }
-      porPilar.push(g)
+  async function guardar(sensible: boolean | null) {
+    setGuardando(true)
+    setError(null)
+    try {
+      await api.patch(`/api/v1/reutilizacion/expedientes/${doc.expediente_id}/sensibilidad`, { sensible })
+      onDone()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo guardar")
+    } finally {
+      setGuardando(false)
     }
-    g.items.push(e)
   }
 
-  const iniciales = nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
+  const opciones = [
+    {
+      valor: true as const, icono: Lock, titulo: "Pedirme autorización",
+      texto: "Ningún cliente nuevo lo verá hasta que yo lo apruebe.",
+      deshabilitado: false,
+    },
+    {
+      valor: false as const, icono: LockOpen, titulo: "Compartir sin preguntar",
+      texto: doc.puede_relajar
+        ? "Un cliente nuevo que lo exija lo recibe de inmediato."
+        : "No disponible: contiene datos personales de un trabajador, y esa protección no es tuya para renunciar.",
+      deshabilitado: !doc.puede_relajar,
+    },
+    {
+      valor: null, icono: RotateCcw, titulo: "Usar el criterio por defecto",
+      texto: "El que definió BERISA para este tipo de documento.",
+      deshabilitado: false,
+    },
+  ]
 
   return (
-    <div className="rounded-xl border border-slate-200 overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-50/70 transition-colors"
-      >
-        <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center shrink-0">
-          {iniciales}
-        </div>
-        <p className="text-sm font-bold flex-1 text-left text-slate-800">{nombre}</p>
-        <ContadorGrupo items={items} />
-        {open ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
-      </button>
+    <div className="fixed inset-0 bg-slate-900/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <p className="text-sm font-semibold text-slate-900">Compartir este documento</p>
+        <p className="text-xs text-slate-500 mt-1">{doc.requisito_nombre}</p>
 
-      {open && (
-        <div className="bg-white p-4 space-y-4">
-          {porPilar.map(g => {
-            const c = PILAR_COLOR[g.codigo] ?? PILAR_DEFAULT
+        <div className="mt-4 space-y-2">
+          {opciones.map(({ valor, icono: Icono, titulo, texto, deshabilitado }) => {
+            const activo = doc.sensible_override === valor
             return (
-              <div key={g.codigo} className="space-y-2">
-                <p className={cn("text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5", c.text)}>
-                  <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
-                  {g.nombre}
-                </p>
-                <div className="space-y-1.5">
-                  {g.items.map((i, idx) => (
-                    <ExigenciaRow key={`${i.requisito_id}-${i.servicio_id ?? "e"}-${idx}`} item={i} onSubir={onSubir} onHistorial={onHistorial} />
-                  ))}
-                </div>
-              </div>
+              <button
+                key={String(valor)}
+                onClick={() => guardar(valor)}
+                disabled={guardando || deshabilitado}
+                className={cn(
+                  "w-full text-left px-3 py-2.5 rounded-lg border transition-colors",
+                  deshabilitado
+                    ? "border-slate-100 opacity-50 cursor-not-allowed"
+                    : activo
+                      ? "border-slate-900 bg-slate-50"
+                      : "border-slate-200 hover:border-slate-400"
+                )}
+              >
+                <span className="text-sm text-slate-900 flex items-center gap-2">
+                  <Icono size={13} /> {titulo}
+                  {activo && <span className="text-[10px] text-slate-500">· actual</span>}
+                </span>
+                <span className="block text-[11px] text-slate-500 mt-0.5">{texto}</span>
+              </button>
             )
           })}
         </div>
-      )}
+
+        {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-md mt-3">{error}</p>}
+
+        <button onClick={onClose} className="w-full mt-4 py-2 text-sm text-slate-500 hover:text-slate-800">
+          Cancelar
+        </button>
+      </div>
     </div>
   )
 }
@@ -132,269 +188,196 @@ function TrabajadorGrupo({ nombre, items, onSubir, onHistorial }: {
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function DocumentosPage() {
-  const [session, setSession] = useState<{ contratista_id: string; mandante_id: string } | null>(null)
-  const [exigencias, setExigencias] = useState<Exigencia[]>([])
+  const [contratistaId, setContratistaId] = useState<string | null>(null)
+  const [docs, setDocs] = useState<DocumentoContratista[]>([])
   const [loading, setLoading] = useState(true)
   const [ambito, setAmbito] = useState<Ambito>("EMPRESA")
   const [busqueda, setBusqueda] = useState("")
-  const [subirItem, setSubirItem] = useState<Exigencia | null>(null)
-  const [historialItem, setHistorialItem] = useState<Exigencia | null>(null)
-  const [filtroEstado, setFiltroEstado] = useState<EstadoDoc | "TODOS">("TODOS")
+  const [filtroMandante, setFiltroMandante] = useState("TODOS")
+  const [subirDoc, setSubirDoc] = useState<DocumentoContratista | null>(null)
+  const [historial, setHistorial] = useState<{ doc: DocumentoContratista; m: EstadoPorMandante } | null>(null)
+  const [sensibilidadDoc, setSensibilidadDoc] = useState<DocumentoContratista | null>(null)
 
-  const cargar = useCallback((s?: { contratista_id: string; mandante_id: string } | null) => {
-    const sesion = s ?? getSession()
-    if (!sesion?.contratista_id || !sesion?.mandante_id) return
+  const cargar = useCallback(() => {
     setLoading(true)
-    api.get<Exigencia[]>(`/api/v1/acreditacion/${sesion.contratista_id}/mandante/${sesion.mandante_id}/exigencias`)
-      .then(setExigencias)
-      .catch(() => setExigencias([]))
+    api.get<DocumentoContratista[]>("/api/v1/documentos/mis-documentos")
+      .then(setDocs)
+      .catch(() => setDocs([]))
       .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
-    const s = getSession()
-    if (s) {
-      setSession(s)
-      cargar(s)
-    }
+    setContratistaId(getSession()?.contratista_id ?? null)
+    cargar()
   }, [cargar])
 
-  const itemsAmbito = exigencias.filter(e => ambito === "EMPRESA" ? !e.trabajador_id : !!e.trabajador_id)
-  const totalEmpresa = exigencias.filter(e => !e.trabajador_id).length
-  const totalTrabajadores = exigencias.filter(e => !!e.trabajador_id).length
+  // El cliente es un FILTRO opcional, no un modo: por defecto se ven todos.
+  const mandantes = useMemo(() => {
+    const m = new Map<string, string>()
+    docs.forEach(d => d.mandantes.forEach(x => m.set(x.mandante_id, x.mandante_razon_social)))
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [docs])
 
-  const kpi = {
-    total: itemsAmbito.length,
-    aprobados: itemsAmbito.filter(e => estadoDe(e) === "APROBADO").length,
-    enRevision: itemsAmbito.filter(e => ["ENVIADO", "EN_ANALISIS"].includes(estadoDe(e))).length,
-    observados: itemsAmbito.filter(e => estadoDe(e) === "OBSERVADO").length,
-  }
+  const visibles = docs
+    .filter(d => ambito === "EMPRESA" ? !d.trabajador_id : !!d.trabajador_id)
+    .filter(d => filtroMandante === "TODOS" || d.mandantes.some(m => m.mandante_id === filtroMandante))
+    .filter(d => {
+      if (!busqueda) return true
+      const q = busqueda.toLowerCase()
+      return d.requisito_nombre.toLowerCase().includes(q)
+        || d.requisito_codigo.toLowerCase().includes(q)
+        || (d.trabajador_nombre ?? "").toLowerCase().includes(q)
+        || (d.servicio_nombre ?? "").toLowerCase().includes(q)
+    })
 
-  const buscados = busqueda
-    ? itemsAmbito.filter(i =>
-        i.requisito_nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        (i.trabajador_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ?? false) ||
-        (i.servicio_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ?? false)
-      )
-    : itemsAmbito
+  const totalEmpresa = docs.filter(d => !d.trabajador_id).length
+  const totalTrabajadores = docs.filter(d => !!d.trabajador_id).length
 
-  const visibles = filtroEstado === "TODOS" ? buscados : buscados.filter(e => estadoDe(e) === filtroEstado)
-
-  // Empresa: agrupado por pilar. Trabajadores: agrupado por trabajador (y dentro, por pilar).
-  const pilares: { codigo: string; nombre: string; items: Exigencia[] }[] = []
-  const trabajadores: { id: string; nombre: string; items: Exigencia[] }[] = []
-  for (const e of visibles) {
-    if (ambito === "EMPRESA") {
-      let g = pilares.find(p => p.codigo === e.pilar_codigo)
-      if (!g) {
-        g = { codigo: e.pilar_codigo, nombre: e.pilar_nombre, items: [] }
-        pilares.push(g)
+  // Empresa se agrupa por pilar; Trabajadores, por persona.
+  const grupos = useMemo(() => {
+    const g = new Map<string, { titulo: string; color: string | null; docs: DocumentoContratista[] }>()
+    visibles.forEach(d => {
+      const clave = ambito === "EMPRESA" ? (d.pilar_codigo ?? "OTROS") : (d.trabajador_id ?? "?")
+      if (!g.has(clave)) {
+        g.set(clave, {
+          titulo: ambito === "EMPRESA" ? (d.pilar_nombre ?? "Otros") : (d.trabajador_nombre ?? "Sin nombre"),
+          color: ambito === "EMPRESA" ? d.pilar_codigo : null,
+          docs: [],
+        })
       }
-      g.items.push(e)
-    } else {
-      let g = trabajadores.find(t => t.id === e.trabajador_id)
-      if (!g) {
-        g = { id: e.trabajador_id!, nombre: e.trabajador_nombre ?? "Sin nombre", items: [] }
-        trabajadores.push(g)
-      }
-      g.items.push(e)
-    }
-  }
-
-  const sinResultados = ambito === "EMPRESA" ? pilares.length === 0 : trabajadores.length === 0
+      g.get(clave)!.docs.push(d)
+    })
+    return [...g.values()]
+  }, [visibles, ambito])
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Header */}
       <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900">Documentos</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Lo que tus servicios activos exigen y el estado de cada expediente
-            </p>
-          </div>
-          <button
-            onClick={() => cargar()}
-            className="flex items-center gap-2 text-sm text-slate-500 border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            <RefreshCw size={13} />
-            Actualizar
-          </button>
-        </div>
-
-        {/* Ámbito: Empresa / Trabajadores */}
-        <div className="mt-4 flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-          <button
-            onClick={() => setAmbito("EMPRESA")}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-              ambito === "EMPRESA" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
-            )}
-          >
-            <Building2 size={13} /> Empresa
-            <span className="text-slate-400">({totalEmpresa})</span>
-          </button>
-          <button
-            onClick={() => setAmbito("TRABAJADORES")}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-              ambito === "TRABAJADORES" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
-            )}
-          >
-            <Users size={13} /> Trabajadores
-            <span className="text-slate-400">({totalTrabajadores})</span>
-          </button>
-        </div>
+        <h1 className="text-xl font-semibold text-slate-900">Mis documentos</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Tu biblioteca. Cada documento se sube una vez y vale para todos los clientes que lo exijan.
+        </p>
       </div>
 
-      <div className="flex-1 overflow-auto px-8 py-6 space-y-5">
-
-        {/* KPI (del ámbito activo) */}
-        <div className="grid grid-cols-4 gap-4">
-          {[
-            { label: "Exigidos", value: kpi.total, color: "text-slate-900" },
-            { label: "Aprobados", value: kpi.aprobados, color: "text-emerald-600" },
-            { label: "En revisión", value: kpi.enRevision, color: "text-blue-600" },
-            { label: "Observados", value: kpi.observados, color: "text-red-600" },
-          ].map(k => (
-            <div key={k.label} className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{k.label}</p>
-              <p className={cn("text-3xl font-semibold mt-1", k.color)}>{k.value}</p>
-            </div>
+      <div className="px-8 py-4 border-b border-slate-200 bg-white shrink-0 flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
+          {([
+            { v: "EMPRESA" as const, label: "Empresa", icon: Building2, n: totalEmpresa },
+            { v: "TRABAJADORES" as const, label: "Trabajadores", icon: Users, n: totalTrabajadores },
+          ]).map(({ v, label, icon: Icon, n }) => (
+            <button
+              key={v}
+              onClick={() => setAmbito(v)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                ambito === v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              <Icon size={13} /> {label}
+              <span className="text-[10px] text-slate-400">{n}</span>
+            </button>
           ))}
         </div>
 
-        {/* Alerta observados */}
-        {kpi.observados > 0 && (
-          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-5 py-4">
-            <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-red-800">
-                {kpi.observados} documento{kpi.observados !== 1 ? "s" : ""} requiere{kpi.observados === 1 ? "" : "n"} corrección
-              </p>
-              <p className="text-xs text-red-700 mt-0.5">
-                Revisa el motivo de cada observación y resube la versión corregida para avanzar en tu acreditación.
-              </p>
-            </div>
-          </div>
-        )}
+        <div className="relative">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar documento..."
+            className="pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          />
+        </div>
 
-        {/* Filtros */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder={ambito === "EMPRESA" ? "Buscar documento o servicio..." : "Buscar documento o trabajador..."}
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-            />
-          </div>
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
-            {([
-              { value: "TODOS", label: "Todos" },
-              { value: "APROBADO", label: "Aprobados" },
-              { value: "ENVIADO", label: "En revisión" },
-              { value: "OBSERVADO", label: "Observados" },
-              { value: "FALTA", label: "Faltan" },
-            ] as const).map(f => (
-              <button
-                key={f.value}
-                onClick={() => setFiltroEstado(f.value as EstadoDoc | "TODOS")}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                  filtroEstado === f.value ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"
-                )}
-              >
-                {f.label}
-              </button>
+        {mandantes.length > 1 && (
+          <select
+            value={filtroMandante}
+            onChange={e => setFiltroMandante(e.target.value)}
+            className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          >
+            <option value="TODOS">Todos los clientes</option>
+            {mandantes.map(([id, nombre]) => (
+              <option key={id} value={id}>{nombre}</option>
             ))}
-          </div>
-        </div>
-
-        {/* Grupos */}
-        <div className="space-y-4">
-          {ambito === "EMPRESA"
-            ? pilares.map(g => (
-                <PilarGrupo
-                  key={g.codigo}
-                  codigo={g.codigo}
-                  nombre={g.nombre}
-                  items={g.items}
-                  onSubir={setSubirItem}
-                  onHistorial={setHistorialItem}
-                />
-              ))
-            : trabajadores.map(t => (
-                <TrabajadorGrupo
-                  key={t.id}
-                  nombre={t.nombre}
-                  items={t.items}
-                  onSubir={setSubirItem}
-                  onHistorial={setHistorialItem}
-                />
-              ))
-          }
-          {!loading && sinResultados && (
-            <div className="py-14 text-center bg-white rounded-xl border border-slate-200">
-              <FileText size={28} className="text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-500 font-medium">
-                {itemsAmbito.length === 0
-                  ? ambito === "EMPRESA"
-                    ? "No hay documentos de empresa exigidos todavía"
-                    : "No hay documentos de trabajadores exigidos todavía"
-                  : "No hay documentos que coincidan con el filtro"}
-              </p>
-              {itemsAmbito.length === 0 && (
-                <p className="text-xs text-slate-400 mt-1">
-                  Cuando el mandante cree un servicio para tu empresa, sus exigencias aparecerán aquí.
-                </p>
-              )}
-            </div>
-          )}
-          {loading && sinResultados && (
-            <div className="py-14 text-center bg-white rounded-xl border border-slate-200">
-              <p className="text-sm text-slate-400">Cargando exigencias...</p>
-            </div>
-          )}
-        </div>
+          </select>
+        )}
       </div>
 
-      {historialItem?.documento_id && (
+      <div className="flex-1 overflow-auto px-8 py-6 space-y-5">
+        {loading ? (
+          <p className="text-sm text-slate-400 py-14 text-center">Cargando documentos...</p>
+        ) : grupos.length === 0 ? (
+          <div className="py-14 text-center bg-white rounded-xl border border-dashed border-slate-200">
+            <FileText size={26} className="text-slate-300 mx-auto mb-3" />
+            <p className="text-sm text-slate-500">
+              {docs.length === 0
+                ? "Todavía no hay documentos exigidos"
+                : "Ningún documento coincide con el filtro"}
+            </p>
+            {docs.length === 0 && (
+              <p className="text-xs text-slate-400 mt-1">
+                Cuando un cliente cree un servicio para tu empresa, sus exigencias aparecerán aquí.
+              </p>
+            )}
+          </div>
+        ) : (
+          grupos.map((g, i) => (
+            <Grupo key={i} titulo={g.titulo} color={g.color} docs={g.docs}>
+              {d => (
+                <DocumentoRow
+                  key={d.clave}
+                  doc={d}
+                  onSubir={setSubirDoc}
+                  onHistorial={(doc, m) => setHistorial({ doc, m })}
+                  onSensibilidad={setSensibilidadDoc}
+                />
+              )}
+            </Grupo>
+          ))
+        )}
+      </div>
+
+      {historial?.m.documento_id && (
         <HistorialDialog
-          documentoId={historialItem.documento_id}
-          titulo={
-            historialItem.trabajador_nombre
-              ? `${historialItem.requisito_nombre} — ${historialItem.trabajador_nombre}`
-              : historialItem.requisito_nombre + (historialItem.servicio_nombre ? ` — ${historialItem.servicio_nombre}` : "")
-          }
-          onClose={() => setHistorialItem(null)}
+          documentoId={historial.m.documento_id}
+          titulo={`${historial.doc.requisito_nombre} — ${historial.m.mandante_razon_social}`}
+          onClose={() => setHistorial(null)}
         />
       )}
 
-      {session && subirItem && (
+      {contratistaId && subirDoc && subirDoc.mandantes.length > 0 && (
         <SubirDocumentoDialog
           open
-          onClose={() => setSubirItem(null)}
-          onSuccess={() => cargar()}
+          onClose={() => setSubirDoc(null)}
+          onSuccess={() => { setSubirDoc(null); cargar() }}
           requisito={{
-            id: subirItem.requisito_id,
-            nombre: subirItem.requisito_nombre,
-            codigo: subirItem.requisito_codigo,
-            alcance: subirItem.alcance,
-            max_archivos: subirItem.max_archivos,
+            id: subirDoc.requisito_id,
+            nombre: subirDoc.requisito_nombre,
+            codigo: subirDoc.requisito_codigo,
+            alcance: subirDoc.alcance,
+            max_archivos: subirDoc.max_archivos,
           } satisfies RequisitoSubida}
-          mandanteId={session.mandante_id}
-          empresaId={subirItem.trabajador_id ? undefined : session.contratista_id}
-          trabajadorId={subirItem.trabajador_id ?? undefined}
-          trabajadorNombre={subirItem.trabajador_nombre ?? undefined}
+          // La entrega es del expediente, no de un mandante: el backend la
+          // propaga a todos los que la necesiten, sin mover al que ya aprobó una
+          // versión vigente. Se manda el primero solo para resolver la
+          // acreditación de referencia y validar el alcance.
+          mandanteId={subirDoc.mandantes[0].mandante_id}
+          empresaId={subirDoc.trabajador_id ? undefined : contratistaId}
+          trabajadorId={subirDoc.trabajador_id ?? undefined}
+          trabajadorNombre={subirDoc.trabajador_nombre ?? undefined}
           servicioFijo={
-            subirItem.servicio_id && subirItem.servicio_nombre
-              ? { id: subirItem.servicio_id, nombre: subirItem.servicio_nombre }
+            subirDoc.servicio_id && subirDoc.servicio_nombre
+              ? { id: subirDoc.servicio_id, nombre: subirDoc.servicio_nombre }
               : undefined
           }
+        />
+      )}
+
+      {sensibilidadDoc && (
+        <SensibilidadDialog
+          doc={sensibilidadDoc}
+          onClose={() => setSensibilidadDoc(null)}
+          onDone={() => { setSensibilidadDoc(null); cargar() }}
         />
       )}
     </div>

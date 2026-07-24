@@ -153,6 +153,52 @@ def acreditaciones_pendientes_autorizacion(db: Session, contratista_id: uuid.UUI
     )
 
 
+def es_sensible(exp: Expediente, req) -> bool:
+    """
+    Sensibilidad efectiva: la decisión del contratista pisa el default del
+    catálogo, salvo que intente relajar un documento de un trabajador.
+    """
+    if exp.sensible_override is None:
+        return req.sensible
+    if exp.sensible_override is False and req.entidad_tipo == EntidadTipo.TRABAJADOR:
+        # Relajar datos de un tercero no es suyo para decidir. Se ignora el
+        # override y manda el catálogo. La API lo rechaza antes de llegar acá;
+        # esto cubre datos ya persistidos o cambios de entidad_tipo posteriores.
+        return req.sensible
+    return exp.sensible_override
+
+
+def definir_sensibilidad(
+    db: Session, expediente_id: uuid.UUID, contratista_id: uuid.UUID, sensible: bool | None
+) -> Expediente:
+    """
+    El contratista decide si este documento suyo se comparte sin preguntar.
+    `None` vuelve al default del catálogo.
+
+    Relajar (False) solo se permite en documentos de entidad EMPRESA: el
+    contenido de un documento de trabajador es dato personal de un tercero.
+    """
+    exp = db.get(Expediente, expediente_id)
+    if not exp or exp.eliminado_en is not None:
+        raise DocumentoNoEncontrado(f"Expediente {expediente_id} no encontrado.")
+
+    dueño_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+    if dueño_id != contratista_id:
+        raise DocumentoNoEncontrado(f"Expediente {expediente_id} no encontrado.")
+
+    if sensible is False and exp.requisito.entidad_tipo == EntidadTipo.TRABAJADOR:
+        raise EstadoDocumentoInvalido(
+            "Este documento contiene datos personales de un trabajador. Puedes exigir "
+            "autorización para compartirlo, pero no puedes renunciar a esa protección "
+            "en su nombre."
+        )
+
+    exp.sensible_override = sensible
+    db.commit()
+    db.refresh(exp)
+    return exp
+
+
 def _requisitos_exigidos_entidad(db, contratista_id, mandante_id):
     rel = (
         db.query(ContratistaMandante)
@@ -206,7 +252,7 @@ def _entrega_vigente(exp, req, hoy: date) -> Entrega | None:
 
 
 def _crear_reutilizada(db, exp, mandante_id, req, vigente: Entrega) -> Acreditacion:
-    if req.sensible:
+    if es_sensible(exp, req):
         acred = Acreditacion(
             mandante_id=mandante_id, expediente_id=exp.id,
             estado=EstadoDocumento.PENDIENTE_AUTORIZACION,

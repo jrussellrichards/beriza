@@ -1,26 +1,6 @@
 export type EstadoDoc = "APROBADO" | "EN_ANALISIS" | "OBSERVADO" | "ENVIADO" | "VENCIDO" | "PENDIENTE_AUTORIZACION" | "FALTA"
 
-export interface Exigencia {
-  requisito_id: string
-  requisito_codigo: string
-  requisito_nombre: string
-  entidad_tipo: "EMPRESA" | "TRABAJADOR"
-  alcance: "ENTIDAD" | "SERVICIO"
-  max_archivos: number
-  estado: number | null
-  fecha_vigencia_hasta: string | null
-  mensaje_brecha: string | null
-  documento_id: string | null
-  trabajador_id: string | null
-  trabajador_nombre: string | null
-  servicio_id: string | null
-  servicio_nombre: string | null
-  pilar_codigo: string
-  pilar_nombre: string
-}
-
 export const ESTADO_NUM: Record<number, EstadoDoc> = { 1: "ENVIADO", 2: "EN_ANALISIS", 3: "OBSERVADO", 4: "APROBADO", 5: "VENCIDO", 6: "PENDIENTE_AUTORIZACION" }
-export const estadoDe = (e: Exigencia): EstadoDoc => (e.estado ? ESTADO_NUM[e.estado] ?? "FALTA" : "FALTA")
 
 export const ESTADO_CFG: Record<EstadoDoc, { label: string; dot: string; text: string; bg: string; border: string }> = {
   APROBADO:    { label: "Aprobado",    dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
@@ -52,21 +32,4 @@ export function diasParaVencer(iso: string | null): number | null {
   const vence = new Date(iso)
   vence.setHours(0, 0, 0, 0)
   return Math.round((vence.getTime() - hoy.getTime()) / 86_400_000)
-}
-
-/**
- * Documentos aprobados que caducan dentro de `dias`, más urgente primero.
- * Los ya vencidos quedan fuera: el cron los pasa a VENCIDO y se muestran con su
- * propio badge, no como aviso preventivo.
- */
-export function porVencer(items: Exigencia[], dias = 30): Exigencia[] {
-  return items
-    .filter(e => {
-      if (e.estado !== 4) return false
-      const d = diasParaVencer(e.fecha_vigencia_hasta)
-      return d !== null && d >= 0 && d <= dias
-    })
-    .sort((a, b) =>
-      (diasParaVencer(a.fecha_vigencia_hasta) ?? 0) - (diasParaVencer(b.fecha_vigencia_hasta) ?? 0)
-    )
 }
