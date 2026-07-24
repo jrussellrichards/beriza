@@ -78,9 +78,11 @@ el primer archivo post-migración).
   prerequisito de la reutilización — sin él, reutilizar habría compartido
   documentos de negocio con un mandante nuevo sin consentimiento. Se implementó
   junto con R1–R3 de Fase 2.
-- **Fase 4 — Subcontratistas (ortogonal):** tabla `ServicioSubcontratista`;
-  `Acreditacion.mandante_id` = mandante real (Ley 20.123). **Decisión abierta:**
-  revisión delegada completa vs. vista agregada.
+- **Fase 4 — Subcontratistas (ortogonal, PENDIENTE):** tabla
+  `ServicioSubcontratista`; `Acreditacion.mandante_id` = mandante real
+  (Ley 20.123). **Decisión C tomada:** revisión delegada **completa** — el
+  mandante verifica los documentos del subcontratista él mismo, no le basta una
+  vista agregada del cumplimiento que le reporte el contratista principal.
 
 ## Fase 2 — qué se implementó
 
@@ -142,7 +144,12 @@ el job `backend-test` de CI que gatea el deploy.
 
 - **A (aceptada):** cron con auto-repin a renovación vigente antes de VENCIDO.
 - **B (aceptada):** flag de sensibilidad para gatear el compartir.
-- **C (pendiente):** alcance de subcontratistas.
+- **C (aceptada):** subcontratistas con **revisión delegada completa**. El
+  mandante revisa los documentos del subcontratista directamente — es él quien
+  responde ante la Ley 20.123, así que no puede delegar la verificación en el
+  contratista principal y quedarse con un reporte agregado. Implicancia de
+  diseño: `Acreditacion.mandante_id` apunta al mandante real, no al contratista
+  principal, y el subcontratista necesita su propio acceso al portal.
 - **D (aceptada):** reutilización **automática** para genéricos (sin fricción) y
   **con autorización explícita** para sensibles. Se descartó pedir autorización
   siempre: convertía cada mandante nuevo en una fila de aprobaciones para el
