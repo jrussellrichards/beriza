@@ -55,6 +55,37 @@ def verificar_acceso_documento(db: Session, acreditacion: Acreditacion, usuario:
     )
 
 
+def puede_ver_todas_las_entregas(db: Session, acreditacion: Acreditacion, usuario: Usuario) -> bool:
+    """
+    True para el dueño del expediente (el contratista) y para berisa_admin.
+
+    Un MANDANTE no: él solo tiene derecho a la entrega que su acreditación fija.
+    Autorizar a nivel de acreditación no basta — la unidad de lo que se comparte
+    es la Entrega, y confundirlas dejaba que un mandante con una acreditación en
+    PENDIENTE_AUTORIZACION (sin entrega fijada, justamente para no compartir el
+    archivo) leyera el historial y bajara el documento igual.
+    """
+    if usuario.rol == "berisa_admin":
+        return True
+    return bool(usuario.contratista_id
+                and _empresa_duena_de(db, acreditacion) == usuario.contratista_id)
+
+
+def entrega_visible(acreditacion: Acreditacion, entrega, ve_todas: bool) -> bool:
+    """
+    ¿Este usuario puede ver esta entrega del expediente?
+
+    El mandante ve hasta la versión que tiene fijada — las que revisó — y nunca
+    las posteriores. Sin pin (PENDIENTE_AUTORIZACION o requisito aún sin
+    entregar) no ve ninguna.
+    """
+    if ve_todas:
+        return True
+    if acreditacion.numero_version is None:
+        return False
+    return entrega.numero_version <= acreditacion.numero_version
+
+
 def verificar_acceso_relacion(
     db: Session,
     contratista_id: uuid.UUID,

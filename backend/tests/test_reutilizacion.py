@@ -175,6 +175,45 @@ def run():
         assert e.status_code == 404, f"debio ser 404 (no revelar existencia), fue {e.status_code}"
     print("PASS: contratista ajeno -> 404 (aislamiento multi-tenant)")
 
+    # ── Un PENDIENTE_AUTORIZACION no filtra el documento ─────────────────────
+    # Regresion de una fuga real detectada en produccion: el mandante podia leer
+    # el historial y obtener una URL firmada del archivo sensible que NO tenia
+    # autorizado, porque los endpoints validaban "el archivo es del expediente"
+    # en vez de "es de la entrega que este mandante tiene fijada".
+    from app.api import documentos as api_doc
+    from app.models.expediente import Archivo
+
+    exp_fuga = _expediente_vigente(db, _requisito(db, sub, "BALANCE_2", sensible=True), c)
+    entrega_fuga = exp_fuga.entregas[0]
+    db.add(Archivo(entrega_id=entrega_fuga.id, orden=0, storage_key="x/y.pdf",
+                   nombre_original="secreto.pdf", mime_type="application/pdf",
+                   tamaño_bytes=1, hash_sha256="0" * 64))
+    acred_pend = Acreditacion(mandante_id=m.id, expediente_id=exp_fuga.id,
+                              estado=EstadoDocumento.PENDIENTE_AUTORIZACION)
+    db.add(acred_pend); db.commit()
+
+    u_mandante = Usuario(email="m@fal.cl", password_hash="x", rol="mandante_admin",
+                         nombre="M", mandante_id=m.id, activo=True)
+    db.add(u_mandante); db.commit()
+
+    hist = api_doc.historial_documento(documento_id=acred_pend.id, db=db, usuario=u_mandante)
+    assert hist.versiones == [], "el mandante no debe ver NINGUNA version sin autorizar"
+    print("PASS: sin autorizar, el mandante no ve versiones en el historial")
+
+    archivo = entrega_fuga.archivos[0]
+    try:
+        api_doc.url_descarga_archivo(documento_id=acred_pend.id, archivo_id=archivo.id,
+                                     db=db, usuario=u_mandante)
+        raise AssertionError("FUGA: entrego una URL firmada de un documento sin autorizar")
+    except HTTPException as e:
+        assert e.status_code == 404, f"debio ser 404, fue {e.status_code}"
+    print("PASS: sin autorizar, el mandante NO obtiene URL de descarga")
+
+    # El contratista dueño sí ve su propio documento completo.
+    hist_dueño = api_doc.historial_documento(documento_id=acred_pend.id, db=db, usuario=usuario)
+    assert len(hist_dueño.versiones) == 1, "el dueño debe seguir viendo su documento"
+    print("PASS: el contratista dueño sigue viendo su propio documento")
+
     # ── Sensibilidad decidida por el contratista ─────────────────────────────
     # Endurecer: un requisito generico pasa a exigir autorizacion porque el
     # contratista lo decidio para SU documento.
