@@ -166,6 +166,23 @@ def run():
     assert por_nombre["Falabella"].mensaje_brecha == "Ilegible"
     print("PASS: cada mandante conserva SU version (v1 aprobada vs v2 observada)")
 
+    # Y el caso mas confuso de todos: AMBOS aprueban, pero versiones distintas.
+    # Los dos badges dicen "aprobado" y solo el numero de version explica por que
+    # tienen vigencias distintas.
+    acred_fal.estado = EstadoDocumento.APROBADO
+    acred_fal.mensaje_brecha = None
+    db.commit()
+
+    f = next(d for d in acreditacion_service.vista_documental(db, c.id)
+             if d.requisito_codigo == "F30")
+    por_nombre = {m.mandante_razon_social: m for m in f.mandantes}
+    assert all(m.estado == EstadoDocumento.APROBADO for m in f.mandantes)
+    assert por_nombre["Codelco"].numero_version == 1
+    assert por_nombre["Falabella"].numero_version == 2
+    assert len({m.numero_version for m in f.mandantes}) == 2, \
+        "ambos aprobados pero en versiones distintas: la UI debe poder distinguirlas"
+    print("PASS: ambos aprobados en versiones distintas -> versiones distinguibles")
+
     print("TODOS LOS TESTS DE VISTA DOCUMENTAL PASARON")
 
 

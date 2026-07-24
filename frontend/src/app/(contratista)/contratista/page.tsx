@@ -7,7 +7,7 @@ import {
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 import {
-  ESTADO_GLOBAL_CFG, vigenciaMasProxima,
+  ESTADO_GLOBAL_CFG,
   type DocumentoContratista, type ResumenMandante,
 } from "@/entities/contratista/resumen"
 import { diasParaVencer, formatFecha } from "@/entities/documento/exigencia"
@@ -67,13 +67,22 @@ function MandanteCard({ r }: { r: ResumenMandante }) {
   )
 }
 
-/** Documentos aprobados que caducan pronto. */
+/**
+ * Documentos que caducan pronto, por CLIENTE afectado.
+ *
+ * Un mismo documento puede vencer en fechas distintas según el mandante: si
+ * Codelco quedó anclado a la v1 y Falabella a la v2, la v1 caduca antes. Decir
+ * solo "el F30 vence en 5 días" ocultaría que el problema es con Codelco y que
+ * con Falabella no hay nada que hacer.
+ */
 function AvisoPorVencer({ docs }: { docs: DocumentoContratista[] }) {
   const items = docs
-    .map(d => {
-      const vence = vigenciaMasProxima(d)
-      return { doc: d, vence, dias: diasParaVencer(vence) }
-    })
+    .flatMap(doc => doc.mandantes.map(m => ({
+      doc,
+      mandante: m.mandante_razon_social,
+      vence: m.fecha_vigencia_hasta,
+      dias: diasParaVencer(m.fecha_vigencia_hasta),
+    })))
     .filter(x => x.dias !== null && x.dias >= 0 && x.dias <= 30)
     .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0))
 
@@ -91,8 +100,8 @@ function AvisoPorVencer({ docs }: { docs: DocumentoContratista[] }) {
             Renuévalos antes de que caduquen para no perder la acreditación.
           </p>
           <ul className="mt-3 space-y-1.5">
-            {items.slice(0, 4).map(({ doc, vence, dias }) => (
-              <li key={doc.clave} className="flex items-baseline gap-2 text-xs">
+            {items.slice(0, 4).map(({ doc, mandante, vence, dias }) => (
+              <li key={`${doc.clave}:${mandante}`} className="flex items-baseline gap-2 text-xs">
                 <span className={cn(
                   "font-medium tabular-nums shrink-0",
                   (dias ?? 0) <= 7 ? "text-red-600" : "text-orange-700"
@@ -102,6 +111,7 @@ function AvisoPorVencer({ docs }: { docs: DocumentoContratista[] }) {
                 <span className="text-slate-600 truncate">
                   {doc.requisito_nombre}
                   {doc.trabajador_nombre && <span className="text-slate-400"> · {doc.trabajador_nombre}</span>}
+                  <span className="text-slate-400"> — {mandante}</span>
                 </span>
                 <span className="text-slate-400 shrink-0 ml-auto">{formatFecha(vence)}</span>
               </li>

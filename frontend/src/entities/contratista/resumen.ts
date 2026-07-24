@@ -50,16 +50,3 @@ export const ESTADO_GLOBAL_CFG: Record<EstadoGlobal, {
   BLOQUEADA:  { label: "Bloqueada",  text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200",     dot: "bg-red-500" },
   PENDIENTE:  { label: "Pendiente",  text: "text-slate-600",   bg: "bg-slate-50",   border: "border-slate-200",   dot: "bg-slate-400" },
 }
-
-/**
- * La vigencia más próxima entre los mandantes de un documento. Cada mandante
- * puede estar anclado a una entrega distinta (v1 vs v2), así que la fecha no es
- * única: se muestra la que vence antes, que es la que obliga a actuar.
- */
-export function vigenciaMasProxima(doc: DocumentoContratista): string | null {
-  const fechas = doc.mandantes
-    .map(m => m.fecha_vigencia_hasta)
-    .filter((f): f is string => f !== null)
-  if (fechas.length === 0) return null
-  return fechas.sort()[0]
-}
