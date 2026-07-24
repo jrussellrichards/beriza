@@ -5,6 +5,7 @@ Un servicio es el contrato/faena concreto entre un mandante y una empresa
 contratista. Cada servicio referencia un perfil de requisitos del mandante,
 que define qué documentos se exigen y con qué parámetros.
 """
+import logging
 import uuid
 from datetime import date
 from decimal import Decimal
@@ -23,6 +24,8 @@ from app.domain.estados import EstadoServicio
 from app.models.contratista import ContratistaMandante
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
+
+logger = logging.getLogger("acredita")
 
 
 # ── Perfiles de requisitos ────────────────────────────────────────────────────
@@ -149,6 +152,10 @@ def crear_servicio(
             notificacion_service.notificar_reutilizacion(db, contratista_id, mandante_id, creadas)
     except Exception:
         db.rollback()
+        logger.exception(
+            "Falló la reutilización documental del contratista %s para el mandante %s "
+            "al crear el servicio %s", contratista_id, mandante_id, servicio.id,
+        )
 
     return servicio
 
