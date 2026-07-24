@@ -198,6 +198,7 @@ export default function DocumentosPage() {
   const [ambito, setAmbito] = useState<Ambito>("EMPRESA")
   const [busqueda, setBusqueda] = useState("")
   const [filtroMandante, setFiltroMandante] = useState("TODOS")
+  const [filtroEstado, setFiltroEstado] = useState("TODOS")
   const [subirDoc, setSubirDoc] = useState<DocumentoContratista | null>(null)
   const [historial, setHistorial] = useState<{ doc: DocumentoContratista; m: EstadoPorMandante } | null>(null)
   const [sensibilidadDoc, setSensibilidadDoc] = useState<DocumentoContratista | null>(null)
@@ -225,6 +226,11 @@ export default function DocumentosPage() {
   const visibles = docs
     .filter(d => ambito === "EMPRESA" ? !d.trabajador_id : !!d.trabajador_id)
     .filter(d => filtroMandante === "TODOS" || d.mandantes.some(m => m.mandante_id === filtroMandante))
+    .filter(d => {
+      if (filtroEstado === "TODOS") return true
+      if (filtroEstado === "FALTA") return d.mandantes.some(m => m.estado === null)
+      return d.mandantes.some(m => String(m.estado) === filtroEstado)
+    })
     .filter(d => {
       if (!busqueda) return true
       const q = busqueda.toLowerCase()
@@ -255,15 +261,15 @@ export default function DocumentosPage() {
   }, [visibles, ambito])
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
-        <h1 className="text-xl font-semibold text-slate-900">Mis documentos</h1>
+    <div className="flex flex-col min-h-screen">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
+        <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Mis documentos</h1>
         <p className="text-sm text-slate-500 mt-0.5">
           Tu biblioteca. Cada documento se sube una vez y vale para todos los clientes que lo exijan.
         </p>
       </div>
 
-      <div className="px-8 py-4 border-b border-slate-200 bg-white shrink-0 flex items-center gap-3 flex-wrap">
+      <div className="px-6 sm:px-8 py-4 border-b border-slate-200 bg-white flex items-center gap-3 flex-wrap">
         <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
           {([
             { v: "EMPRESA" as const, label: "Empresa", icon: Building2, n: totalEmpresa },
@@ -293,6 +299,20 @@ export default function DocumentosPage() {
           />
         </div>
 
+        <select
+          value={filtroEstado}
+          onChange={e => setFiltroEstado(e.target.value)}
+          className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+        >
+          <option value="TODOS">Cualquier estado</option>
+          <option value="FALTA">Falta subir</option>
+          <option value="3">Observado</option>
+          <option value="6">Requiere autorización</option>
+          <option value="1">En revisión</option>
+          <option value="4">Aprobado</option>
+          <option value="5">Vencido</option>
+        </select>
+
         {mandantes.length > 1 && (
           <select
             value={filtroMandante}
@@ -307,7 +327,7 @@ export default function DocumentosPage() {
         )}
       </div>
 
-      <div className="flex-1 overflow-auto px-8 py-6 space-y-5">
+      <div className="flex-1 px-6 sm:px-8 py-6 space-y-5">
         {loading ? (
           <p className="text-sm text-slate-400 py-14 text-center">Cargando documentos...</p>
         ) : grupos.length === 0 ? (

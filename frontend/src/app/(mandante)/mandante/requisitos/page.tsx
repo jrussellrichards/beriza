@@ -407,12 +407,12 @@ export default function PerfilesPage() {
   const totalExigidos = pilares.flatMap(p => p.requisitos).filter(r => r.es_obligatorio).length
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">Perfiles de exigencias</h1>
+            <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Perfiles de exigencias</h1>
             <p className="text-sm text-slate-500 mt-0.5">
               Define qué documentos exiges por tipo de servicio — cada servicio usa un perfil
             </p>
@@ -481,7 +481,7 @@ export default function PerfilesPage() {
       </div>
 
       {/* Pilares */}
-      <div className={cn("flex-1 overflow-auto px-8 py-6 space-y-4 transition-all duration-300", panel ? "mr-96" : "")}>
+      <div className={cn("flex-1 px-6 sm:px-8 py-6 space-y-4 transition-all duration-300", panel ? "lg:mr-96" : "")}>
         {pilares.map((pilar) => (
           <PilarSection
             key={pilar.id}

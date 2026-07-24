@@ -159,11 +159,11 @@ export default function ServiciosPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", seleccionado ? "mr-96" : "")}>
+    <div className="flex min-h-screen">
+      <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", seleccionado ? "lg:mr-96" : "")}>
 
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
+        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold text-slate-900">Servicios</h1>
@@ -179,7 +179,7 @@ export default function ServiciosPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-8 py-6 space-y-5">
+        <div className="flex-1 px-6 sm:px-8 py-6 space-y-5">
 
           {/* KPI */}
           <div className="grid grid-cols-4 gap-4">

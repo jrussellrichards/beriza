@@ -4,7 +4,7 @@ from sqlalchemy import String, Boolean, Date, ForeignKey, Index, Integer, JSON, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from decimal import Decimal
 from app.models.base import ModelBase
-from app.domain.estados import EstadoServicio
+from app.domain.estados import EstadoServicio, TipoServicio
 
 
 class PerfilRequisitos(ModelBase):
@@ -62,6 +62,9 @@ class Servicio(ModelBase):
     )
     perfil_requisitos_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("perfiles_requisitos.id"), nullable=False)
     nombre: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Vocabulario del rubro: el portal del contratista muestra esta palabra
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False,
+                                      default=TipoServicio.SERVICIO, server_default="SERVICIO")
     codigo_referencia: Mapped[str | None] = mapped_column(String(100), nullable=True)
     descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
     fecha_inicio: Mapped[date] = mapped_column(Date, nullable=False)

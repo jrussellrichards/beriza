@@ -7,6 +7,7 @@ import { api } from "@/shared/lib/api"
 import { getSession } from "@/shared/lib/auth"
 import { AvancePanel } from "@/entities/servicio/avance-panel"
 import type { EstadoServicio, Servicio } from "@/entities/servicio/types"
+import { TIPO_LABEL } from "@/entities/contratista/resumen"
 
 const ESTADO_CFG: Record<EstadoServicio, { label: string; dot: string; text: string; bg: string; border: string }> = {
   ACTIVO:     { label: "Activo",     dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
@@ -211,23 +212,23 @@ export default function ServiciosContratistaPage() {
   useEffect(() => { cargar() }, [cargar])
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", seleccionado ? "mr-96" : "")}>
+    <div className="flex min-h-screen">
+      <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", seleccionado ? "lg:mr-96" : "")}>
 
-        <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
-          <h1 className="text-xl font-semibold text-slate-900">Mis servicios</h1>
+        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
+          <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Mis servicios</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Faenas contratadas, su avance de acreditación y la dotación asignada
+            Lo que cada cliente te contrató, su avance y la dotación asignada
           </p>
         </div>
 
-        <div className="flex-1 overflow-auto px-8 py-6">
+        <div className="flex-1 px-6 sm:px-8 py-6 overflow-x-auto">
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Servicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Perfil</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Perfil</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Dotación</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Inicio</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
@@ -250,13 +251,16 @@ export default function ServiciosContratistaPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="font-medium text-slate-900 truncate max-w-[240px]">{s.nombre}</p>
+                            <p className="text-[10px] text-slate-500">
+                              {TIPO_LABEL[s.tipo] ?? s.tipo} · {s.mandante_razon_social}
+                            </p>
                             {s.codigo_referencia && (
                               <p className="text-[10px] text-slate-400 font-mono">{s.codigo_referencia}</p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-500">{s.perfil_nombre}</td>
+                      <td className="px-4 py-3.5 text-xs text-slate-500 hidden md:table-cell">{s.perfil_nombre}</td>
                       <td className="px-4 py-3.5 text-xs text-slate-500">{s.trabajadores_asignados}</td>
                       <td className="px-4 py-3.5 text-xs text-slate-400">{s.fecha_inicio}</td>
                       <td className="px-4 py-3.5"><EstadoBadge estado={s.estado} /></td>
