@@ -354,6 +354,49 @@ class UrlDescargaResponse(BaseModel):
     expira_en_segundos: int = 3600
 
 
+class ResumenMandanteResponse(BaseModel):
+    """Cómo va el contratista con UN cliente. Fila del dashboard."""
+    mandante_id: uuid.UUID
+    mandante_razon_social: str
+    estado_global: str
+    servicios_activos: int
+    brechas: list[str]
+    trabajadores_total: int
+    trabajadores_ok: int
+
+    model_config = {"from_attributes": True}
+
+
+class EstadoPorMandanteResponse(BaseModel):
+    """Cómo juzga un mandante concreto un documento del contratista."""
+    mandante_id: uuid.UUID
+    mandante_razon_social: str
+    estado: int | None
+    mensaje_brecha: str | None
+    documento_id: uuid.UUID | None
+    fecha_vigencia_hasta: date | None
+
+
+class DocumentoContratistaResponse(BaseModel):
+    """Un documento del contratista con el estado de cada mandante que lo exige."""
+    clave: str
+    requisito_id: uuid.UUID
+    requisito_codigo: str
+    requisito_nombre: str
+    entidad_tipo: str
+    alcance: str
+    max_archivos: int
+    pilar_codigo: str | None
+    pilar_nombre: str | None
+    trabajador_id: uuid.UUID | None
+    trabajador_nombre: str | None
+    servicio_id: uuid.UUID | None
+    servicio_nombre: str | None
+    mandantes: list[EstadoPorMandanteResponse]
+
+    model_config = {"from_attributes": True}
+
+
 class SolicitudAutorizacionResponse(BaseModel):
     """Documento sensible que un mandante nuevo quiere ver por reutilización."""
     acreditacion_id: uuid.UUID

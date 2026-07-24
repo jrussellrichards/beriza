@@ -549,3 +549,154 @@ def _resumir(items: list[RequisitoAvance]) -> ResumenAvance:
         faltantes=faltantes,
         porcentaje_avance=round(aprobados / total * 100) if total else 0,
     )
+
+
+# ── Vista por documento (portal del contratista) ──────────────────────────────
+#
+# El portal del contratista se organiza por DOCUMENTO, no por mandante: un F30
+# no es "mi F30 de Codelco", es mi F30 —que Codelco aprobó, Falabella tiene en
+# revisión y Anglo ni exige—. Es la vista que hace visible la reutilización de
+# Fase 2 y la única forma de que el contratista entienda que subió una vez y le
+# sirvió para varios clientes.
+#
+# Se construye agregando `evaluar_relacion` sobre todos los mandantes: la lógica
+# de qué se exige y en qué estado está vive ahí y no se duplica.
+
+
+@dataclass
+class EstadoPorMandante:
+    """Cómo juzga UN mandante este documento. Uno por acreditación."""
+    mandante_id: uuid.UUID
+    mandante_razon_social: str
+    estado: int | None                 # None = exigido pero sin subir
+    mensaje_brecha: str | None
+    documento_id: uuid.UUID | None     # id de la Acreditacion (para historial/descarga)
+    fecha_vigencia_hasta: date | None  # de la entrega que ESE mandante tiene fijada
+
+
+@dataclass
+class DocumentoContratista:
+    """Un documento del contratista con el estado de cada mandante que lo exige."""
+    clave: str
+    requisito_id: uuid.UUID
+    requisito_codigo: str
+    requisito_nombre: str
+    entidad_tipo: str
+    alcance: str
+    max_archivos: int
+    pilar_codigo: str | None
+    pilar_nombre: str | None
+    trabajador_id: uuid.UUID | None
+    trabajador_nombre: str | None
+    servicio_id: uuid.UUID | None
+    servicio_nombre: str | None
+    mandantes: list[EstadoPorMandante] = field(default_factory=list)
+
+
+def vista_documental(db: Session, contratista_id: uuid.UUID) -> list[DocumentoContratista]:
+    """
+    Todos los documentos del contratista con su estado ante cada mandante.
+
+    Agrupación: los de alcance ENTIDAD se unifican entre mandantes (es el mismo
+    F30 físico); los de alcance SERVICIO nunca, porque el servicio pertenece a un
+    solo mandante y el MIPER de Obra Norte no es el de Obra Sur.
+    """
+    relaciones = db.query(ContratistaMandante).filter_by(contratista_id=contratista_id).all()
+    docs: dict[tuple, DocumentoContratista] = {}
+
+    for rel in relaciones:
+        evaluacion = evaluar_relacion(db, contratista_id, rel.mandante_id)
+        items = list(evaluacion.items_empresa)
+        for items_trabajador in evaluacion.items_trabajadores.values():
+            items.extend(items_trabajador)
+
+        for item in items:
+            clave = (item.requisito_id, item.trabajador_id, item.servicio_id)
+            doc = docs.get(clave)
+            if doc is None:
+                doc = DocumentoContratista(
+                    clave=f"{item.requisito_id}:{item.trabajador_id or ''}:{item.servicio_id or ''}",
+                    requisito_id=item.requisito_id,
+                    requisito_codigo=item.requisito_codigo,
+                    requisito_nombre=item.requisito_nombre,
+                    entidad_tipo=item.entidad_tipo,
+                    alcance=item.alcance,
+                    max_archivos=item.max_archivos,
+                    pilar_codigo=item.pilar_codigo,
+                    pilar_nombre=item.pilar_nombre,
+                    trabajador_id=item.trabajador_id,
+                    trabajador_nombre=item.trabajador_nombre,
+                    servicio_id=item.servicio_id,
+                    servicio_nombre=item.servicio_nombre,
+                )
+                docs[clave] = doc
+            doc.mandantes.append(EstadoPorMandante(
+                mandante_id=rel.mandante_id,
+                mandante_razon_social=rel.mandante.razon_social,
+                estado=item.estado,
+                mensaje_brecha=item.mensaje_brecha,
+                documento_id=item.documento_id,
+                fecha_vigencia_hasta=item.fecha_vigencia_hasta,
+            ))
+
+    for doc in docs.values():
+        doc.mandantes.sort(key=lambda m: m.mandante_razon_social)
+
+    # Empresa antes que trabajadores; dentro, por pilar y nombre de requisito.
+    return sorted(
+        docs.values(),
+        key=lambda d: (
+            d.entidad_tipo != EntidadTipo.EMPRESA,
+            d.trabajador_nombre or "",
+            d.pilar_nombre or "",
+            d.requisito_nombre,
+            d.servicio_nombre or "",
+        ),
+    )
+
+
+@dataclass
+class ResumenMandante:
+    """Fila del dashboard del contratista: cómo va con UN cliente."""
+    mandante_id: uuid.UUID
+    mandante_razon_social: str
+    estado_global: str
+    servicios_activos: int
+    brechas: list[str] = field(default_factory=list)
+    trabajadores_total: int = 0
+    trabajadores_ok: int = 0
+
+
+def resumen_por_mandante(db: Session, contratista_id: uuid.UUID) -> list[ResumenMandante]:
+    """
+    Una fila por cliente del contratista. Es la respuesta a "¿con quién estoy
+    bien y con quién no?", que hoy el dashboard no puede contestar porque está
+    cableado a un único mandante elegido arbitrariamente en el token.
+    """
+    resumenes: list[ResumenMandante] = []
+    relaciones = db.query(ContratistaMandante).filter_by(contratista_id=contratista_id).all()
+
+    for rel in relaciones:
+        estado = obtener_estado_acreditacion(db, contratista_id, rel.mandante_id)
+        brechas = [b for p in estado.pilares_empresa for b in p.brechas]
+        for t in estado.trabajadores:
+            if not t.cumple:
+                brechas.extend(f"{t.nombre}: {b}" for p in t.pilares for b in p.brechas)
+        resumenes.append(ResumenMandante(
+            mandante_id=rel.mandante_id,
+            mandante_razon_social=rel.mandante.razon_social,
+            estado_global=estado.estado_global,
+            servicios_activos=sum(1 for s in rel.servicios if s.estado == EstadoServicio.ACTIVO),
+            brechas=brechas,
+            trabajadores_total=len(estado.trabajadores),
+            trabajadores_ok=sum(1 for t in estado.trabajadores if t.cumple),
+        ))
+
+    # Lo que necesita atención primero: bloqueadas, luego en proceso.
+    orden = {
+        EstadoAcreditacion.BLOQUEADA: 0,
+        EstadoAcreditacion.EN_PROCESO: 1,
+        EstadoAcreditacion.PENDIENTE: 2,
+        EstadoAcreditacion.ACREDITADA: 3,
+    }
+    return sorted(resumenes, key=lambda r: (orden.get(r.estado_global, 9), r.mandante_razon_social))

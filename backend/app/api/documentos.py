@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.schemas import (
     ArchivoDocumentoResponse,
+    DocumentoContratistaResponse,
     DocumentoEventoResponse,
     DocumentoResponse,
     DocumentoVersionResponse,
@@ -25,7 +26,7 @@ from app.core.exceptions import (
     EstadoDocumentoInvalido,
     TrabajadorNoEncontrado,
 )
-from app.domain import archivo_service, documento_service
+from app.domain import acreditacion_service, archivo_service, documento_service
 from app.domain.archivo_service import ArchivoEntrada
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
@@ -150,6 +151,23 @@ def pendientes_revision(
             archivos=[ArchivoDocumentoResponse.model_validate(a) for a in entrega.archivos],
         ))
     return resultado
+
+
+@router.get("/mis-documentos", response_model=list[DocumentoContratistaResponse])
+def mis_documentos(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["contratista_admin", "prevencionista"])),
+):
+    """
+    Vista por documento del portal del contratista: cada documento con el estado
+    de TODOS los mandantes que lo exigen, no de uno solo.
+
+    El contratista se deriva del token — nunca del path — para que un usuario no
+    pueda pedir la biblioteca de otra empresa.
+    """
+    if not usuario.contratista_id:
+        raise HTTPException(status_code=400, detail="El usuario no está asociado a un contratista")
+    return acreditacion_service.vista_documental(db, usuario.contratista_id)
 
 
 @router.get("/{documento_id}", response_model=DocumentoResponse)

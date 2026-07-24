@@ -3,13 +3,28 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.schemas import AcreditacionResponse, RequisitoAvanceResponse
+from app.api.schemas import AcreditacionResponse, RequisitoAvanceResponse, ResumenMandanteResponse
 from app.domain import acreditacion_service
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
 from app.middleware.tenant import verificar_acceso_relacion
 
 router = APIRouter()
+
+
+@router.get("/mi-resumen", response_model=list[ResumenMandanteResponse])
+def mi_resumen(
+    db: Session = Depends(get_db),
+    usuario=Depends(require_rol(["contratista_admin", "prevencionista"])),
+):
+    """
+    Una fila por cliente del contratista: con quién está acreditado y con quién
+    no. Es lo que el dashboard no podía contestar cuando estaba cableado a un
+    único mandante. El contratista sale del token, nunca del path.
+    """
+    if not usuario.contratista_id:
+        raise HTTPException(status_code=400, detail="El usuario no está asociado a un contratista")
+    return acreditacion_service.resumen_por_mandante(db, usuario.contratista_id)
 
 
 @router.get("/{contratista_id}/mandante/{mandante_id}/exigencias", response_model=list[RequisitoAvanceResponse])
