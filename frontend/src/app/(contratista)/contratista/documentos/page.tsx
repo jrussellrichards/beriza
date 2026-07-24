@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Briefcase, Building2, ChevronDown, ChevronRight, FileText,
-  Lock, LockOpen, RotateCcw, Search, Upload, Users,
+  Lock, LockOpen, Search, Upload, Users,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { SubirDocumentoDialog, type RequisitoSubida } from "@/features/subir-documento/subir-documento-dialog"
@@ -122,6 +122,9 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
     }
   }
 
+  // Solo dos opciones. La que rige hoy —sea porque la eligió el contratista o
+  // porque es el default del catálogo— viene marcada; no se le pide entender
+  // qué definió BERISA, que es un concepto ajeno a él.
   const opciones = [
     {
       valor: true as const, icono: Lock, titulo: "Pedirme autorización",
@@ -131,14 +134,9 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
     {
       valor: false as const, icono: LockOpen, titulo: "Compartir sin preguntar",
       texto: doc.puede_relajar
-        ? "Un cliente nuevo que lo exija lo recibe de inmediato."
+        ? "Cualquier cliente que lo exija lo recibe de inmediato."
         : "No disponible: contiene datos personales de un trabajador, y esa protección no es tuya para renunciar.",
       deshabilitado: !doc.puede_relajar,
-    },
-    {
-      valor: null, icono: RotateCcw, titulo: "Usar el criterio por defecto",
-      texto: "El que definió BERISA para este tipo de documento.",
-      deshabilitado: false,
     },
   ]
 
@@ -147,10 +145,16 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
       <div className="bg-white rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
         <p className="text-sm font-semibold text-slate-900">Compartir este documento</p>
         <p className="text-xs text-slate-500 mt-1">{doc.requisito_nombre}</p>
+        {doc.sensible && doc.puede_relajar && (
+          <p className="text-[11px] text-violet-700 bg-violet-50 border border-violet-200 rounded-md px-2.5 py-1.5 mt-3">
+            Si eliges compartir sin preguntar, las solicitudes que ya estén esperando tu
+            autorización se aprueban de inmediato.
+          </p>
+        )}
 
         <div className="mt-4 space-y-2">
           {opciones.map(({ valor, icono: Icono, titulo, texto, deshabilitado }) => {
-            const activo = doc.sensible_override === valor
+            const activo = doc.sensible === valor
             return (
               <button
                 key={String(valor)}

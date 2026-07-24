@@ -228,6 +228,28 @@ def run():
     assert reutilizacion_service.es_sensible(exp_sens, req_sens) is False
     print("PASS: puede relajar un documento de su empresa")
 
+    # Liberar la restriccion resuelve las solicitudes que ya estaban esperando:
+    # dejarlas en la bandeja obligaria a aprobar una por una algo que el
+    # contratista acaba de declarar que no le importa.
+    req_lib = _requisito(db, sub, "BALANCE_LIB", sensible=True)
+    exp_lib = _expediente_vigente(db, req_lib, c)
+    a_lib = Acreditacion(mandante_id=m.id, expediente_id=exp_lib.id,
+                         estado=EstadoDocumento.PENDIENTE_AUTORIZACION)
+    db.add(a_lib); db.commit()
+
+    reutilizacion_service.definir_sensibilidad(db, exp_lib.id, c.id, False)
+    db.refresh(a_lib)
+    assert a_lib.estado == EstadoDocumento.ENVIADO, "al liberar debe compartirse sola"
+    assert a_lib.entrega_id is not None, "debe quedar anclada a la entrega vigente"
+    print("PASS: liberar la sensibilidad comparte las solicitudes pendientes")
+
+    # Y marcarlo sensible de nuevo NO revoca lo ya compartido: revocarlo
+    # desacreditaria de golpe a un mandante que ya lo tenia aprobado.
+    reutilizacion_service.definir_sensibilidad(db, exp_lib.id, c.id, True)
+    db.refresh(a_lib)
+    assert a_lib.estado == EstadoDocumento.ENVIADO, "marcar sensible no revoca lo ya compartido"
+    print("PASS: marcar sensible no revoca lo ya compartido")
+
     # Relajar un documento de TRABAJADOR: son datos de un tercero, se rechaza.
     req_trab = RequisitoDocumental(subpilar_id=sub.id, codigo="EXAM_MED", nombre="EXAM_MED",
                                    entidad_tipo="TRABAJADOR", alcance="ENTIDAD", sensible=True)
