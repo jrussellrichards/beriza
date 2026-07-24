@@ -57,6 +57,13 @@ MAX_ARCHIVOS = {
     "CARPETA_TRIBUTARIA": 5,
 }
 
+# Documentos que no caducan: quedan fuera del cron de vencimientos y sus alertas
+SIN_VENCIMIENTO = {"RIOHS", "DJ_CONFLICTO"}
+
+# Contenido de negocio: no se comparte con un mandante nuevo por reutilización
+# automática — el contratista autoriza caso a caso (bandeja de solicitudes).
+SENSIBLES = {"CARPETA_TRIBUTARIA"}
+
 
 def _hash(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -69,10 +76,13 @@ def _vigencia(dias: int) -> date:
 # ── Pilares y requisitos ──────────────────────────────────────────────────────
 
 def _aplicar_parametros_catalogo(reqs: dict[str, RequisitoDocumental]):
-    """Aplica alcance y max_archivos según las decisiones de negocio del módulo."""
+    """Aplica alcance, max_archivos, vigencia y sensibilidad según las
+    decisiones de negocio del módulo."""
     for codigo, req in reqs.items():
         req.alcance = ALCANCES.get(codigo, Alcance.ENTIDAD)
         req.max_archivos = MAX_ARCHIVOS.get(codigo, 1)
+        req.sin_vencimiento = codigo in SIN_VENCIMIENTO
+        req.sensible = codigo in SENSIBLES
 
 
 def seed_pilares(session: Session) -> dict[str, RequisitoDocumental]:

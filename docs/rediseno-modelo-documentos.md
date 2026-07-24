@@ -71,19 +71,68 @@ el primer archivo post-migración).
      `reglas_service.py` (el `codigo` dejó de ser único global tras los
      requisitos propios por mandante), y bloquear que un requisito propio
      colisione con el catálogo global en `pilares.py`.
-- **Fase 1 — Núcleo:** las 4 tablas + storage + migración + reescritura de
-  dominio (subir_entrega, acreditacion_service, revisar, historial).
-- **Fase 2 — Reutilización + vigencia:** auto-generar Acreditación al exigirse
-  un requisito; fecha única en Entrega; cron de vencimiento (Celery **beat**
-  nuevo, no existe hoy) con auto-repin; alertas 30/15/7/1.
-- **Fase 3 — Sensibilidad:** flag en `RequisitoDocumental`; documentos con
-  contenido de negocio piden autorización del contratista antes de compartirse.
+- **Fase 1 — Núcleo (LISTA):** las 4 tablas + storage + migración + reescritura
+  de dominio (subir_entrega, acreditacion_service, revisar, historial).
+- **Fase 2 — Reutilización + vigencia (LISTA):** ver detalle abajo.
+- **Fase 3 — Sensibilidad (LISTA, adelantada a Fase 2):** el flag `sensible` era
+  prerequisito de la reutilización — sin él, reutilizar habría compartido
+  documentos de negocio con un mandante nuevo sin consentimiento. Se implementó
+  junto con R1–R3 de Fase 2.
 - **Fase 4 — Subcontratistas (ortogonal):** tabla `ServicioSubcontratista`;
   `Acreditacion.mandante_id` = mandante real (Ley 20.123). **Decisión abierta:**
   revisión delegada completa vs. vista agregada.
+
+## Fase 2 — qué se implementó
+
+Rama `fase-2-reutilizacion-vigencia`. Dos verticales, por incrementos verificados.
+
+### Vigencia y vencimientos
+
+- `RequisitoDocumental.sin_vencimiento`: requisitos que no caducan (escritura de
+  la sociedad) quedan fuera del cron y de las alertas.
+- Estado `VENCIDO = 5`. Transiciones: `APROBADO → VENCIDO` (cron),
+  `VENCIDO → ENVIADO` (renovación o auto-repin).
+- `vencimiento_service.procesar_vencimientos`: por cada Acreditación APROBADA
+  cuya entrega fijada expiró, si el expediente tiene una entrega posterior
+  vigente hace **auto-repin** a ella (`RENOVACION_AUTO` → ENVIADO); si no,
+  marca `VENCIDO`. Idempotente.
+- `alertas_de_vencimiento`: digest al contratista a 30/15/7/1 días.
+- Celery **beat** nuevo (servicio `beat` en `docker-compose.prod.yml`), diario 07:00.
+
+### Reutilización entre mandantes
+
+Un F30 vigente vale para todos los mandantes: el contratista no lo sube N veces.
+
+- `RequisitoDocumental.sensible`: gatea el compartir automático.
+- `reutilizacion_service.reconciliar_reutilizacion(db, contratista, mandante)`:
+  por cada requisito **de alcance ENTIDAD** que el mandante exige y el
+  contratista ya tiene resuelto, crea la Acreditación faltante:
+  - genérico → `ENVIADO` anclado a la entrega vigente. **Nunca pre-aprobado**:
+    cada mandante lo revisa con su propia config (su `vigencia_max_dias` puede
+    ser más estricto).
+  - sensible → `PENDIENTE_AUTORIZACION = 6`, **sin** `entrega_id` — el archivo
+    no se comparte hasta que el contratista autorice.
+- Los requisitos de alcance SERVICIO no se reutilizan entre mandantes: son
+  específicos de la faena (un MIPER por obra).
+- **Trigger:** `servicio_service.crear_servicio`, best-effort — un fallo de la
+  reconciliación no revierte la creación del servicio, que ya está confirmada.
+- **Bandeja:** `/api/v1/reutilizacion/solicitudes` + `/contratista/solicitudes`.
+  Autorizar ancla la entrega vigente y pasa a ENVIADO. Rechazar descarta la
+  acreditación y **el rechazo es durable**: `reconciliar_reutilizacion` no
+  vuelve a proponer un expediente que ya tuvo acreditación con ese mandante
+  (por eso el chequeo de existencia no filtra `eliminado_en`).
+- Aislamiento: los endpoints responden **404, no 403**, si la acreditación no es
+  del contratista del usuario — un 403 confirmaría que existe.
+
+Tests: `backend/tests/test_vencimiento.py` y `test_reutilizacion.py`, ambos en
+el job `backend-test` de CI que gatea el deploy.
 
 ## Decisiones de producto
 
 - **A (aceptada):** cron con auto-repin a renovación vigente antes de VENCIDO.
 - **B (aceptada):** flag de sensibilidad para gatear el compartir.
 - **C (pendiente):** alcance de subcontratistas.
+- **D (aceptada):** reutilización **automática** para genéricos (sin fricción) y
+  **con autorización explícita** para sensibles. Se descartó pedir autorización
+  siempre: convertía cada mandante nuevo en una fila de aprobaciones para el
+  contratista, que es justo el trabajo manual que el rediseño elimina.
