@@ -46,6 +46,7 @@ const ESTADO_LABEL: Record<string, { label: string; cls: string }> = {
   "3": { label: "Observado", cls: "bg-red-50 text-red-700 border-red-200" },
   "4": { label: "Aprobado", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   "5": { label: "Vencido", cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  "6": { label: "Requiere autorización", cls: "bg-violet-50 text-violet-700 border-violet-200" },
 }
 
 const EVENTO_LABEL: Record<string, string> = {
@@ -53,6 +54,10 @@ const EVENTO_LABEL: Record<string, string> = {
   CAMBIO_ESTADO: "Cambio de estado",
   REVISION_MANUAL: "Revisión del mandante",
   EXCEPCION_APROBADA: "Aprobación por excepción",
+  VENCIMIENTO: "Documento vencido",
+  RENOVACION_AUTO: "Renovado automáticamente",
+  REUTILIZACION: "Documento reutilizado",
+  AUTORIZACION_COMPARTIR: "Compartir autorizado",
   ELIMINACION: "Eliminación",
 }
 
@@ -62,9 +67,12 @@ function fecha(iso: string): string {
   })
 }
 
-export function HistorialDialog({ documentoId, titulo, onClose }: {
+export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClose }: {
   documentoId: string
   titulo: string
+  /** Estado de ESTA acreditación. Sin él no se puede distinguir una versión
+   *  vieja de una que todavía no se comparte. */
+  estadoAcreditacion?: number | null
   onClose: () => void
 }) {
   const [historial, setHistorial] = useState<Historial | null>(null)
@@ -110,13 +118,32 @@ export function HistorialDialog({ documentoId, titulo, onClose }: {
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Versiones ({historial.versiones.length})
               </p>
+              {historial.versiones.length === 0 && (
+                <div className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center">
+                  <p className="text-xs text-slate-500">
+                    El contratista todavía no autorizó compartir este documento.
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Está marcado como sensible: verás el archivo cuando lo apruebe.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 {[...historial.versiones].reverse().map((v) => {
-                  // estado 0 = versión histórica (el estado vive en la acreditación,
-                  // solo aplica a la versión vigente que el mandante revisa)
+                  // estado 0 = esta versión no es la que la acreditación tiene
+                  // fijada. Puede ser por dos motivos muy distintos: es una
+                  // versión vieja, o el documento aún no se comparte con este
+                  // mandante (espera autorización, y entonces NINGUNA está
+                  // fijada). Decir "versión anterior" en el segundo caso
+                  // confunde: no es antigua, es la única que hay.
+                  const sinCompartir = estadoAcreditacion === 6
                   const e = ESTADO_LABEL[String(v.estado)] ?? {
-                    label: v.estado === 0 ? "Versión anterior" : `Estado ${v.estado}`,
-                    cls: "bg-slate-50 text-slate-600 border-slate-200",
+                    label: v.estado !== 0
+                      ? `Estado ${v.estado}`
+                      : sinCompartir ? "Aún no compartida" : "Versión anterior",
+                    cls: sinCompartir
+                      ? "bg-violet-50 text-violet-700 border-violet-200"
+                      : "bg-slate-50 text-slate-600 border-slate-200",
                   }
                   return (
                     <div key={v.id} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
