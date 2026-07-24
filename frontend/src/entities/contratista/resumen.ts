@@ -117,3 +117,25 @@ export interface ServicioContratista {
   perfil_nombre: string
   trabajadores_asignados: number
 }
+
+// ── Portal del mandante ──────────────────────────────────────────────────────
+
+export interface ServicioEnRiesgo {
+  servicio_id: string
+  servicio_nombre: string
+  servicio_tipo: TipoServicio
+  contratista_razon_social: string
+  trabajadores_asignados: number
+  trabajadores_no_habilitados: number
+  documentos_pendientes: number
+  brechas_empresa: string[]
+}
+
+/** Dónde está expuesto el mandante, por faena. */
+export interface RiesgoMandante {
+  total_servicios: number
+  servicios_en_riesgo: number
+  personas_no_habilitadas: number
+  documentos_por_revisar: number
+  servicios: ServicioEnRiesgo[]
+}

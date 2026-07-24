@@ -160,7 +160,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
       {avance.trabajadores.length > 0 && (
         <div>
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
-            Dotación ({avance.trabajadores.filter((t) => t.cumple).length}/{avance.trabajadores.length} al día)
+            Dotación ({avance.trabajadores.filter((t) => t.cumple).length}/{avance.trabajadores.length} puede ingresar)
           </p>
           <div className="space-y-1.5">
             {avance.trabajadores.map((t) => (
@@ -169,7 +169,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
                   <p className="text-xs font-medium text-slate-800">{t.nombre}</p>
                   <p className="text-[10px] text-slate-400 font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
                 </div>
-                <span className={cn("text-xs font-medium", t.cumple ? "text-emerald-600" : "text-amber-600")}>
+                <span className={cn("text-xs font-medium", t.cumple ? "text-emerald-600" : "text-red-600")}>
                   {t.aprobados}/{t.total}
                 </span>
               </div>
