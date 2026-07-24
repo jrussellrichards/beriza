@@ -173,11 +173,20 @@ def subir_entrega(
     # aquel al que se le subió. Best-effort: la entrega ya está confirmada y no
     # debe perderse porque la propagación falle.
     if requisito.alcance == Alcance.ENTIDAD:
-        from app.domain import reutilizacion_service
+        from app.domain import notificacion_service, reutilizacion_service
         try:
-            reutilizacion_service.reconciliar_todos_los_mandantes(
+            propagadas = reutilizacion_service.reconciliar_todos_los_mandantes(
                 db, empresa_efectiva_id, excepto_mandante_id=mandante_id
             )
+            # Solo se avisa de lo que necesita acción del contratista: que un
+            # documento sensible quedó esperando su autorización. Que un genérico
+            # se aplique a otro mandante es justo lo que pidió al subirlo, y
+            # mandarle un mail por cada mandante sería ruido.
+            for mid, creadas in propagadas.items():
+                if any(a.estado == EstadoDocumento.PENDIENTE_AUTORIZACION for a in creadas):
+                    notificacion_service.notificar_reutilizacion(
+                        db, empresa_efectiva_id, mid, creadas
+                    )
         except Exception:
             db.rollback()
             logger.exception(
