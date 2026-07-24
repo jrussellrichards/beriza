@@ -1,10 +1,17 @@
 """
-Orquestación del expediente documental.
+Orquestación del expediente documental (modelo Fase 1).
 
-Responsabilidad única: ciclo de vida de entregas (versiones), transiciones
-de estado y sincronización del snapshot del expediente. La validación de
-archivos vive en archivo_service; las reglas de aprobación en reglas_service;
-los bytes en infrastructure/storage.
+Separa la biblioteca del contratista (Expediente → Entrega → Archivo) de la
+revisión por mandante (Acreditacion). Ver docs/rediseno-modelo-documentos.md.
+
+- La subida crea/resuelve el Expediente (sin mandante), agrega una Entrega
+  (con de-dup por hash) y fija la Acreditacion del mandante a esa entrega.
+- La revisión y la excepción operan sobre la Acreditacion (estado por mandante).
+- La vigencia objetiva vive en la Entrega; el umbral por mandante en el perfil.
+
+Los nombres públicos (subir_entrega, revisar_documento, aprobar_por_excepcion,
+obtener_documento, listar_pendientes_revision) se mantienen para la capa API;
+"documento_id" en esa capa es ahora el id de la Acreditacion.
 """
 import uuid
 from dataclasses import dataclass
@@ -23,7 +30,7 @@ from app.domain import archivo_service, reglas_service
 from app.domain.archivo_service import ArchivoEntrada
 from app.domain.estados import Alcance, EntidadTipo, EstadoDocumento, TipoEvento, validar_transicion
 from app.ia import clasificador, extractor
-from app.models.documento import ArchivoDocumento, Documento, DocumentoEvento, DocumentoVersion
+from app.models.expediente import Acreditacion, AcreditacionEvento, Archivo, Entrega, Expediente
 from app.models.pilar import RequisitoDocumental
 from app.models.servicio import Servicio
 from app.models.trabajador import Trabajador
@@ -31,8 +38,8 @@ from app.models.trabajador import Trabajador
 
 @dataclass
 class ResultadoSubidaDocumento:
-    documento_id: uuid.UUID
-    version_id: uuid.UUID
+    documento_id: uuid.UUID   # id de la Acreditacion (contrato con la capa API)
+    version_id: uuid.UUID     # id de la Entrega
     numero_version: int
     mensaje: str
 
@@ -45,7 +52,7 @@ class ResultadoAnalisis:
     mensaje_brecha: str | None
 
 
-# ── Entrega (subida de una versión nueva) ─────────────────────────────────────
+# ── Subida de una entrega ─────────────────────────────────────────────────────
 
 def subir_entrega(
     db: Session,
@@ -58,12 +65,9 @@ def subir_entrega(
     subido_por_usuario_id: uuid.UUID,
 ) -> ResultadoSubidaDocumento:
     """
-    Registra una entrega: resuelve (o crea) el expediente según el alcance
-    del requisito, sube los archivos a storage, crea la versión N+1 con sus
-    archivos y el evento SUBIDA, y sincroniza el snapshot.
-
-    Si hay un Vision LLM configurado, encola el análisis IA; si no, la
-    entrega queda ENVIADO a la espera de revisión manual del mandante.
+    Registra una entrega: resuelve (o crea) el Expediente del contratista según
+    el alcance del requisito, sube los archivos (con de-dup por hash), y fija la
+    Acreditacion del mandante a esa entrega en estado ENVIADO.
     """
     requisito = db.get(RequisitoDocumental, requisito_id)
     if not requisito:
@@ -85,12 +89,11 @@ def subir_entrega(
     else:
         empresa_efectiva_id = empresa_id
 
-    # Alcance: SERVICIO exige servicio coherente; ENTIDAD lo ignora
+    # Alcance: SERVICIO exige servicio coherente con esta empresa y mandante;
+    # ENTIDAD lo ignora (el expediente es compartido entre servicios).
     if requisito.alcance == Alcance.SERVICIO:
         if servicio_id is None:
-            raise EntregaInvalida(
-                f"{requisito.codigo} se acredita por servicio; debe indicar servicio_id."
-            )
+            raise EntregaInvalida(f"{requisito.codigo} se acredita por servicio; debe indicar servicio_id.")
         servicio = db.get(Servicio, servicio_id)
         if (
             not servicio
@@ -101,115 +104,132 @@ def subir_entrega(
     else:
         servicio_id = None
 
-    doc = _resolver_documento(db, requisito, mandante_id, empresa_id, trabajador_id, servicio_id)
+    expediente = _resolver_expediente(db, requisito, empresa_id, trabajador_id, servicio_id)
+    acred = _resolver_acreditacion(db, expediente, mandante_id)
 
-    if doc.id is not None and doc.version_vigente_id is not None:
-        # Re-entrega: solo desde OBSERVADO (corrección) o APROBADO (renovación)
-        if doc.estado in (EstadoDocumento.ENVIADO, EstadoDocumento.EN_ANALISIS):
+    # Re-entrega: solo desde OBSERVADO (corrección) o APROBADO (renovación).
+    if acred.entrega_id is not None:
+        if acred.estado in (EstadoDocumento.ENVIADO, EstadoDocumento.EN_ANALISIS):
             raise EntregaInvalida(
                 f"Ya existe una entrega de {requisito.codigo} pendiente de revisión. "
                 "Espere el resultado antes de subir una nueva versión."
             )
-        validar_transicion(doc.estado, EstadoDocumento.ENVIADO)
+        validar_transicion(acred.estado, EstadoDocumento.ENVIADO)
 
-    numero_version = len(doc.versiones) + 1
+    # De-dup por contenido: si el set de archivos es idéntico a la última entrega
+    # del expediente, se reusa esa entrega en vez de crear una versión nueva.
+    archivo_service.validar_entrega(requisito, archivos)
+    hashes_nuevos = [archivo_service.calcular_hash(a.contenido) for a in archivos]
+    ultima = expediente.entregas[-1] if expediente.entregas else None
 
-    # Storage primero, commit de BD después
-    subidos = archivo_service.subir_archivos(
-        requisito=requisito,
-        archivos=archivos,
-        mandante_id=mandante_id,
-        empresa_id=empresa_efectiva_id,
-        entidad_tipo=requisito.entidad_tipo,
-        entidad_id=trabajador_id or empresa_id,
-        numero_version=numero_version,
-        servicio_id=servicio_id,
-    )
+    if ultima is not None and _mismos_archivos(ultima, hashes_nuevos):
+        entrega = ultima
+        entrega_creada = False
+    else:
+        numero_version = len(expediente.entregas) + 1
+        subidos = archivo_service.subir_archivos(
+            requisito=requisito,
+            archivos=archivos,
+            empresa_id=empresa_efectiva_id,
+            entidad_tipo=requisito.entidad_tipo,
+            entidad_id=trabajador_id or empresa_id,
+            numero_version=numero_version,
+            servicio_id=servicio_id,
+        )
+        entrega = Entrega(
+            expediente=expediente,
+            numero_version=numero_version,
+            subido_por_usuario_id=subido_por_usuario_id,
+        )
+        db.add(entrega)
+        for a in subidos:
+            db.add(Archivo(
+                entrega=entrega, orden=a.orden, storage_key=a.storage_key,
+                nombre_original=a.nombre_original, mime_type=a.mime_type,
+                tamaño_bytes=a.tamaño_bytes, hash_sha256=a.hash_sha256,
+            ))
+        db.flush()
+        entrega_creada = True
 
-    estado_anterior = doc.estado if doc.version_vigente_id else None
-    version = DocumentoVersion(
-        documento=doc,
-        numero_version=numero_version,
-        estado=EstadoDocumento.ENVIADO,
-        subido_por_usuario_id=subido_por_usuario_id,
-    )
-    db.add(version)
-    for a in subidos:
-        db.add(ArchivoDocumento(
-            version=version,
-            orden=a.orden,
-            storage_key=a.storage_key,
-            nombre_original=a.nombre_original,
-            mime_type=a.mime_type,
-            tamaño_bytes=a.tamaño_bytes,
-            hash_sha256=a.hash_sha256,
-        ))
+    estado_anterior = acred.estado if acred.entrega_id else None
+    acred.entrega_id = entrega.id
+    acred.numero_version = entrega.numero_version
+    acred.estado = EstadoDocumento.ENVIADO
+    acred.mensaje_brecha = None
     db.flush()
 
-    doc.estado = EstadoDocumento.ENVIADO
-    doc.mensaje_brecha = None
-    doc.fecha_vigencia_hasta = None
-    doc.version_vigente_id = version.id
-
     _registrar_evento(
-        db, doc, version, TipoEvento.SUBIDA,
+        db, acred, TipoEvento.SUBIDA,
         estado_anterior=estado_anterior, estado_nuevo=EstadoDocumento.ENVIADO,
         actor_usuario_id=subido_por_usuario_id,
-        detalle={"archivos": [a.nombre_original for a in subidos], "version": numero_version},
+        detalle={"version": entrega.numero_version, "archivos": [a.nombre_original for a in archivos]},
     )
     db.commit()
-    db.refresh(version)
 
-    if settings.IA_HABILITADA and settings.VISION_LLM_API_KEY:
-        # Importación local para evitar circularidad con el worker
+    if entrega_creada and settings.IA_HABILITADA and settings.VISION_LLM_API_KEY:
         from app.tasks.procesar_documento import procesar_documento_task
-        procesar_documento_task.delay(str(version.id))
+        procesar_documento_task.delay(str(entrega.id))
         mensaje = "Documento recibido, analizando..."
     else:
         mensaje = "Documento recibido, pendiente de revisión del mandante."
 
     return ResultadoSubidaDocumento(
-        documento_id=doc.id,
-        version_id=version.id,
-        numero_version=numero_version,
+        documento_id=acred.id,
+        version_id=entrega.id,
+        numero_version=entrega.numero_version,
         mensaje=mensaje,
     )
 
 
-def _resolver_documento(
+def _mismos_archivos(entrega: Entrega, hashes_nuevos: list[str]) -> bool:
+    """True si la entrega tiene exactamente los mismos archivos (por hash, en orden)."""
+    hashes_entrega = [a.hash_sha256 for a in sorted(entrega.archivos, key=lambda x: x.orden)]
+    return hashes_entrega == hashes_nuevos
+
+
+def _resolver_expediente(
     db: Session,
     requisito: RequisitoDocumental,
-    mandante_id: uuid.UUID,
     empresa_id: uuid.UUID | None,
     trabajador_id: uuid.UUID | None,
     servicio_id: uuid.UUID | None,
-) -> Documento:
-    """Retorna el expediente vivo para la identidad, o crea uno nuevo."""
-    query = db.query(Documento).filter_by(
-        requisito_id=requisito.id,
-        mandante_id=mandante_id,
-        servicio_id=servicio_id,
-        eliminado_en=None,
+) -> Expediente:
+    """Expediente vivo del contratista para la identidad (requisito, entidad, servicio?), o uno nuevo."""
+    query = db.query(Expediente).filter_by(
+        requisito_id=requisito.id, servicio_id=servicio_id, eliminado_en=None
     )
     if empresa_id:
-        query = query.filter_by(empresa_id=empresa_id)
+        query = query.filter_by(empresa_id=empresa_id, trabajador_id=None)
     else:
-        query = query.filter_by(trabajador_id=trabajador_id)
-    doc = query.first()
-    if doc:
-        return doc
+        query = query.filter_by(trabajador_id=trabajador_id, empresa_id=None)
+    exp = query.first()
+    if exp:
+        return exp
 
-    doc = Documento(
-        requisito_id=requisito.id,
-        mandante_id=mandante_id,
-        servicio_id=servicio_id,
-        empresa_id=empresa_id,
-        trabajador_id=trabajador_id,
-        estado=EstadoDocumento.ENVIADO,
+    exp = Expediente(
+        requisito_id=requisito.id, empresa_id=empresa_id,
+        trabajador_id=trabajador_id, servicio_id=servicio_id,
     )
-    db.add(doc)
+    db.add(exp)
     db.flush()
-    return doc
+    return exp
+
+
+def _resolver_acreditacion(db: Session, expediente: Expediente, mandante_id: uuid.UUID) -> Acreditacion:
+    """Acreditacion viva del mandante sobre el expediente, o una nueva."""
+    acred = (
+        db.query(Acreditacion)
+        .filter_by(expediente_id=expediente.id, mandante_id=mandante_id, eliminado_en=None)
+        .first()
+    )
+    if acred:
+        return acred
+    acred = Acreditacion(
+        expediente_id=expediente.id, mandante_id=mandante_id, estado=EstadoDocumento.ENVIADO,
+    )
+    db.add(acred)
+    db.flush()
+    return acred
 
 
 # ── Revisión manual (mandante, sin IA) ────────────────────────────────────────
@@ -223,38 +243,39 @@ def revisar_documento(
     fecha_vigencia_hasta: date | None = None,
 ) -> None:
     """
-    El mandante revisa manualmente la entrega vigente (estado Enviado):
-    la aprueba (con fecha de vigencia opcional) o la observa con el motivo.
+    El mandante revisa la entrega fijada en SU acreditación: la aprueba (con
+    fecha de vigencia opcional, que se escribe en la Entrega compartida solo si
+    aún no la tiene) o la observa con el motivo.
     """
-    doc = obtener_documento(db, documento_id)
-    version = doc.version_vigente
-    if version is None:
-        raise EstadoDocumentoInvalido("El expediente no tiene ninguna entrega para revisar.")
+    acred = obtener_documento(db, documento_id)
+    if acred.entrega_id is None:
+        raise EstadoDocumentoInvalido("La acreditación no tiene ninguna entrega para revisar.")
     if not aprobar and not (mensaje_brecha and mensaje_brecha.strip()):
         raise EstadoDocumentoInvalido("Para observar un documento debe indicar el motivo de la brecha.")
 
     nuevo_estado = EstadoDocumento.APROBADO if aprobar else EstadoDocumento.OBSERVADO
-    validar_transicion(doc.estado, nuevo_estado)
+    validar_transicion(acred.estado, nuevo_estado)
 
-    version.estado = nuevo_estado
-    version.revisado_por_usuario_id = usuario_id
-    version.revisado_en = datetime.now(timezone.utc)
-    version.mensaje_brecha = None if aprobar else mensaje_brecha
-    version.fecha_vigencia_hasta = fecha_vigencia_hasta if aprobar else None
+    estado_anterior = acred.estado
+    acred.estado = nuevo_estado
+    acred.revisado_por_usuario_id = usuario_id
+    acred.revisado_en = datetime.now(timezone.utc)
+    acred.mensaje_brecha = None if aprobar else mensaje_brecha
 
-    estado_anterior = doc.estado
-    doc.estado = nuevo_estado
-    doc.mensaje_brecha = version.mensaje_brecha
-    doc.fecha_vigencia_hasta = version.fecha_vigencia_hasta
+    # La vigencia es un hecho del documento → vive en la Entrega (compartida).
+    # El mandante solo la ingresa como fallback si la IA no la extrajo; no pisa
+    # una fecha ya existente (Fase 2: alerta de discrepancia).
+    if aprobar and fecha_vigencia_hasta is not None and acred.entrega.fecha_vigencia_hasta is None:
+        acred.entrega.fecha_vigencia_hasta = fecha_vigencia_hasta
 
     _registrar_evento(
-        db, doc, version, TipoEvento.REVISION_MANUAL,
+        db, acred, TipoEvento.REVISION_MANUAL,
         estado_anterior=estado_anterior, estado_nuevo=nuevo_estado,
         actor_usuario_id=usuario_id,
         detalle={"mensaje_brecha": mensaje_brecha} if not aprobar else None,
     )
     db.commit()
-    _recalcular_acreditacion(db, doc)
+    _recalcular_acreditacion(db, acred)
 
 
 def aprobar_por_excepcion(
@@ -263,200 +284,151 @@ def aprobar_por_excepcion(
     usuario_id: uuid.UUID,
     justificacion: str,
 ) -> None:
-    """
-    Permite al mandante_admin aprobar manualmente un documento observado.
-    Registra quién aprobó, cuándo y con qué justificación — en la versión
-    (la excepción aprueba UNA entrega, no el expediente abstracto).
-    """
-    doc = obtener_documento(db, documento_id)
-    if doc.estado != EstadoDocumento.OBSERVADO:
+    """Aprueba manualmente una acreditación observada, dejando la justificación."""
+    acred = obtener_documento(db, documento_id)
+    if acred.estado != EstadoDocumento.OBSERVADO:
         raise EstadoDocumentoInvalido(
-            f"Solo se pueden aprobar por excepción documentos en estado Observado (3). Estado actual: {doc.estado}"
+            f"Solo se pueden aprobar por excepción documentos en estado Observado (3). Estado actual: {acred.estado}"
         )
-    version = doc.version_vigente
-    if version is None:
-        raise EstadoDocumentoInvalido("El expediente no tiene ninguna entrega.")
+    if acred.entrega_id is None:
+        raise EstadoDocumentoInvalido("La acreditación no tiene ninguna entrega.")
 
-    version.estado = EstadoDocumento.APROBADO
-    version.aprobado_por_excepcion = True
-    version.justificacion_excepcion = justificacion
-    version.aprobado_por_usuario_id = usuario_id
-    version.aprobado_en = datetime.now(timezone.utc)
-
-    doc.estado = EstadoDocumento.APROBADO
-    doc.mensaje_brecha = None
+    acred.estado = EstadoDocumento.APROBADO
+    acred.mensaje_brecha = None
+    acred.aprobado_por_excepcion = True
+    acred.justificacion_excepcion = justificacion
+    acred.aprobado_por_usuario_id = usuario_id
+    acred.aprobado_en = datetime.now(timezone.utc)
 
     _registrar_evento(
-        db, doc, version, TipoEvento.EXCEPCION_APROBADA,
+        db, acred, TipoEvento.EXCEPCION_APROBADA,
         estado_anterior=EstadoDocumento.OBSERVADO, estado_nuevo=EstadoDocumento.APROBADO,
         actor_usuario_id=usuario_id,
         detalle={"justificacion": justificacion},
     )
     db.commit()
-    _recalcular_acreditacion(db, doc)
+    _recalcular_acreditacion(db, acred)
 
 
 # ── Pipeline IA (activo solo con VISION_LLM_API_KEY configurada) ──────────────
 
-def procesar_documento(
-    db: Session,
-    version_id: uuid.UUID,
-) -> ResultadoAnalisis:
+def procesar_documento(db: Session, entrega_id: uuid.UUID) -> ResultadoAnalisis:
     """
-    Ejecutado por el worker Celery sobre UNA versión. Descarga todos los
-    archivos de la entrega, los convierte a imágenes y los pasa JUNTOS al
-    pipeline (los campos pueden estar repartidos entre archivos).
+    Ejecutado por el worker sobre UNA entrega. Extrae campos y vigencia (que
+    viven en la Entrega, compartida), y evalúa cada acreditación que la fija
+    contra las reglas de su propio mandante. Sin IA configurada nunca se llama.
     """
-    version = db.get(DocumentoVersion, version_id)
-    if not version:
-        raise DocumentoNoEncontrado(f"Versión {version_id} no encontrada.")
-    doc = version.documento
-    requisito = db.get(RequisitoDocumental, doc.requisito_id)
+    entrega = db.get(Entrega, entrega_id)
+    if not entrega:
+        raise DocumentoNoEncontrado(f"Entrega {entrega_id} no encontrada.")
+    expediente = entrega.expediente
+    requisito = db.get(RequisitoDocumental, expediente.requisito_id)
+    acreditaciones = [
+        a for a in expediente.acreditaciones
+        if a.entrega_id == entrega.id and a.eliminado_en is None
+    ]
 
-    _cambiar_estado_version(db, doc, version, EstadoDocumento.EN_ANALISIS, actor=None)
+    for acred in acreditaciones:
+        _cambiar_estado(db, acred, EstadoDocumento.EN_ANALISIS, actor=None)
 
     imagenes: list[bytes] = []
-    for archivo in version.archivos:
+    for archivo in entrega.archivos:
         pdf_bytes = archivo_service.descargar(archivo.storage_key)
         imagenes.extend(clasificador.pdf_a_imagenes(pdf_bytes))
 
-    resultado_clasificacion = clasificador.clasificar_documento(imagenes[0], requisito.codigo)
-    if not resultado_clasificacion.es_valido:
-        version.mensaje_brecha = (
-            f"El documento no parece ser un {requisito.nombre}. "
-            f"Por favor suba el documento correcto."
-        )
-        _cambiar_estado_version(db, doc, version, EstadoDocumento.OBSERVADO, actor=None)
+    clasif = clasificador.clasificar_documento(imagenes[0], requisito.codigo) if imagenes else None
+    if clasif is not None and not clasif.es_valido:
+        msg = f"El documento no parece ser un {requisito.nombre}. Por favor suba el documento correcto."
+        for acred in acreditaciones:
+            acred.mensaje_brecha = msg
+            _cambiar_estado(db, acred, EstadoDocumento.OBSERVADO, actor=None)
         return ResultadoAnalisis(
-            documento_id=doc.id,
-            estado=EstadoDocumento.OBSERVADO,
-            campos_extraidos=None,
-            mensaje_brecha=version.mensaje_brecha,
+            documento_id=acreditaciones[0].id if acreditaciones else entrega.id,
+            estado=EstadoDocumento.OBSERVADO, campos_extraidos=None, mensaje_brecha=msg,
         )
 
     campos = extractor.extraer_campos(imagenes, requisito.codigo)
-    campos_dict = campos.model_dump()
+    campos_dict = campos.model_dump() if hasattr(campos, "model_dump") else dict(campos or {})
+    entrega.campos_extraidos = campos_dict
+    if campos_dict.get("fecha_vigencia_hasta"):
+        entrega.fecha_vigencia_hasta = campos_dict["fecha_vigencia_hasta"]
+    if campos_dict.get("fecha_emision"):
+        entrega.fecha_emision = campos_dict["fecha_emision"]
 
-    empresa_efectiva = doc.empresa_id or (doc.trabajador.empresa_id if doc.trabajador_id else None)
-    resultado_validacion = reglas_service.validar_documento(
-        db, requisito.id, campos_dict, doc.mandante_id, contratista_id=empresa_efectiva
-    )
-
-    version.campos_extraidos = campos_dict
-    version.mensaje_brecha = "\n".join(resultado_validacion.brechas) if resultado_validacion.brechas else None
-
-    if resultado_validacion.aprobado:
-        fecha_vigencia = campos_dict.get("fecha_vigencia_hasta") or campos_dict.get("fecha_hasta")
-        if fecha_vigencia:
-            try:
-                version.fecha_vigencia_hasta = date.fromisoformat(fecha_vigencia)
-            except (ValueError, TypeError):
-                pass
-
-    _cambiar_estado_version(db, doc, version, EstadoDocumento(resultado_validacion.estado), actor=None)
+    ultimo_estado = EstadoDocumento.APROBADO
+    ultimo_msg = None
+    for acred in acreditaciones:
+        resultado = reglas_service.validar_documento(
+            db, requisito.id, campos_dict, acred.mandante_id,
+            contratista_id=expediente.empresa_id or (
+                entrega.expediente.trabajador.empresa_id if expediente.trabajador_id else None
+            ),
+        )
+        acred.mensaje_brecha = None if resultado.aprobado else "; ".join(resultado.brechas)
+        _cambiar_estado(db, acred, resultado.estado, actor=None)
+        ultimo_estado, ultimo_msg = resultado.estado, acred.mensaje_brecha
 
     return ResultadoAnalisis(
-        documento_id=doc.id,
-        estado=doc.estado,
-        campos_extraidos=version.campos_extraidos,
-        mensaje_brecha=version.mensaje_brecha,
+        documento_id=acreditaciones[0].id if acreditaciones else entrega.id,
+        estado=ultimo_estado, campos_extraidos=campos_dict, mensaje_brecha=ultimo_msg,
     )
-
-
-def marcar_version_observada(db: Session, version_id: uuid.UUID, mensaje: str) -> None:
-    """Deja una versión observada con mensaje (errores del pipeline IA)."""
-    version = db.get(DocumentoVersion, version_id)
-    if not version:
-        raise DocumentoNoEncontrado(f"Versión {version_id} no encontrada.")
-    version.mensaje_brecha = mensaje
-    _cambiar_estado_version(db, version.documento, version, EstadoDocumento.OBSERVADO, actor=None)
 
 
 # ── Lectura ───────────────────────────────────────────────────────────────────
 
-def obtener_documento(db: Session, documento_id: uuid.UUID) -> Documento:
-    """Retorna el documento vivo o lanza DocumentoNoEncontrado."""
-    doc = db.get(Documento, documento_id)
-    if not doc or doc.eliminado_en is not None:
-        raise DocumentoNoEncontrado(f"Documento {documento_id} no encontrado.")
-    return doc
+def obtener_documento(db: Session, documento_id: uuid.UUID) -> Acreditacion:
+    """Retorna la Acreditacion viva o lanza DocumentoNoEncontrado."""
+    acred = db.get(Acreditacion, documento_id)
+    if not acred or acred.eliminado_en is not None:
+        raise DocumentoNoEncontrado(f"Acreditación {documento_id} no encontrada.")
+    return acred
 
 
-def listar_documentos_por_entidad(
-    db: Session,
-    mandante_id: uuid.UUID,
-    empresa_id: uuid.UUID | None = None,
-    trabajador_id: uuid.UUID | None = None,
-) -> list[Documento]:
-    """Lista los expedientes vivos de una empresa o trabajador ante un mandante."""
-    query = db.query(Documento).filter_by(mandante_id=mandante_id, eliminado_en=None)
-    if empresa_id:
-        query = query.filter_by(empresa_id=empresa_id)
-    if trabajador_id:
-        query = query.filter_by(trabajador_id=trabajador_id)
-    return query.order_by(Documento.created_at.desc()).all()
-
-
-def listar_pendientes_revision(db: Session, mandante_id: uuid.UUID) -> list[Documento]:
-    """
-    Cola de revisión manual del mandante: expedientes Enviados, más los que
-    quedaron En Análisis (la máquina de estados permite resolverlos manualmente
-    si el pipeline IA no los cerró).
-    """
+def listar_pendientes_revision(db: Session, mandante_id: uuid.UUID) -> list[Acreditacion]:
+    """Cola de revisión manual del mandante: acreditaciones Enviadas o En Análisis."""
     return (
-        db.query(Documento)
+        db.query(Acreditacion)
         .filter_by(mandante_id=mandante_id, eliminado_en=None)
-        .filter(Documento.estado.in_([EstadoDocumento.ENVIADO, EstadoDocumento.EN_ANALISIS]))
-        .order_by(Documento.updated_at.asc())
+        .filter(Acreditacion.estado.in_([EstadoDocumento.ENVIADO, EstadoDocumento.EN_ANALISIS]))
+        .order_by(Acreditacion.updated_at.asc())
         .all()
     )
 
 
 # ── Helpers privados ──────────────────────────────────────────────────────────
 
-def _recalcular_acreditacion(db: Session, doc: Documento) -> None:
+def _recalcular_acreditacion(db: Session, acred: Acreditacion) -> None:
     """Actualiza el agregado ACREDITADA/BLOQUEADA/EN_PROCESO de la relación."""
     from app.domain import acreditacion_service  # import local: mismo nivel de capa
-    contratista_id = doc.empresa_id or (doc.trabajador.empresa_id if doc.trabajador_id else None)
+    exp = acred.expediente
+    contratista_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
     if contratista_id:
-        acreditacion_service.recalcular_estado_global(db, contratista_id, doc.mandante_id)
+        acreditacion_service.recalcular_estado_global(db, contratista_id, acred.mandante_id)
 
 
-def _cambiar_estado_version(
-    db: Session,
-    doc: Documento,
-    version: DocumentoVersion,
-    nuevo_estado: EstadoDocumento,
-    actor: uuid.UUID | None,
-) -> None:
-    """Transición validada + sincronización de snapshot + evento + commit."""
-    validar_transicion(doc.estado, nuevo_estado)
-    estado_anterior = doc.estado
-    version.estado = nuevo_estado
-    doc.estado = nuevo_estado
-    doc.mensaje_brecha = version.mensaje_brecha
-    doc.fecha_vigencia_hasta = version.fecha_vigencia_hasta
+def _cambiar_estado(db: Session, acred: Acreditacion, nuevo_estado: int, actor: uuid.UUID | None) -> None:
+    """Transición validada + evento + commit (usado por el pipeline IA)."""
+    validar_transicion(acred.estado, nuevo_estado)
+    estado_anterior = acred.estado
+    acred.estado = nuevo_estado
     _registrar_evento(
-        db, doc, version, TipoEvento.CAMBIO_ESTADO,
-        estado_anterior=estado_anterior, estado_nuevo=nuevo_estado,
-        actor_usuario_id=actor,
+        db, acred, TipoEvento.CAMBIO_ESTADO,
+        estado_anterior=estado_anterior, estado_nuevo=nuevo_estado, actor_usuario_id=actor,
     )
     db.commit()
 
 
 def _registrar_evento(
     db: Session,
-    doc: Documento,
-    version: DocumentoVersion | None,
+    acred: Acreditacion,
     tipo: TipoEvento,
     estado_anterior: int | None,
     estado_nuevo: int | None,
     actor_usuario_id: uuid.UUID | None,
     detalle: dict | None = None,
 ) -> None:
-    db.add(DocumentoEvento(
-        documento_id=doc.id,
-        documento_version_id=version.id if version else None,
+    db.add(AcreditacionEvento(
+        acreditacion_id=acred.id,
         tipo_evento=tipo,
         estado_anterior=estado_anterior,
         estado_nuevo=estado_nuevo,
