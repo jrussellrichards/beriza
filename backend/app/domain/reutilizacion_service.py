@@ -194,6 +194,36 @@ def definir_sensibilidad(
         )
 
     exp.sensible_override = sensible
+    db.flush()
+
+    # Liberar la restricción SE APLICA a lo que ya estaba esperando: si el
+    # contratista dice "compartir sin preguntar", las solicitudes pendientes se
+    # resuelven solas. Dejarlas en la bandeja obligaría a aprobar una por una
+    # algo que acaba de declarar que no le importa.
+    liberadas = 0
+    if not es_sensible(exp, exp.requisito):
+        vigente = _entrega_vigente(exp, exp.requisito, date.today())
+        if vigente is not None:
+            for acred in exp.acreditaciones:
+                if acred.eliminado_en is not None:
+                    continue
+                if acred.estado != EstadoDocumento.PENDIENTE_AUTORIZACION:
+                    continue
+                validar_transicion(acred.estado, EstadoDocumento.ENVIADO)
+                acred.entrega_id = vigente.id
+                acred.numero_version = vigente.numero_version
+                acred.estado = EstadoDocumento.ENVIADO
+                db.add(AcreditacionEvento(
+                    acreditacion_id=acred.id, tipo_evento=TipoEvento.AUTORIZACION_COMPARTIR,
+                    estado_anterior=EstadoDocumento.PENDIENTE_AUTORIZACION,
+                    estado_nuevo=EstadoDocumento.ENVIADO,
+                    actor_usuario_id=None, detalle={"por_liberar_sensibilidad": True},
+                ))
+                liberadas += 1
+
+    # Marcar como sensible NO revoca lo ya compartido: un mandante que ya aprobó
+    # el documento quedaría desacreditado de golpe. El flag rige lo que viene.
+
     db.commit()
     db.refresh(exp)
     return exp
