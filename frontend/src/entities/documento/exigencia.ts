@@ -43,3 +43,30 @@ export function formatFecha(iso: string | null): string | null {
   if (!iso) return null
   return new Date(iso).toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" })
 }
+
+/** Días que faltan para que caduque. Negativo si ya venció, null si no aplica. */
+export function diasParaVencer(iso: string | null): number | null {
+  if (!iso) return null
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const vence = new Date(iso)
+  vence.setHours(0, 0, 0, 0)
+  return Math.round((vence.getTime() - hoy.getTime()) / 86_400_000)
+}
+
+/**
+ * Documentos aprobados que caducan dentro de `dias`, más urgente primero.
+ * Los ya vencidos quedan fuera: el cron los pasa a VENCIDO y se muestran con su
+ * propio badge, no como aviso preventivo.
+ */
+export function porVencer(items: Exigencia[], dias = 30): Exigencia[] {
+  return items
+    .filter(e => {
+      if (e.estado !== 4) return false
+      const d = diasParaVencer(e.fecha_vigencia_hasta)
+      return d !== null && d >= 0 && d <= dias
+    })
+    .sort((a, b) =>
+      (diasParaVencer(a.fecha_vigencia_hasta) ?? 0) - (diasParaVencer(b.fecha_vigencia_hasta) ?? 0)
+    )
+}

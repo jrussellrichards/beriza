@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  CheckCircle2, Clock, XCircle,
+  CheckCircle2, Clock, XCircle, CalendarClock,
   ChevronDown, ChevronRight, Users, Plus, Building2, ArrowRight,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
 import { useAcreditacion } from "@/entities/contratista/use-acreditacion"
-import { type Exigencia } from "@/entities/documento/exigencia"
+import { type Exigencia, diasParaVencer, formatFecha, porVencer } from "@/entities/documento/exigencia"
 import { ExigenciaRow } from "@/entities/documento/exigencia-row"
 import type { EstadoTrabajador } from "@/shared/types"
 
@@ -67,6 +67,60 @@ function EstadoTag({ estado }: { estado: keyof typeof ESTADO_CONFIG }) {
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
       {c.label}
     </span>
+  )
+}
+
+/**
+ * Aviso preventivo: lo que caduca pronto. Sin esto, un vencimiento solo se ve
+ * en la app cuando ya venció (badge VENCIDO) — el aviso previo llegaba únicamente
+ * por email, y perderlo significa quedar bloqueado en faena sin haberlo visto.
+ */
+function AvisoPorVencer({ items }: { items: Exigencia[] }) {
+  if (items.length === 0) return null
+  const criticos = items.slice(0, 4)
+
+  return (
+    <div className="rounded-xl border border-orange-200 bg-orange-50 px-5 py-4">
+      <div className="flex items-start gap-3">
+        <CalendarClock size={18} className="text-orange-500 mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-900">
+            {items.length === 1
+              ? "Tienes 1 documento por vencer"
+              : `Tienes ${items.length} documentos por vencer`}
+          </p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Renuévalos antes de que caduquen para no perder la acreditación.
+          </p>
+          <ul className="mt-3 space-y-1.5">
+            {criticos.map((i, idx) => {
+              const dias = diasParaVencer(i.fecha_vigencia_hasta) ?? 0
+              return (
+                <li key={`${i.requisito_id}-${i.trabajador_id ?? "e"}-${idx}`} className="flex items-baseline gap-2 text-xs">
+                  <span className={cn(
+                    "font-medium tabular-nums shrink-0",
+                    dias <= 7 ? "text-red-600" : "text-orange-700"
+                  )}>
+                    {dias === 0 ? "hoy" : dias === 1 ? "1 día" : `${dias} días`}
+                  </span>
+                  <span className="text-slate-600 truncate">
+                    {i.requisito_nombre}
+                    {i.trabajador_nombre && <span className="text-slate-400"> · {i.trabajador_nombre}</span>}
+                  </span>
+                  <span className="text-slate-400 shrink-0 ml-auto">{formatFecha(i.fecha_vigencia_hasta)}</span>
+                </li>
+              )
+            })}
+          </ul>
+          {items.length > criticos.length && (
+            <p className="text-[10px] text-slate-400 mt-2">
+              y {items.length - criticos.length} más
+            </p>
+          )}
+        </div>
+        <VerEnDocumentos />
+      </div>
+    </div>
   )
 }
 
@@ -185,6 +239,7 @@ export default function DashboardContratistaPage() {
   const Icon = cfg.icon
   const trabajadoresOk = data.trabajadores.filter(t => t.cumple).length
   const itemsEmpresa = exigencias.filter(e => !e.trabajador_id)
+  const itemsPorVencer = porVencer(exigencias)
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -224,6 +279,8 @@ export default function DashboardContratistaPage() {
             </p>
           </div>
         </div>
+
+        <AvisoPorVencer items={itemsPorVencer} />
 
         {/* Documentos empresa — solo lectura, gestión en /contratista/documentos */}
         <section>
