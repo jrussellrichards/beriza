@@ -60,6 +60,7 @@ def listar_pilares(
                     "entidad_tipo": r.entidad_tipo,
                     "alcance": r.alcance,
                     "max_archivos": r.max_archivos,
+                    "sin_vencimiento": r.sin_vencimiento,
                     "es_propio": r.mandante_id is not None,
                 }
                 for r in visibles
@@ -130,6 +131,7 @@ def crear_requisito(
         entidad_tipo=body.entidad_tipo,
         alcance=body.alcance,
         max_archivos=body.max_archivos,
+        sin_vencimiento=body.sin_vencimiento,
     )
     db.add(req)
     db.commit()
@@ -164,6 +166,8 @@ def actualizar_requisito(
         if body.max_archivos < 1:
             raise HTTPException(status_code=400, detail="max_archivos debe ser al menos 1")
         req.max_archivos = body.max_archivos
+    if body.sin_vencimiento is not None:
+        req.sin_vencimiento = body.sin_vencimiento
     db.commit()
     return {"mensaje": "Requisito actualizado"}
 

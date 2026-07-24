@@ -50,5 +50,8 @@ class RequisitoDocumental(ModelBase):
     max_archivos: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     formatos_permitidos: Mapped[list | None] = mapped_column(JSON, nullable=True)
     descripcion: Mapped[str] = mapped_column(Text, nullable=True)
+    # Si True, los documentos de este requisito no caducan: el cron de
+    # vencimientos los ignora (ej. certificado de constitución de sociedad).
+    sin_vencimiento: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     subpilar: Mapped["Subpilar"] = relationship(back_populates="requisitos")
