@@ -2,18 +2,30 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import { cn } from "@/shared/lib/utils"
-import { Briefcase, FileText, Users, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react"
+import { api } from "@/shared/lib/api"
+import { Briefcase, FileText, Users, LayoutDashboard, LogOut, ShieldCheck, ShieldQuestion } from "lucide-react"
 
 const nav = [
   { href: "/contratista", label: "Dashboard", icon: LayoutDashboard },
   { href: "/contratista/servicios", label: "Servicios", icon: Briefcase },
   { href: "/contratista/trabajadores", label: "Trabajadores", icon: Users },
   { href: "/contratista/documentos", label: "Documentos", icon: FileText },
+  { href: "/contratista/solicitudes", label: "Solicitudes", icon: ShieldQuestion },
 ]
 
 export function SidebarContratista() {
   const path = usePathname()
+  // Contador de solicitudes de acceso pendientes; se refresca al navegar
+  // para que autorizar/rechazar lo baje sin recargar la página.
+  const [pendientes, setPendientes] = useState(0)
+
+  useEffect(() => {
+    api.get<unknown[]>("/api/v1/reutilizacion/solicitudes")
+      .then(s => setPendientes(s.length))
+      .catch(() => setPendientes(0))
+  }, [path])
 
   return (
     <aside className="w-56 min-h-screen bg-[#0f172a] flex flex-col shrink-0">
@@ -45,6 +57,11 @@ export function SidebarContratista() {
             >
               <Icon size={15} strokeWidth={active ? 2.5 : 2} />
               {label}
+              {href === "/contratista/solicitudes" && pendientes > 0 && (
+                <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-[10px] font-semibold text-slate-900 flex items-center justify-center">
+                  {pendientes}
+                </span>
+              )}
             </Link>
           )
         })}

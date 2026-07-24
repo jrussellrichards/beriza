@@ -94,6 +94,8 @@ class CrearRequisitoCatalogoRequest(BaseModel):
     entidad_tipo: str  # EMPRESA | TRABAJADOR
     alcance: str = "ENTIDAD"  # ENTIDAD | SERVICIO
     max_archivos: int = 1
+    sin_vencimiento: bool = False
+    sensible: bool = False
 
 
 class ActualizarRequisitoCatalogoRequest(BaseModel):
@@ -101,6 +103,8 @@ class ActualizarRequisitoCatalogoRequest(BaseModel):
     descripcion: str | None = None
     alcance: str | None = None
     max_archivos: int | None = None
+    sin_vencimiento: bool | None = None
+    sensible: bool | None = None
 
 
 # ── Perfiles de requisitos ───────────────────────────────────────────────────
@@ -348,6 +352,19 @@ class PendienteRevisionResponse(BaseModel):
 class UrlDescargaResponse(BaseModel):
     url: str
     expira_en_segundos: int = 3600
+
+
+class SolicitudAutorizacionResponse(BaseModel):
+    """Documento sensible que un mandante nuevo quiere ver por reutilización."""
+    acreditacion_id: uuid.UUID
+    mandante_razon_social: str
+    requisito_codigo: str
+    requisito_nombre: str
+    pilar_nombre: str
+    trabajador_nombre: str | None
+    numero_version_vigente: int | None
+    fecha_vigencia_hasta: date | None
+    solicitado_en: datetime
 
 
 # ── Acreditación ─────────────────────────────────────────────────────────────

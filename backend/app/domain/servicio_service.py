@@ -5,6 +5,7 @@ Un servicio es el contrato/faena concreto entre un mandante y una empresa
 contratista. Cada servicio referencia un perfil de requisitos del mandante,
 que define qué documentos se exigen y con qué parámetros.
 """
+import logging
 import uuid
 from datetime import date
 from decimal import Decimal
@@ -23,6 +24,8 @@ from app.domain.estados import EstadoServicio
 from app.models.contratista import ContratistaMandante
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
+
+logger = logging.getLogger("acredita")
 
 
 # ── Perfiles de requisitos ────────────────────────────────────────────────────
@@ -90,7 +93,35 @@ def configurar_requisito_perfil(
 
     db.commit()
     db.refresh(config)
+
+    # Si el mandante empieza a exigir un requisito que sus contratistas ya tienen
+    # resuelto, se les aplica de inmediato en vez de pedírselo de nuevo.
+    if es_obligatorio:
+        _reconciliar_contratistas_del_perfil(db, perfil_id)
+
     return config
+
+
+def _reconciliar_contratistas_del_perfil(db: Session, perfil_id: uuid.UUID) -> None:
+    """Reutilización para los contratistas con servicio activo bajo este perfil."""
+    from app.domain import reutilizacion_service
+
+    perfil = db.get(PerfilRequisitos, perfil_id)
+    servicios = (
+        db.query(Servicio)
+        .filter_by(perfil_requisitos_id=perfil_id, estado=EstadoServicio.ACTIVO)
+        .all()
+    )
+    contratistas = {s.relacion.contratista_id for s in servicios}
+    for contratista_id in contratistas:
+        try:
+            reutilizacion_service.reconciliar_reutilizacion(db, contratista_id, perfil.mandante_id)
+        except Exception:
+            db.rollback()
+            logger.exception(
+                "Falló la reutilización del contratista %s tras configurar el perfil %s",
+                contratista_id, perfil_id,
+            )
 
 
 # ── Servicios ─────────────────────────────────────────────────────────────────
@@ -137,6 +168,23 @@ def crear_servicio(
     db.add(servicio)
     db.commit()
     db.refresh(servicio)
+
+    # Reutilización documental: los expedientes ENTIDAD vigentes del contratista
+    # se aplican automáticamente a las exigencias de este mandante (los sensibles
+    # quedan pendientes de autorización). Best-effort: un fallo aquí no debe
+    # revertir la creación del servicio, que ya está confirmada.
+    from app.domain import notificacion_service, reutilizacion_service
+    try:
+        creadas = reutilizacion_service.reconciliar_reutilizacion(db, contratista_id, mandante_id)
+        if creadas:
+            notificacion_service.notificar_reutilizacion(db, contratista_id, mandante_id, creadas)
+    except Exception:
+        db.rollback()
+        logger.exception(
+            "Falló la reutilización documental del contratista %s para el mandante %s "
+            "al crear el servicio %s", contratista_id, mandante_id, servicio.id,
+        )
+
     return servicio
 
 

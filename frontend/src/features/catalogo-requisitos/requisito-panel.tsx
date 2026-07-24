@@ -13,6 +13,8 @@ export interface RequisitoCatalogo {
   entidad_tipo: "EMPRESA" | "TRABAJADOR"
   alcance: "ENTIDAD" | "SERVICIO"
   max_archivos: number
+  sin_vencimiento?: boolean
+  sensible?: boolean
 }
 
 interface PilarMinimo {
@@ -40,6 +42,8 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
   const [entidad, setEntidad] = useState<"EMPRESA" | "TRABAJADOR">(requisito?.entidad_tipo ?? "EMPRESA")
   const [alcance, setAlcance] = useState<"ENTIDAD" | "SERVICIO">(requisito?.alcance ?? "ENTIDAD")
   const [maxArchivos, setMaxArchivos] = useState(requisito?.max_archivos ?? 1)
+  const [sinVencimiento, setSinVencimiento] = useState(requisito?.sin_vencimiento ?? false)
+  const [sensible, setSensible] = useState(requisito?.sensible ?? false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,6 +57,8 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           descripcion: descripcion || null,
           alcance,
           max_archivos: maxArchivos,
+          sin_vencimiento: sinVencimiento,
+          sensible,
         })
       } else {
         await api.post(`/api/v1/pilares/${pilar.id}/requisitos`, {
@@ -62,6 +68,8 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           entidad_tipo: entidad,
           alcance,
           max_archivos: maxArchivos,
+          sin_vencimiento: sinVencimiento,
+          sensible,
         })
       }
       onDone()
@@ -168,6 +176,36 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           />
           <p className="text-[10px] text-slate-400">Cuántos archivos admite una entrega (ej: contrato + anexos = 3).</p>
         </div>
+
+        <label className="flex items-start gap-2.5 cursor-pointer rounded-lg border border-slate-200 px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={sinVencimiento}
+            onChange={e => setSinVencimiento(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span className="text-sm text-slate-700">
+            Sin vencimiento
+            <span className="block text-[10px] text-slate-400">
+              El documento no caduca; no genera alertas de vencimiento (ej: escritura de la sociedad).
+            </span>
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2.5 cursor-pointer rounded-lg border border-slate-200 px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={sensible}
+            onChange={e => setSensible(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span className="text-sm text-slate-700">
+            Contenido sensible
+            <span className="block text-[10px] text-slate-400">
+              No se comparte con un mandante nuevo sin autorización del contratista (ej: carpeta tributaria).
+            </span>
+          </span>
+        </label>
 
         <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-700 flex items-start gap-2">
           <Lock size={11} className="mt-0.5 shrink-0" />

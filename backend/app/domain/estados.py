@@ -16,10 +16,13 @@ class EstadoDocumento(IntEnum):
     EN_ANALISIS = 2   # lo asigna el sistema al encolar el pipeline IA
     OBSERVADO = 3     # lo asigna el sistema IA con el mensaje exacto de brecha
     APROBADO = 4      # lo asigna el sistema IA o el mandante (excepción manual)
+    VENCIDO = 5       # lo asigna el cron cuando la vigencia expiró sin renovación válida
+    PENDIENTE_AUTORIZACION = 6  # reutilización de un doc sensible: espera autorización del contratista
 
 
 # Transiciones permitidas del ciclo: 1 → 2 → 4 (pipeline IA) | 1 → 3/4 (revisión
-# manual del mandante cuando no hay LLM configurado) | 3 → 1 (corrección)
+# manual del mandante) | 3 → 1 (corrección) | 4 → 5 (vencimiento) | 4/5 → 1
+# (renovación: nueva versión o auto-repin del cron a una entrega vigente)
 TRANSICIONES_VALIDAS: dict[EstadoDocumento, frozenset[EstadoDocumento]] = {
     EstadoDocumento.ENVIADO: frozenset({
         EstadoDocumento.EN_ANALISIS,   # pipeline IA
@@ -29,8 +32,12 @@ TRANSICIONES_VALIDAS: dict[EstadoDocumento, frozenset[EstadoDocumento]] = {
     EstadoDocumento.EN_ANALISIS: frozenset({EstadoDocumento.OBSERVADO, EstadoDocumento.APROBADO}),
     # Desde OBSERVADO: re-subida (nueva versión → ENVIADO) o aprobación por excepción del mandante
     EstadoDocumento.OBSERVADO: frozenset({EstadoDocumento.ENVIADO, EstadoDocumento.APROBADO}),
-    # Desde APROBADO: renovación por vencimiento (nueva versión → ENVIADO)
-    EstadoDocumento.APROBADO: frozenset({EstadoDocumento.ENVIADO}),
+    # Desde APROBADO: renovación (nueva versión → ENVIADO) o vencimiento (cron → VENCIDO)
+    EstadoDocumento.APROBADO: frozenset({EstadoDocumento.ENVIADO, EstadoDocumento.VENCIDO}),
+    # Desde VENCIDO: renovación (nueva versión o auto-repin del cron → ENVIADO)
+    EstadoDocumento.VENCIDO: frozenset({EstadoDocumento.ENVIADO}),
+    # Desde PENDIENTE_AUTORIZACION: el contratista autoriza compartir → ENVIADO
+    EstadoDocumento.PENDIENTE_AUTORIZACION: frozenset({EstadoDocumento.ENVIADO}),
 }
 
 
@@ -81,4 +88,8 @@ class TipoEvento(StrEnum):
     CAMBIO_ESTADO = "CAMBIO_ESTADO"
     REVISION_MANUAL = "REVISION_MANUAL"
     EXCEPCION_APROBADA = "EXCEPCION_APROBADA"
+    VENCIMIENTO = "VENCIMIENTO"           # el cron marcó la acreditación vencida
+    RENOVACION_AUTO = "RENOVACION_AUTO"   # el cron re-ancló a una entrega vigente posterior
+    REUTILIZACION = "REUTILIZACION"       # se reutilizó un documento vigente para un mandante nuevo
+    AUTORIZACION_COMPARTIR = "AUTORIZACION_COMPARTIR"  # el contratista autorizó compartir un doc sensible
     ELIMINACION = "ELIMINACION"

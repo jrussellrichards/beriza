@@ -469,6 +469,10 @@ def _brecha_de_item(item: RequisitoAvance) -> str | None:
         return f"{nombre}: en análisis."
     if item.estado == EstadoDocumento.OBSERVADO:
         return item.mensaje_brecha or f"{nombre}: observado."
+    if item.estado == EstadoDocumento.VENCIDO:
+        return f"{nombre}: vencido — renovar."
+    if item.estado == EstadoDocumento.PENDIENTE_AUTORIZACION:
+        return f"{nombre}: el contratista debe autorizar compartir el documento."
     return None
 
 
