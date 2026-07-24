@@ -68,9 +68,13 @@ def validar_entrega(requisito: RequisitoDocumental, archivos: list[ArchivoEntrad
             raise ArchivoInvalido(f"El archivo '{a.nombre_original}' está vacío.")
 
 
+def calcular_hash(contenido: bytes) -> str:
+    """SHA-256 hex de un archivo. Lo usa el dominio para de-dup por contenido."""
+    return hashlib.sha256(contenido).hexdigest()
+
+
 def construir_key(
     requisito: RequisitoDocumental,
-    mandante_id: uuid.UUID,
     empresa_id: uuid.UUID,
     entidad_tipo: str,
     entidad_id: uuid.UUID,
@@ -79,16 +83,18 @@ def construir_key(
     servicio_id: uuid.UUID | None,
 ) -> str:
     """
-    Key determinística y particionada por tenant:
-      ENTIDAD:  {mandante}/{empresa}/entidad/{empresa|trabajador}/{entidad}/{REQ}/v{n}/{uuid}.{ext}
-      SERVICIO: {mandante}/{empresa}/servicio/{servicio}/{empresa|trabajador}/{entidad}/{REQ}/v{n}/{uuid}.{ext}
+    Key determinística particionada por CONTRATISTA — sin mandante en la ruta;
+    el "de qué mandante" vive en la tabla Acreditacion. Documentos globales bajo
+    entidad/, por servicio bajo servicio/{id}/. Ver docs/rediseno-modelo-documentos.md.
+      ENTIDAD:  {empresa}/entidad/{empresa|trabajador}/{entidad}/{REQ}/v{n}/{uuid}.{ext}
+      SERVICIO: {empresa}/servicio/{servicio}/{empresa|trabajador}/{entidad}/{REQ}/v{n}/{uuid}.{ext}
     """
     ext = PurePosixPath(nombre_original).suffix.lstrip(".").lower() or "bin"
     segmento_alcance = (
         f"servicio/{servicio_id}" if requisito.alcance == Alcance.SERVICIO else "entidad"
     )
     return (
-        f"{mandante_id}/{empresa_id}/{segmento_alcance}/"
+        f"{empresa_id}/{segmento_alcance}/"
         f"{entidad_tipo.lower()}/{entidad_id}/{requisito.codigo}/"
         f"v{numero_version}/{uuid.uuid4().hex}.{ext}"
     )
@@ -97,7 +103,6 @@ def construir_key(
 def subir_archivos(
     requisito: RequisitoDocumental,
     archivos: list[ArchivoEntrada],
-    mandante_id: uuid.UUID,
     empresa_id: uuid.UUID,
     entidad_tipo: str,
     entidad_id: uuid.UUID,
@@ -116,7 +121,7 @@ def subir_archivos(
     resultado: list[ArchivoValidado] = []
     for orden, a in enumerate(archivos):
         key = construir_key(
-            requisito, mandante_id, empresa_id, entidad_tipo, entidad_id,
+            requisito, empresa_id, entidad_tipo, entidad_id,
             numero_version, a.nombre_original, servicio_id,
         )
         # El storage local/S3 genera su propio nombre único a partir de la carpeta;
@@ -128,7 +133,7 @@ def subir_archivos(
             nombre_original=a.nombre_original,
             mime_type=a.mime_type,
             tamaño_bytes=len(a.contenido),
-            hash_sha256=hashlib.sha256(a.contenido).hexdigest(),
+            hash_sha256=calcular_hash(a.contenido),
             orden=orden,
         ))
     return resultado
