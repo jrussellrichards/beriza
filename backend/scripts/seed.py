@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 import uuid as uuid_lib
 
 from app.core.config import settings
-from app.domain.estados import Alcance, EstadoServicio, TipoEvento
+from app.domain.estados import Alcance, EstadoDocumento, EstadoServicio, TipoEvento
 from app.models import Base, Usuario
 from app.models.mandante import Mandante
 from app.models.contratista import EmpresaContratista, ContratistaMandante
@@ -621,6 +621,64 @@ def seed_otros_mandantes(session: Session, mandantes: dict, reqs: dict):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def seed_segundo_mandante_condor(session: Session):
+    """
+    Vincula al contratista de demo (Cóndor) con un SEGUNDO mandante y reutiliza
+    sus documentos ya subidos.
+
+    Sin esto la demo no muestra lo que el portal existe para mostrar: con un solo
+    cliente, cada documento tiene un badge y la vista por documento se ve igual
+    que la vieja. Con dos, se ve que el F30 se subió una vez y sirve para ambos,
+    y que la carpeta tributaria (sensible) queda esperando autorización.
+
+    Idempotente: si la relación ya existe, no hace nada.
+    """
+    from app.domain import reutilizacion_service, servicio_service
+
+    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
+    pelambres = session.query(Mandante).filter_by(slug="los-pelambres").first()
+    if not condor or not pelambres:
+        return
+
+    existe = session.query(ContratistaMandante).filter_by(
+        contratista_id=condor.id, mandante_id=pelambres.id
+    ).first()
+    if existe:
+        print("  OK Cóndor ya está vinculado a Los Pelambres, saltando.")
+        return
+
+    session.add(ContratistaMandante(
+        contratista_id=condor.id, mandante_id=pelambres.id, estado_acreditacion="PENDIENTE",
+    ))
+    session.commit()
+
+    perfil = session.query(PerfilRequisitos).filter_by(
+        mandante_id=pelambres.id, nombre="General"
+    ).first()
+    if perfil:
+        # Vía crear_servicio (no INSERT directo) para que dispare la
+        # reconciliación de reutilización, igual que en producción.
+        servicio_service.crear_servicio(
+            db=session, mandante_id=pelambres.id, contratista_id=condor.id,
+            perfil_requisitos_id=perfil.id, nombre="Ampliación Planta Concentradora",
+            fecha_inicio=HOY, codigo_referencia="LP-2026-004",
+        )
+    else:
+        # Sin perfil no hay servicio ni trigger; se reconcilia a mano.
+        reutilizacion_service.reconciliar_reutilizacion(session, condor.id, pelambres.id)
+
+    # Se cuenta el resultado real: llamar de nuevo a reconciliar sería no-op
+    # (es idempotente) y reportaría cero.
+    acreds = session.query(Acreditacion).filter_by(
+        mandante_id=pelambres.id, eliminado_en=None
+    ).join(Expediente).filter(
+        (Expediente.empresa_id == condor.id) | (Expediente.trabajador_id.isnot(None))
+    ).all()
+    pendientes = sum(1 for a in acreds if a.estado == EstadoDocumento.PENDIENTE_AUTORIZACION)
+    print(f"  OK Cóndor vinculado a Los Pelambres: {len(acreds)} documento(s) reutilizado(s), "
+          f"{pendientes} esperando autorización.")
+
+
 def main():
     print("\n--- Seed Acredita ---")
     with Session(engine) as session:
@@ -635,6 +693,7 @@ def main():
         session.flush()
         seed_perfiles_y_servicios(session, reqs)
         session.commit()
+        seed_segundo_mandante_condor(session)
     print("\nCredenciales de acceso:")
     print("  admin@berisa.cl       / admin123  (berisa_admin)")
     print("  mandante@demo.cl      / demo123   (mandante_admin — Codelco)")
