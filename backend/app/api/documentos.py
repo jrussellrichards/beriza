@@ -26,6 +26,7 @@ from app.domain import archivo_service, documento_service
 from app.domain.archivo_service import ArchivoEntrada
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
+from app.middleware.tenant import verificar_acceso_documento, verificar_puede_subir_para
 from app.models.documento import ArchivoDocumento
 from app.models.usuario import Usuario
 
@@ -56,6 +57,7 @@ async def subir_documento(
         )
         for a in archivos
     ]
+    verificar_puede_subir_para(db, usuario, mandante_id, empresa_id, trabajador_id)
     try:
         resultado = documento_service.subir_entrega(
             db=db,
@@ -120,9 +122,11 @@ def obtener_documento(
 ):
     """Estado actual del expediente con su versión vigente y archivos."""
     try:
-        return documento_service.obtener_documento(db, documento_id)
+        doc = documento_service.obtener_documento(db, documento_id)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
+    verificar_acceso_documento(db, doc, usuario)
+    return doc
 
 
 @router.get("/{documento_id}/historial", response_model=HistorialDocumentoResponse)
@@ -136,6 +140,7 @@ def historial_documento(
         doc = documento_service.obtener_documento(db, documento_id)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
+    verificar_acceso_documento(db, doc, usuario)
     return HistorialDocumentoResponse(
         documento_id=doc.id,
         versiones=doc.versiones,
@@ -200,6 +205,7 @@ def url_descarga_archivo(
     archivo = db.get(ArchivoDocumento, archivo_id)
     if not archivo or archivo.version.documento_id != documento_id:
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    verificar_acceso_documento(db, archivo.version.documento, usuario)
     return UrlDescargaResponse(url=archivo_service.url_descarga(archivo.storage_key))
 
 
@@ -217,6 +223,7 @@ def obtener_url_descarga(
         doc = documento_service.obtener_documento(db, documento_id)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
+    verificar_acceso_documento(db, doc, usuario)
 
     version = doc.version_vigente
     if not version or not version.archivos:
