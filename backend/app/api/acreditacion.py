@@ -7,6 +7,7 @@ from app.api.schemas import AcreditacionResponse, RequisitoAvanceResponse
 from app.domain import acreditacion_service
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
+from app.middleware.tenant import verificar_acceso_relacion
 
 router = APIRouter()
 
@@ -24,6 +25,7 @@ def listar_exigencias(
     separados por servicio cuando el requisito es de alcance SERVICIO.
     Es la fuente de la página "Documentos" del contratista.
     """
+    verificar_acceso_relacion(db, contratista_id, mandante_id, usuario)
     evaluacion = acreditacion_service.evaluar_relacion(db, contratista_id, mandante_id)
     items = list(evaluacion.items_empresa)
     for items_t in evaluacion.items_trabajadores.values():
@@ -42,6 +44,7 @@ def obtener_estado_acreditacion(
     Retorna el estado granular de acreditación de una empresa ante un mandante:
     pilares corporativos (1 y 3) + estado individual de cada trabajador (pilar 2).
     """
+    verificar_acceso_relacion(db, contratista_id, mandante_id, usuario)
     resultado = acreditacion_service.obtener_estado_acreditacion(db, contratista_id, mandante_id)
     return AcreditacionResponse(
         contratista_id=resultado.contratista_id,
