@@ -2,9 +2,13 @@
 
 export type EstadoServicio = "ACTIVO" | "SUSPENDIDO" | "TERMINADO"
 
+export type TipoServicio = "OBRA" | "FAENA" | "SERVICIO"
+
 export interface Servicio {
   id: string
   nombre: string
+  /** Vocabulario del rubro: el portal usa esta palabra, no una genérica. */
+  tipo: TipoServicio
   codigo_referencia: string | null
   estado: EstadoServicio
   fecha_inicio: string
@@ -12,6 +16,8 @@ export interface Servicio {
   contratista_id: string
   contratista_razon_social: string
   contratista_rut: string
+  mandante_id: string
+  mandante_razon_social: string
   perfil_nombre: string
   trabajadores_asignados: number
 }

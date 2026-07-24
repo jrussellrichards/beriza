@@ -58,3 +58,62 @@ export const ESTADO_GLOBAL_CFG: Record<EstadoGlobal, {
   BLOQUEADA:  { label: "Bloqueada",  text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200",     dot: "bg-red-500" },
   PENDIENTE:  { label: "Pendiente",  text: "text-slate-600",   bg: "bg-slate-50",   border: "border-slate-200",   dot: "bg-slate-400" },
 }
+
+// ── Portal v2 ────────────────────────────────────────────────────────────────
+
+export type TipoServicio = "OBRA" | "FAENA" | "SERVICIO"
+
+/** La palabra del rubro que corresponde a este contrato. */
+export const TIPO_LABEL: Record<TipoServicio, string> = {
+  OBRA: "Obra",
+  FAENA: "Faena",
+  SERVICIO: "Servicio",
+}
+
+export type TipoPendiente =
+  | "AUTORIZACION" | "OBSERVADO" | "POR_VENCER" | "TRABAJADOR_INCOMPLETO"
+
+/** Algo que el contratista debe resolver. Enunciado por su consecuencia. */
+export interface Pendiente {
+  tipo: TipoPendiente
+  titulo: string
+  detalle: string | null
+  urgencia: number
+  documento_id: string | null
+  trabajador_id: string | null
+  servicio_id: string | null
+  requisito_id: string | null
+}
+
+export interface HabilitacionServicio {
+  servicio_id: string
+  servicio_nombre: string
+  servicio_tipo: TipoServicio
+  mandante_razon_social: string
+  habilitado: boolean
+  faltantes: string[]
+}
+
+/** Un trabajador con su habilitación en cada servicio donde está asignado. */
+export interface TrabajadorHabilitacion {
+  trabajador_id: string
+  nombre_completo: string
+  rut: string
+  cargo: string | null
+  activo: boolean
+  servicios: HabilitacionServicio[]
+}
+
+export interface ServicioContratista {
+  id: string
+  nombre: string
+  tipo: TipoServicio
+  codigo_referencia: string | null
+  estado: string
+  fecha_inicio: string
+  fecha_termino: string | null
+  mandante_id: string
+  mandante_razon_social: string
+  perfil_nombre: string
+  trabajadores_asignados: number
+}
