@@ -926,3 +926,91 @@ def habilitacion_trabajadores(db: Session, contratista_id: uuid.UUID) -> list[Tr
         trabajadores.values(),
         key=lambda t: (not any(not s.habilitado for s in t.servicios), t.nombre_completo),
     )
+
+
+# ── Riesgo del mandante ───────────────────────────────────────────────────────
+#
+# El mandante responde ante la Ley 20.123 por lo que pasa en su faena. Su
+# dashboard no debe contarle cuántos contratistas tiene —dato de vanidad— sino
+# dónde está expuesto: quién está trabajando sin cumplir y qué espera su revisión.
+
+
+@dataclass
+class ServicioEnRiesgo:
+    servicio_id: uuid.UUID
+    servicio_nombre: str
+    servicio_tipo: str
+    contratista_razon_social: str
+    trabajadores_asignados: int
+    trabajadores_no_habilitados: int
+    documentos_pendientes: int
+    brechas_empresa: list[str] = field(default_factory=list)
+
+
+@dataclass
+class RiesgoMandante:
+    total_servicios: int
+    servicios_en_riesgo: int
+    personas_no_habilitadas: int
+    documentos_por_revisar: int
+    servicios: list[ServicioEnRiesgo] = field(default_factory=list)
+
+
+def riesgo_del_mandante(db: Session, mandante_id: uuid.UUID) -> RiesgoMandante:
+    """
+    Dónde está expuesto el mandante, por faena.
+
+    La unidad es el servicio y no el contratista: una empresa puede estar
+    impecable en una obra y tener gente sin habilitar en otra. Agrupar por
+    contratista escondería justamente el lugar donde hay riesgo.
+    """
+    servicios: list[ServicioEnRiesgo] = []
+    relaciones = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id).all()
+
+    for rel in relaciones:
+        for servicio in rel.servicios:
+            if servicio.estado != EstadoServicio.ACTIVO:
+                continue
+            avance = obtener_avance_servicio(db, servicio.id)
+
+            no_habilitados: set[uuid.UUID] = set()
+            asignados: set[uuid.UUID] = set()
+            pendientes = 0
+            brechas_empresa: list[str] = []
+
+            for pilar in avance.pilares:
+                for item in pilar.requisitos:
+                    if item.estado in (EstadoDocumento.ENVIADO, EstadoDocumento.EN_ANALISIS):
+                        pendientes += 1
+                    if item.trabajador_id:
+                        asignados.add(item.trabajador_id)
+                        if item.estado != EstadoDocumento.APROBADO:
+                            no_habilitados.add(item.trabajador_id)
+                    elif item.estado != EstadoDocumento.APROBADO:
+                        brechas_empresa.append(item.requisito_nombre)
+
+            servicios.append(ServicioEnRiesgo(
+                servicio_id=servicio.id,
+                servicio_nombre=servicio.nombre,
+                servicio_tipo=servicio.tipo,
+                contratista_razon_social=rel.contratista.razon_social,
+                trabajadores_asignados=len(asignados),
+                trabajadores_no_habilitados=len(no_habilitados),
+                documentos_pendientes=pendientes,
+                brechas_empresa=brechas_empresa,
+            ))
+
+    def en_riesgo(s: ServicioEnRiesgo) -> bool:
+        return s.trabajadores_no_habilitados > 0 or bool(s.brechas_empresa)
+
+    # Lo más expuesto primero: más gente sin habilitar arriba.
+    servicios.sort(key=lambda s: (-s.trabajadores_no_habilitados, -len(s.brechas_empresa),
+                                  s.contratista_razon_social))
+
+    return RiesgoMandante(
+        total_servicios=len(servicios),
+        servicios_en_riesgo=sum(1 for s in servicios if en_riesgo(s)),
+        personas_no_habilitadas=sum(s.trabajadores_no_habilitados for s in servicios),
+        documentos_por_revisar=sum(s.documentos_pendientes for s in servicios),
+        servicios=servicios,
+    )

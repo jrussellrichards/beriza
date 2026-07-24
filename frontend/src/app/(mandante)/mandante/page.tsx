@@ -1,220 +1,187 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import {
-  CheckCircle2, Clock, XCircle, AlertCircle,
-  ChevronRight, TrendingUp, ArrowUpRight
-} from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardCheck, UserX } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
-import { getSession } from "@/shared/lib/auth"
-import { useApiData } from "@/shared/lib/use-api-data"
+import { api } from "@/shared/lib/api"
+import { TIPO_LABEL, type RiesgoMandante, type ServicioEnRiesgo } from "@/entities/contratista/resumen"
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-
-interface DashboardData {
-  total_contratistas: number
-  acreditadas: number
-  en_proceso: number
-  bloqueadas: number
-  pilares: { codigo: string; nombre: string; ok: number; total: number; cumplimiento: number }[]
-  alertas: { contratista: string; rut: string; estado: string; brechas: string[] }[]
-  actividad: { empresa: string; accion: string; tiempo: string; tipo: string }[]
+function Skeleton({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse bg-slate-200 rounded-lg", className)} />
 }
 
-const FALLBACK: DashboardData = {
-  total_contratistas: 0, acreditadas: 0, en_proceso: 0, bloqueadas: 0,
-  pilares: [], alertas: [], actividad: [],
-}
+/** Una faena con su exposición. El rojo se reserva para gente que no puede entrar. */
+function FaenaRow({ s }: { s: ServicioEnRiesgo }) {
+  const enRiesgo = s.trabajadores_no_habilitados > 0 || s.brechas_empresa.length > 0
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function initials(name: string) {
-  return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
-}
-
-function PilarBar({ nombre, ok, total }: { nombre: string; ok: number; total: number }) {
-  const pct = total > 0 ? Math.round((ok / total) * 100) : 0
-  const color = pct === 100 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-400" : "bg-red-400"
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-700 font-medium">{nombre}</span>
-        <span className="text-xs text-slate-500">{ok}/{total} OK</span>
+    <button
+      onClick={() => window.location.href = "/mandante/servicios"}
+      className={cn(
+        "w-full text-left bg-white border rounded-xl px-4 py-3.5 hover:bg-slate-50/70 transition-colors",
+        s.trabajadores_no_habilitados > 0 ? "border-red-200" : "border-slate-200"
+      )}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-sm font-medium text-slate-900">{s.servicio_nombre}</span>
+            <span className="text-[10px] text-slate-400">{TIPO_LABEL[s.servicio_tipo] ?? s.servicio_tipo}</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">{s.contratista_razon_social}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 shrink-0 text-xs">
+          {s.trabajadores_no_habilitados > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-red-600 font-medium">
+              <UserX size={12} />
+              {s.trabajadores_no_habilitados} de {s.trabajadores_asignados} no puede{s.trabajadores_no_habilitados === 1 ? "" : "n"} ingresar
+            </span>
+          )}
+          {s.documentos_pendientes > 0 && (
+            <span className="text-amber-700">{s.documentos_pendientes} por revisar</span>
+          )}
+          {!enRiesgo && (
+            <span className="inline-flex items-center gap-1.5 text-emerald-700">
+              <CheckCircle2 size={12} /> Todo en regla
+            </span>
+          )}
+        </div>
       </div>
-      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
-      </div>
-      <p className="text-xs text-slate-400">{pct}% de contratistas cumplen</p>
-    </div>
+
+      {s.brechas_empresa.length > 0 && (
+        <p className="text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
+          Falta de la empresa: {s.brechas_empresa.slice(0, 3).join(", ")}
+          {s.brechas_empresa.length > 3 && ` y ${s.brechas_empresa.length - 3} más`}
+        </p>
+      )}
+    </button>
   )
 }
 
-const TIPO_CONFIG = {
-  ok:   { dot: "bg-emerald-500", text: "text-emerald-700" },
-  warn: { dot: "bg-red-500",     text: "text-red-600" },
-  info: { dot: "bg-blue-400",    text: "text-slate-500" },
-}
+/**
+ * Inicio del mandante: ¿dónde estoy expuesto?
+ *
+ * Antes mostraba "total contratistas" y "acreditadas", que son datos de vanidad:
+ * al mandante no le sirve saber que tiene 12 contratistas, le sirve saber en qué
+ * faena hay alguien trabajando sin poder ingresar — que es de lo que responde
+ * ante la Ley 20.123.
+ *
+ * La unidad es la FAENA y no el contratista: una empresa puede estar impecable
+ * en una obra y tener gente sin habilitar en otra.
+ */
+export default function InicioMandantePage() {
+  const [riesgo, setRiesgo] = useState<RiesgoMandante | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-// ── Página ────────────────────────────────────────────────────────────────────
-
-export default function DashboardMandante() {
-  const [endpoint, setEndpoint] = useState<string | null>(null)
-
-  useEffect(() => {
-    const s = getSession()
-    if (s?.mandante_id) setEndpoint(`/api/v1/mandantes/${s.mandante_id}/dashboard`)
+  const cargar = useCallback(() => {
+    api.get<RiesgoMandante>("/api/v1/acreditacion/mi-riesgo")
+      .then(setRiesgo)
+      .catch(e => setError(e instanceof Error ? e.message : "No se pudo cargar tu estado"))
   }, [])
 
-  const { data, loading } = useApiData<DashboardData>(endpoint, FALLBACK)
+  useEffect(() => { cargar() }, [cargar])
 
-  const pctGlobal = data.total_contratistas > 0
-    ? Math.round((data.acreditadas / data.total_contratistas) * 100)
-    : 0
+  if (!riesgo && !error) {
+    return (
+      <div className="p-6 sm:p-8 space-y-6">
+        <Skeleton className="h-8 w-72" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
+        </div>
+        <Skeleton className="h-40 rounded-xl" />
+      </div>
+    )
+  }
 
-  const kpis = [
-    { label: "Total contratistas", value: data.total_contratistas, sub: "empresas activas", color: "text-slate-900" },
-    { label: "Acreditadas",        value: data.acreditadas, sub: `${pctGlobal}% del total`, color: "text-emerald-600" },
-    { label: "En Proceso",         value: data.en_proceso,  sub: "sin acción requerida",   color: "text-amber-600" },
-    { label: "Bloqueadas",         value: data.bloqueadas,  sub: "requieren atención",     color: "text-red-600" },
-  ]
-
-  return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Header */}
-      <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
-        <div className="flex items-center justify-between">
+  if (error || !riesgo) {
+    return (
+      <div className="p-6 sm:p-8">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-amber-500 mt-0.5 shrink-0" />
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">Dashboard</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Resumen general de acreditación</p>
+            <p className="text-sm font-medium text-slate-900">No pudimos revisar el estado de tus faenas</p>
+            <p className="text-xs text-slate-600 mt-1">
+              {error} — vuelve a cargar la página. Mientras no carguemos esto, puede haber
+              personal trabajando sin cumplir.
+            </p>
           </div>
-          <a
-            href="/mandante/contratistas"
-            className="flex items-center gap-2 text-sm text-slate-600 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            Ver todos los contratistas
-            <ArrowUpRight size={14} />
-          </a>
         </div>
       </div>
+    )
+  }
 
-      <div className="flex-1 overflow-auto px-8 py-6 space-y-6">
+  const sinRiesgo = riesgo.servicios_en_riesgo === 0
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-4 gap-4">
-          {kpis.map(k => (
-            <div key={k.label} className="bg-white rounded-xl border border-slate-200 p-5">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{k.label}</p>
-              <p className={cn("text-3xl font-semibold mt-2 mb-1", k.color)}>
-                {loading ? <span className="inline-block w-8 h-7 bg-slate-100 rounded animate-pulse" /> : k.value}
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
+        <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Estado de mis faenas</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          {riesgo.total_servicios === 0
+            ? "Aún no tienes servicios activos"
+            : sinRiesgo
+              ? `Tus ${riesgo.total_servicios} servicios activos están en regla`
+              : `${riesgo.servicios_en_riesgo} de ${riesgo.total_servicios} servicios tienen incumplimientos`}
+        </p>
+      </div>
+
+      <div className="flex-1 px-6 sm:px-8 py-6 space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className={cn(
+            "rounded-xl border p-4",
+            riesgo.personas_no_habilitadas > 0 ? "border-red-200 bg-red-50" : "border-slate-200 bg-white"
+          )}>
+            <p className="text-xs text-slate-500">Personas sin poder ingresar</p>
+            <p className={cn(
+              "text-2xl font-semibold mt-1",
+              riesgo.personas_no_habilitadas > 0 ? "text-red-700" : "text-slate-900"
+            )}>
+              {riesgo.personas_no_habilitadas}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">
+              asignadas a una faena sin cumplir sus requisitos
+            </p>
+          </div>
+
+          <button
+            onClick={() => window.location.href = "/mandante/revision"}
+            className="text-left rounded-xl border border-slate-200 bg-white p-4 hover:bg-slate-50/70 transition-colors"
+          >
+            <p className="text-xs text-slate-500">Esperando tu revisión</p>
+            <p className="text-2xl font-semibold text-slate-900 mt-1">{riesgo.documentos_por_revisar}</p>
+            <p className="text-[11px] text-slate-600 mt-1 inline-flex items-center gap-1">
+              Ir a Revisión <ArrowRight size={10} />
+            </p>
+          </button>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs text-slate-500">Faenas en regla</p>
+            <p className="text-2xl font-semibold text-slate-900 mt-1">
+              {riesgo.total_servicios - riesgo.servicios_en_riesgo}
+              <span className="text-sm text-slate-400 font-normal">/{riesgo.total_servicios}</span>
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">sin incumplimientos abiertos</p>
+          </div>
+        </div>
+
+        <section>
+          <p className="text-xs text-slate-500 mb-2">Mis faenas · más expuestas primero</p>
+
+          {riesgo.servicios.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center">
+              <ClipboardCheck size={24} className="text-slate-300 mx-auto mb-3" />
+              <p className="text-sm text-slate-500">No tienes servicios activos</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Crea uno desde Servicios para empezar a exigir documentos.
               </p>
-              <p className="text-xs text-slate-400">{k.sub}</p>
             </div>
-          ))}
-        </div>
-
-        {/* Fila central */}
-        <div className="grid grid-cols-5 gap-6">
-
-          {/* Gauge + pilares */}
-          <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900">Cumplimiento por pilar</h2>
-              <div className="flex items-center gap-1.5">
-                <TrendingUp size={13} className="text-emerald-500" />
-                <span className="text-xs font-semibold text-emerald-600">{pctGlobal}% global</span>
-              </div>
+          ) : (
+            <div className="space-y-2">
+              {riesgo.servicios.map(s => <FaenaRow key={s.servicio_id} s={s} />)}
             </div>
-            <div className="flex items-center justify-center py-2">
-              <div className="relative w-32 h-32">
-                <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="#f1f5f9" strokeWidth="12" />
-                  <circle
-                    cx="60" cy="60" r="50" fill="none"
-                    stroke={pctGlobal >= 70 ? "#10b981" : pctGlobal >= 50 ? "#f59e0b" : "#ef4444"}
-                    strokeWidth="12"
-                    strokeDasharray={`${2 * Math.PI * 50}`}
-                    strokeDashoffset={`${2 * Math.PI * 50 * (1 - pctGlobal / 100)}`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-2xl font-bold text-slate-900">{pctGlobal}%</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">acreditadas</p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4 pt-1">
-              {data.pilares.map(p => <PilarBar key={p.codigo} nombre={p.nombre} ok={p.ok} total={p.total} />)}
-            </div>
-          </div>
-
-          {/* Alertas bloqueados */}
-          <div className="col-span-3 bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle size={15} className="text-red-500" />
-                <h2 className="text-sm font-semibold text-slate-900">Contratistas bloqueados</h2>
-                <span className="text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full font-medium">
-                  {data.bloqueadas}
-                </span>
-              </div>
-              <a href="/mandante/contratistas" className="text-xs text-slate-400 hover:text-slate-600">
-                Ver todos →
-              </a>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {data.alertas.length === 0 && !loading && (
-                <p className="px-5 py-8 text-sm text-slate-400 text-center">Sin contratistas bloqueados</p>
-              )}
-              {data.alertas.map((a, i) => (
-                <div key={i} className="px-5 py-4 hover:bg-slate-50/70 transition-colors cursor-pointer">
-                  <div className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-md bg-red-50 text-red-600 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                      {initials(a.contratista)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{a.contratista}</p>
-                      <p className="text-xs text-slate-400 font-mono mb-2">{a.rut}</p>
-                      <div className="space-y-0.5">
-                        {a.brechas.map((b, j) => (
-                          <p key={j} className="text-xs text-red-500 flex items-center gap-1.5">
-                            <span className="w-1 h-1 rounded-full bg-red-400 shrink-0" />
-                            {b}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="text-slate-300 mt-0.5 shrink-0" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Actividad reciente */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-900">Actividad reciente</h2>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {data.actividad.length === 0 && !loading && (
-              <p className="px-5 py-6 text-sm text-slate-400 text-center">Sin actividad reciente</p>
-            )}
-            {data.actividad.map((a, i) => {
-              const c = TIPO_CONFIG[a.tipo as keyof typeof TIPO_CONFIG] ?? TIPO_CONFIG.info
-              return (
-                <div key={i} className="px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50/70">
-                  <span className={cn("w-2 h-2 rounded-full shrink-0", c.dot)} />
-                  <p className="text-sm font-medium text-slate-800 w-64 shrink-0 truncate">{a.empresa}</p>
-                  <p className={cn("text-sm flex-1", c.text)}>{a.accion}</p>
-                  <p className="text-xs text-slate-400 shrink-0">{a.tiempo}</p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
+          )}
+        </section>
       </div>
     </div>
   )

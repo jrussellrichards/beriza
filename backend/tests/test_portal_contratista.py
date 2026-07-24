@@ -129,6 +129,23 @@ def run():
     assert pend == sorted(pend, key=lambda x: (x.urgencia, x.titulo)), "debe venir por urgencia"
     print("PASS: la bandeja viene ordenada por urgencia")
 
+    # ── Riesgo del mandante ─────────────────────────────────────────────────
+    # La unidad es la FAENA, no el contratista: la misma empresa esta impecable
+    # en Obra Sur y tiene gente sin habilitar en Obra Norte. Agrupar por
+    # contratista escondería justo el lugar donde hay riesgo.
+    riesgo = acreditacion_service.riesgo_del_mandante(db, codelco.id)
+    por_nombre = {s.servicio_nombre: s for s in riesgo.servicios}
+
+    assert riesgo.total_servicios == 2
+    assert riesgo.servicios_en_riesgo == 1, "solo Obra Norte tiene gente sin habilitar"
+    assert por_nombre["Obra Norte"].trabajadores_no_habilitados == 1
+    assert por_nombre["Obra Sur"].trabajadores_no_habilitados == 0
+    print("PASS: el riesgo del mandante se reporta por faena, no por contratista")
+
+    assert riesgo.servicios[0].servicio_nombre == "Obra Norte",         "lo mas expuesto debe venir primero"
+    assert riesgo.personas_no_habilitadas == 1
+    print("PASS: las faenas mas expuestas vienen primero")
+
     print("TODOS LOS TESTS DEL PORTAL PASARON")
 
 

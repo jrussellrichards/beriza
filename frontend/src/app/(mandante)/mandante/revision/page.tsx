@@ -157,11 +157,11 @@ export default function RevisionPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
+    <div className="flex flex-col min-h-screen">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">Revisión de documentos</h1>
+            <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Revisión de documentos</h1>
             <p className="text-sm text-slate-500 mt-0.5">
               Entregas de contratistas pendientes de tu aprobación
             </p>
@@ -176,7 +176,7 @@ export default function RevisionPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-8 py-6 space-y-4">
+      <div className="flex-1 px-6 sm:px-8 py-6 space-y-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-slate-700">
             {pendientes.length} entrega{pendientes.length !== 1 ? "s" : ""} pendiente{pendientes.length !== 1 ? "s" : ""}

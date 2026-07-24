@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
-    AcreditacionResponse, PendienteResponse, RequisitoAvanceResponse, ResumenMandanteResponse,
+    AcreditacionResponse, PendienteResponse, RequisitoAvanceResponse,
+    ResumenMandanteResponse, RiesgoMandanteResponse,
 )
 from app.domain import acreditacion_service
 from app.infrastructure.database import get_db
@@ -27,6 +28,23 @@ def mi_resumen(
     if not usuario.contratista_id:
         raise HTTPException(status_code=400, detail="El usuario no está asociado a un contratista")
     return acreditacion_service.resumen_por_mandante(db, usuario.contratista_id)
+
+
+@router.get("/mi-riesgo", response_model=RiesgoMandanteResponse)
+def mi_riesgo(
+    db: Session = Depends(get_db),
+    usuario=Depends(require_rol(["mandante_admin", "prevencionista", "berisa_admin"])),
+):
+    """
+    Dónde está expuesto el mandante, por faena: cuánta gente está asignada sin
+    poder ingresar y cuántos documentos esperan su revisión.
+
+    Responde la pregunta que le importa por la Ley 20.123 —dónde tengo riesgo—
+    en vez de cuántos contratistas tiene, que es un dato de vanidad.
+    """
+    if not usuario.mandante_id:
+        raise HTTPException(status_code=400, detail="El usuario no está asociado a un mandante")
+    return acreditacion_service.riesgo_del_mandante(db, usuario.mandante_id)
 
 
 @router.get("/mis-pendientes", response_model=list[PendienteResponse])

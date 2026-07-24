@@ -397,6 +397,30 @@ class TrabajadorHabilitacionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ServicioEnRiesgoResponse(BaseModel):
+    servicio_id: uuid.UUID
+    servicio_nombre: str
+    servicio_tipo: str
+    contratista_razon_social: str
+    trabajadores_asignados: int
+    trabajadores_no_habilitados: int
+    documentos_pendientes: int
+    brechas_empresa: list[str]
+
+    model_config = {"from_attributes": True}
+
+
+class RiesgoMandanteResponse(BaseModel):
+    """Donde esta expuesto el mandante, por faena."""
+    total_servicios: int
+    servicios_en_riesgo: int
+    personas_no_habilitadas: int
+    documentos_por_revisar: int
+    servicios: list[ServicioEnRiesgoResponse]
+
+    model_config = {"from_attributes": True}
+
+
 class PendienteResponse(BaseModel):
     """Algo que el contratista debe resolver. La UI interpreta `tipo`."""
     tipo: str
