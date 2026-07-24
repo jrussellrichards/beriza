@@ -27,6 +27,14 @@ export interface EstadoPorMandante {
 /** Un documento del contratista con el estado de cada mandante que lo exige. */
 export interface DocumentoContratista {
   clave: string
+  /** null = exigido pero aún sin subir. */
+  expediente_id: string | null
+  /** Sensibilidad efectiva: la decisión del contratista o el default del catálogo. */
+  sensible: boolean
+  /** Decisión del contratista; null = usar el default de BERISA. */
+  sensible_override: boolean | null
+  /** false en documentos de trabajador: son datos personales de un tercero. */
+  puede_relajar: boolean
   requisito_id: string
   requisito_codigo: string
   requisito_nombre: string

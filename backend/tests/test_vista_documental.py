@@ -183,6 +183,36 @@ def run():
         "ambos aprobados pero en versiones distintas: la UI debe poder distinguirlas"
     print("PASS: ambos aprobados en versiones distintas -> versiones distinguibles")
 
+    # ── Subir una version nueva avanza a los que la necesitan ────────────────
+    # Codelco APROBADO y vigente; Falabella OBSERVADO. Al subir una v3, solo
+    # Falabella debe moverse: mover a Codelco lo desacreditaria mientras su
+    # documento sigue siendo valido.
+    from app.domain import documento_service
+    acred_cod = (db.query(Acreditacion)
+                 .filter_by(expediente_id=exp.id, mandante_id=codelco.id).first())
+    acred_cod.entrega.fecha_vigencia_hasta = HOY.replace(year=HOY.year + 1)
+    acred_fal.estado = EstadoDocumento.OBSERVADO
+    db.commit()
+
+    v3 = Entrega(expediente_id=exp.id, numero_version=3); db.add(v3); db.flush()
+    documento_service._avanzar_otros_mandantes(db, exp, acred_fal, v3, u.id)
+    db.commit()
+    db.refresh(acred_cod); db.refresh(acred_fal)
+
+    assert acred_cod.numero_version == 1 and acred_cod.estado == EstadoDocumento.APROBADO, \
+        "el aprobado y vigente NO debe moverse: se desacreditaria por una subida ajena"
+    print("PASS: subir version nueva no mueve al mandante aprobado y vigente")
+
+    # Y si su vigencia YA expiro, si debe avanzar (su documento ya no sirve).
+    acred_cod.entrega.fecha_vigencia_hasta = HOY.replace(year=HOY.year - 1)
+    v4 = Entrega(expediente_id=exp.id, numero_version=4); db.add(v4); db.flush()
+    documento_service._avanzar_otros_mandantes(db, exp, acred_fal, v4, u.id)
+    db.commit(); db.refresh(acred_cod)
+
+    assert acred_cod.numero_version == 4 and acred_cod.estado == EstadoDocumento.ENVIADO, \
+        "si su vigencia expiro, debe avanzar a la version nueva"
+    print("PASS: el aprobado con vigencia expirada si avanza a la version nueva")
+
     print("TODOS LOS TESTS DE VISTA DOCUMENTAL PASARON")
 
 

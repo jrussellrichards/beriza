@@ -1,26 +1,6 @@
 export type EstadoDoc = "APROBADO" | "EN_ANALISIS" | "OBSERVADO" | "ENVIADO" | "VENCIDO" | "PENDIENTE_AUTORIZACION" | "FALTA"
 
-export interface Exigencia {
-  requisito_id: string
-  requisito_codigo: string
-  requisito_nombre: string
-  entidad_tipo: "EMPRESA" | "TRABAJADOR"
-  alcance: "ENTIDAD" | "SERVICIO"
-  max_archivos: number
-  estado: number | null
-  fecha_vigencia_hasta: string | null
-  mensaje_brecha: string | null
-  documento_id: string | null
-  trabajador_id: string | null
-  trabajador_nombre: string | null
-  servicio_id: string | null
-  servicio_nombre: string | null
-  pilar_codigo: string
-  pilar_nombre: string
-}
-
 export const ESTADO_NUM: Record<number, EstadoDoc> = { 1: "ENVIADO", 2: "EN_ANALISIS", 3: "OBSERVADO", 4: "APROBADO", 5: "VENCIDO", 6: "PENDIENTE_AUTORIZACION" }
-export const estadoDe = (e: Exigencia): EstadoDoc => (e.estado ? ESTADO_NUM[e.estado] ?? "FALTA" : "FALTA")
 
 export const ESTADO_CFG: Record<EstadoDoc, { label: string; dot: string; text: string; bg: string; border: string }> = {
   APROBADO:    { label: "Aprobado",    dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },

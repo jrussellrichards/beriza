@@ -167,6 +167,7 @@ def subir_entrega(
         actor_usuario_id=subido_por_usuario_id,
         detalle={"version": entrega.numero_version, "archivos": [a.nombre_original for a in archivos]},
     )
+    _avanzar_otros_mandantes(db, expediente, acred, entrega, subido_por_usuario_id)
     db.commit()
 
     # Un documento de alcance ENTIDAD vale para todos los mandantes, no solo para
@@ -207,6 +208,51 @@ def subir_entrega(
         numero_version=entrega.numero_version,
         mensaje=mensaje,
     )
+
+
+def _avanzar_otros_mandantes(
+    db: Session,
+    expediente: Expediente,
+    acred_subida: Acreditacion,
+    entrega: Entrega,
+    usuario_id: uuid.UUID,
+) -> None:
+    """
+    El contratista sube UNA versión de su documento; los demás mandantes que lo
+    exigen deben verla también. Si no, subir una corrección para un cliente
+    dejaría a los otros mirando la versión que ya fue rechazada.
+
+    Excepción: el que tiene APROBADA una entrega aún vigente NO se mueve.
+    Moverlo lo devolvería a revisión y lo desacreditaría mientras su documento
+    sigue siendo válido. Cuando esa vigencia expire, el cron de vencimientos
+    hace el auto-repin. Es el pin explícito de Fase 1.
+    """
+    hoy = date.today()
+    for otra in expediente.acreditaciones:
+        if otra.id == acred_subida.id or otra.eliminado_en is not None:
+            continue
+        # Un documento sensible sin autorizar no se comparte por la puerta trasera
+        if otra.estado == EstadoDocumento.PENDIENTE_AUTORIZACION:
+            continue
+        if otra.entrega_id == entrega.id:
+            continue
+        if otra.estado == EstadoDocumento.APROBADO:
+            vigencia = otra.entrega.fecha_vigencia_hasta if otra.entrega else None
+            if vigencia is None or vigencia >= hoy:
+                continue   # aprobado y vigente: no lo desacreditamos
+
+        estado_anterior = otra.estado if otra.entrega_id else None
+        otra.entrega_id = entrega.id
+        otra.numero_version = entrega.numero_version
+        otra.estado = EstadoDocumento.ENVIADO
+        otra.mensaje_brecha = None
+        db.flush()
+        _registrar_evento(
+            db, otra, TipoEvento.SUBIDA,
+            estado_anterior=estado_anterior, estado_nuevo=EstadoDocumento.ENVIADO,
+            actor_usuario_id=usuario_id,
+            detalle={"version": entrega.numero_version, "propagada": True},
+        )
 
 
 def _mismos_archivos(entrega: Entrega, hashes_nuevos: list[str]) -> bool:

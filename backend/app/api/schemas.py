@@ -381,6 +381,10 @@ class EstadoPorMandanteResponse(BaseModel):
 class DocumentoContratistaResponse(BaseModel):
     """Un documento del contratista con el estado de cada mandante que lo exige."""
     clave: str
+    expediente_id: uuid.UUID | None
+    sensible: bool
+    sensible_override: bool | None
+    puede_relajar: bool
     requisito_id: uuid.UUID
     requisito_codigo: str
     requisito_nombre: str

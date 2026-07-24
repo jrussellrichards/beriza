@@ -22,6 +22,7 @@ from app.domain.estados import (
     EstadoDocumento,
     EstadoServicio,
 )
+from app.domain import reutilizacion_service
 from app.models.contratista import ContratistaMandante
 from app.models.expediente import Acreditacion, Expediente
 from app.models.pilar import RequisitoDocumental, Subpilar
@@ -581,6 +582,10 @@ class EstadoPorMandante:
 class DocumentoContratista:
     """Un documento del contratista con el estado de cada mandante que lo exige."""
     clave: str
+    expediente_id: uuid.UUID | None   # None = exigido pero aún sin subir
+    sensible: bool                    # sensibilidad EFECTIVA (override o catálogo)
+    sensible_override: bool | None    # decisión del contratista; None = default
+    puede_relajar: bool               # False en documentos de trabajador
     requisito_id: uuid.UUID
     requisito_codigo: str
     requisito_nombre: str
@@ -617,8 +622,15 @@ def vista_documental(db: Session, contratista_id: uuid.UUID) -> list[DocumentoCo
             clave = (item.requisito_id, item.trabajador_id, item.servicio_id)
             doc = docs.get(clave)
             if doc is None:
+                exp = _expediente_del_item(db, item, contratista_id)
+                requisito = exp.requisito if exp else None
                 doc = DocumentoContratista(
                     clave=f"{item.requisito_id}:{item.trabajador_id or ''}:{item.servicio_id or ''}",
+                    expediente_id=exp.id if exp else None,
+                    sensible=(reutilizacion_service.es_sensible(exp, requisito)
+                              if exp and requisito else False),
+                    sensible_override=exp.sensible_override if exp else None,
+                    puede_relajar=item.entidad_tipo == EntidadTipo.EMPRESA,
                     requisito_id=item.requisito_id,
                     requisito_codigo=item.requisito_codigo,
                     requisito_nombre=item.requisito_nombre,
@@ -704,3 +716,20 @@ def resumen_por_mandante(db: Session, contratista_id: uuid.UUID) -> list[Resumen
         EstadoAcreditacion.ACREDITADA: 3,
     }
     return sorted(resumenes, key=lambda r: (orden.get(r.estado_global, 9), r.mandante_razon_social))
+
+
+def _expediente_del_item(db: Session, item: RequisitoAvance, contratista_id: uuid.UUID) -> Expediente | None:
+    """El expediente detrás de un item de avance, si el contratista ya subió algo."""
+    from app.models.expediente import Acreditacion as _A
+    if item.documento_id:
+        acred = db.get(_A, item.documento_id)
+        return acred.expediente if acred else None
+    q = db.query(Expediente).filter(
+        Expediente.requisito_id == item.requisito_id,
+        Expediente.eliminado_en.is_(None),
+    )
+    q = (q.filter(Expediente.trabajador_id == item.trabajador_id)
+         if item.trabajador_id else q.filter(Expediente.empresa_id == contratista_id))
+    q = (q.filter(Expediente.servicio_id == item.servicio_id)
+         if item.servicio_id else q.filter(Expediente.servicio_id.is_(None)))
+    return q.first()
