@@ -3,8 +3,10 @@
 > Documento de contexto. Resume la decisión de arquitectura acordada tras un
 > debate multi-agente (arquitecto, programador escéptico, ingeniero de
 > seguridad, experto de producto). Léelo antes de tocar el dominio de
-> documentos. Estado al 2026-07-23: **Fase 0 en curso** (rama
-> `fase-0-prerequisitos`).
+> documentos. Estado al 2026-07-23: **Fase 0 en PR** (`fase-0-prerequisitos`) y
+> **Fase 1 completa** en la rama `fase-1-nucleo` (modelo nuevo en producción de
+> código: dominio, API, seed, notificaciones y tarea IA migrados; modelo viejo
+> eliminado). El modelo viejo (`documento.py`) ya no existe.
 
 ## El problema
 

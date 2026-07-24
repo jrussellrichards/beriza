@@ -26,7 +26,7 @@ from app.infrastructure.database import get_db
 from app.infrastructure.email import Email, get_email_cliente
 from app.middleware.auth import require_rol
 from app.models.contratista import ContratistaMandante, EmpresaContratista
-from app.models.documento import Documento
+from app.models.expediente import Acreditacion, AcreditacionEvento, Expediente
 from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.models.trabajador import Trabajador
@@ -243,13 +243,19 @@ def dashboard_mandante(
     bloq_rels = [r for r in rels if r.estado_acreditacion == "BLOQUEADA"]
     for rel in bloq_rels[:5]:
         brechas = []
-        docs_obs = db.query(Documento).filter(
-            Documento.empresa_id == rel.contratista_id,
-            Documento.mandante_id == mandante_id,
-            Documento.estado == 3,
-        ).all()
+        docs_obs = (
+            db.query(Acreditacion)
+            .join(Expediente, Acreditacion.expediente_id == Expediente.id)
+            .filter(
+                Expediente.empresa_id == rel.contratista_id,
+                Acreditacion.mandante_id == mandante_id,
+                Acreditacion.estado == 3,
+                Acreditacion.eliminado_en.is_(None),
+            )
+            .all()
+        )
         for d in docs_obs:
-            brechas.append(d.mensaje_brecha or f"{d.requisito.codigo} observado")
+            brechas.append(d.mensaje_brecha or f"{d.expediente.requisito.codigo} observado")
         alertas.append({
             "contratista": rel.contratista.razon_social,
             "rut": rel.contratista.rut,
@@ -259,25 +265,26 @@ def dashboard_mandante(
 
     # Actividad reciente (últimos docs del mandante)
     docs_recientes = (
-        db.query(Documento)
-        .filter_by(mandante_id=mandante_id)
-        .order_by(Documento.created_at.desc())
+        db.query(Acreditacion)
+        .filter_by(mandante_id=mandante_id, eliminado_en=None)
+        .order_by(Acreditacion.created_at.desc())
         .limit(5)
         .all()
     )
     ahora = datetime.now(timezone.utc)
     actividad = []
     for doc in docs_recientes:
-        empresa = db.get(EmpresaContratista, doc.empresa_id) if doc.empresa_id else None
+        empresa = db.get(EmpresaContratista, doc.expediente.empresa_id) if doc.expediente.empresa_id else None
         nombre = empresa.razon_social if empresa else "—"
+        codigo = doc.expediente.requisito.codigo
         if doc.estado == 4:
-            accion = f"Documento {doc.requisito.codigo} aprobado"
+            accion = f"Documento {codigo} aprobado"
             tipo = "ok"
         elif doc.estado == 3:
-            accion = f"Documento {doc.requisito.codigo} rechazado"
+            accion = f"Documento {codigo} rechazado"
             tipo = "warn"
         else:
-            accion = f"Documento {doc.requisito.codigo} enviado"
+            accion = f"Documento {codigo} enviado"
             tipo = "info"
         delta = ahora - doc.created_at.replace(tzinfo=timezone.utc)
         if delta.seconds < 3600 and delta.days == 0:
@@ -417,7 +424,7 @@ def reportes_mandante(
     total = len(rels)
     acreditadas = sum(1 for r in rels if r.estado_acreditacion == "ACREDITADA")
 
-    docs_todos = db.query(Documento).filter_by(mandante_id=mandante_id).all()
+    docs_todos = db.query(Acreditacion).filter_by(mandante_id=mandante_id, eliminado_en=None).all()
     docs_procesados = sum(1 for d in docs_todos if d.estado in (3, 4))
 
     pilares = db.query(Pilar).order_by(Pilar.orden).all()
@@ -439,18 +446,17 @@ def reportes_mandante(
         })
 
     # Evolución mensual real: aprobaciones registradas en la bitácora de
-    # eventos (documento_eventos) en los últimos 6 meses.
+    # eventos (acreditacion_eventos) en los últimos 6 meses.
     from datetime import date
-    from app.models.documento import DocumentoEvento
 
     hoy = date.today()
     MESES_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
     aprobaciones = (
-        db.query(DocumentoEvento)
-        .join(Documento, DocumentoEvento.documento_id == Documento.id)
+        db.query(AcreditacionEvento)
+        .join(Acreditacion, AcreditacionEvento.acreditacion_id == Acreditacion.id)
         .filter(
-            Documento.mandante_id == mandante_id,
-            DocumentoEvento.estado_nuevo == EstadoDocumento.APROBADO,
+            Acreditacion.mandante_id == mandante_id,
+            AcreditacionEvento.estado_nuevo == EstadoDocumento.APROBADO,
         )
         .all()
     )
@@ -469,20 +475,21 @@ def reportes_mandante(
 
     # Historial: últimos documentos procesados
     docs_recientes = (
-        db.query(Documento)
-        .filter_by(mandante_id=mandante_id)
-        .filter(Documento.estado.in_([3, 4]))
-        .order_by(Documento.created_at.desc())
+        db.query(Acreditacion)
+        .filter_by(mandante_id=mandante_id, eliminado_en=None)
+        .filter(Acreditacion.estado.in_([3, 4]))
+        .order_by(Acreditacion.created_at.desc())
         .limit(10)
         .all()
     )
     historial = []
     for doc in docs_recientes:
-        empresa = db.get(EmpresaContratista, doc.empresa_id) if doc.empresa_id else None
+        empresa = db.get(EmpresaContratista, doc.expediente.empresa_id) if doc.expediente.empresa_id else None
+        req = doc.expediente.requisito
         historial.append({
             "contratista": empresa.razon_social if empresa else "—",
             "tipo": "Documento aprobado" if doc.estado == 4 else "Documento observado",
-            "descripcion": f"{doc.requisito.codigo}: {doc.requisito.nombre[:40]}",
+            "descripcion": f"{req.codigo}: {req.nombre[:40]}",
             "estado": "ok" if doc.estado == 4 else "warn",
             "fecha": doc.created_at.strftime("%d/%m/%Y"),
         })

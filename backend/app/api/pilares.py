@@ -14,7 +14,7 @@ from app.api.schemas import ActualizarRequisitoCatalogoRequest, CrearRequisitoCa
 from app.domain.estados import Alcance, EntidadTipo
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
-from app.models.documento import Documento
+from app.models.expediente import Expediente
 from app.models.pilar import Pilar, Subpilar, RequisitoDocumental
 from app.models.servicio import PerfilRequisitoConfig
 from app.models.usuario import Usuario
@@ -186,7 +186,7 @@ def eliminar_requisito(
         raise HTTPException(status_code=403, detail="Solo puede eliminar requisitos propios de su organización")
 
     en_perfiles = db.query(PerfilRequisitoConfig).filter_by(requisito_documental_id=requisito_id).count()
-    con_documentos = db.query(Documento).filter_by(requisito_id=requisito_id).count()
+    con_documentos = db.query(Expediente).filter_by(requisito_id=requisito_id).count()
     if en_perfiles or con_documentos:
         raise HTTPException(
             status_code=409,

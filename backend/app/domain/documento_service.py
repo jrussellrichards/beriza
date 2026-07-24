@@ -374,6 +374,17 @@ def procesar_documento(db: Session, entrega_id: uuid.UUID) -> ResultadoAnalisis:
     )
 
 
+def marcar_entrega_observada(db: Session, entrega_id: uuid.UUID, mensaje: str) -> None:
+    """Deja observadas las acreditaciones que fijan esta entrega (errores del pipeline IA)."""
+    entrega = db.get(Entrega, entrega_id)
+    if not entrega:
+        raise DocumentoNoEncontrado(f"Entrega {entrega_id} no encontrada.")
+    for acred in entrega.expediente.acreditaciones:
+        if acred.entrega_id == entrega.id and acred.eliminado_en is None:
+            acred.mensaje_brecha = mensaje
+            _cambiar_estado(db, acred, EstadoDocumento.OBSERVADO, actor=None)
+
+
 # ── Lectura ───────────────────────────────────────────────────────────────────
 
 def obtener_documento(db: Session, documento_id: uuid.UUID) -> Acreditacion:

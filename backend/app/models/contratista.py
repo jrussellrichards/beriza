@@ -14,7 +14,6 @@ class EmpresaContratista(ModelBase):
     usuarios: Mapped[list["Usuario"]] = relationship(back_populates="contratista")
     trabajadores: Mapped[list["Trabajador"]] = relationship(back_populates="empresa")
     mandantes: Mapped[list["ContratistaMandante"]] = relationship(back_populates="contratista")
-    documentos: Mapped[list["Documento"]] = relationship(back_populates="empresa")
 
 
 class ContratistaMandante(ModelBase):
