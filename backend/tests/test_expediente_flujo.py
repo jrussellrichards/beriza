@@ -27,6 +27,7 @@ from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.models.servicio import PerfilRequisitoConfig, PerfilRequisitos, Servicio
 from app.models.usuario import Usuario
+from app.api import documentos as api_doc
 from app.domain import acreditacion_service, documento_service
 from app.domain.archivo_service import ArchivoEntrada
 from app.domain.estados import EstadoAcreditacion, EstadoDocumento
@@ -112,6 +113,18 @@ def run():
     est = acreditacion_service.obtener_estado_acreditacion(db, c.id, m.id)
     assert est.estado_global == EstadoAcreditacion.ACREDITADA, f"esperaba ACREDITADA, vino {est.estado_global}"
     print("PASS 6: aprobada la v2 -> relacion ACREDITADA")
+
+    # 7. Capa API: obtener_documento / historial / pendientes / url-descarga
+    resp = api_doc.obtener_documento(documento_id=acred.id, db=db, usuario=u)
+    assert resp.id == acred.id and resp.estado == EstadoDocumento.APROBADO
+    assert resp.version_vigente is not None and resp.version_vigente.numero_version == 2
+    hist = api_doc.historial_documento(documento_id=acred.id, db=db, usuario=u)
+    assert len(hist.versiones) == 2 and len(hist.eventos) >= 1
+    pend = api_doc.pendientes_revision(db=db, usuario=u)
+    assert all(p.documento_id != acred.id for p in pend), "aprobada no debe seguir pendiente"
+    url = api_doc.obtener_url_descarga(documento_id=acred.id, db=db, usuario=u)
+    assert url.url
+    print("PASS 7: capa API (obtener/historial/pendientes/url) OK")
 
     print("TODOS LOS SMOKE TESTS DE FLUJO PASARON")
 

@@ -8,7 +8,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
+    ArchivoDocumentoResponse,
+    DocumentoEventoResponse,
     DocumentoResponse,
+    DocumentoVersionResponse,
     HistorialDocumentoResponse,
     PendienteRevisionResponse,
     RevisarDocumentoRequest,
@@ -27,10 +30,43 @@ from app.domain.archivo_service import ArchivoEntrada
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
 from app.middleware.tenant import verificar_acceso_documento, verificar_puede_subir_para
-from app.models.documento import ArchivoDocumento
+from app.models.expediente import Acreditacion, Archivo, Entrega
 from app.models.usuario import Usuario
 
 router = APIRouter()
+
+
+# ── Builders de respuesta (nuevo modelo → contrato API estable) ───────────────
+
+def _version_response(entrega: Entrega, acred: Acreditacion) -> DocumentoVersionResponse:
+    """Una entrega como 'versión'. estado/excepción son de la acreditación y solo
+    aplican a la entrega vigente (0 = versión histórica, sin estado propio)."""
+    es_vigente = acred.entrega_id == entrega.id
+    return DocumentoVersionResponse(
+        id=entrega.id,
+        numero_version=entrega.numero_version,
+        estado=acred.estado if es_vigente else 0,
+        mensaje_brecha=acred.mensaje_brecha if es_vigente else None,
+        fecha_vigencia_hasta=entrega.fecha_vigencia_hasta,
+        aprobado_por_excepcion=acred.aprobado_por_excepcion if es_vigente else False,
+        created_at=entrega.created_at,
+        archivos=[ArchivoDocumentoResponse.model_validate(a) for a in entrega.archivos],
+    )
+
+
+def _documento_response(acred: Acreditacion) -> DocumentoResponse:
+    exp = acred.expediente
+    entrega = acred.entrega
+    return DocumentoResponse(
+        id=acred.id,
+        requisito_id=exp.requisito_id,
+        servicio_id=exp.servicio_id,
+        estado=acred.estado,
+        mensaje_brecha=acred.mensaje_brecha,
+        fecha_vigencia_hasta=entrega.fecha_vigencia_hasta if entrega else None,
+        created_at=acred.created_at,
+        version_vigente=_version_response(entrega, acred) if entrega else None,
+    )
 
 
 @router.post("/", response_model=SubidaDocumentoResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -91,25 +127,27 @@ def pendientes_revision(
     if not usuario.mandante_id:
         raise HTTPException(status_code=400, detail="El usuario no está asociado a un mandante")
 
-    docs = documento_service.listar_pendientes_revision(db, usuario.mandante_id)
+    acreditaciones = documento_service.listar_pendientes_revision(db, usuario.mandante_id)
     resultado = []
-    for d in docs:
-        version = d.version_vigente
-        if version is None:
+    for acred in acreditaciones:
+        entrega = acred.entrega
+        if entrega is None:
             continue
-        trabajador = d.trabajador
-        empresa = d.empresa or (trabajador.empresa if trabajador else None)
+        exp = acred.expediente
+        requisito = exp.requisito
+        trabajador = exp.trabajador
+        empresa = exp.empresa or (trabajador.empresa if trabajador else None)
         resultado.append(PendienteRevisionResponse(
-            documento_id=d.id,
-            requisito_codigo=d.requisito.codigo,
-            requisito_nombre=d.requisito.nombre,
-            pilar_nombre=d.requisito.subpilar.pilar.nombre,
+            documento_id=acred.id,
+            requisito_codigo=requisito.codigo,
+            requisito_nombre=requisito.nombre,
+            pilar_nombre=requisito.subpilar.pilar.nombre,
             contratista_razon_social=empresa.razon_social if empresa else "—",
             trabajador_nombre=trabajador.nombre_completo if trabajador else None,
-            servicio_nombre=d.servicio.nombre if d.servicio else None,
-            numero_version=version.numero_version,
-            subido_en=version.created_at,
-            archivos=version.archivos,
+            servicio_nombre=exp.servicio.nombre if exp.servicio else None,
+            numero_version=entrega.numero_version,
+            subido_en=entrega.created_at,
+            archivos=[ArchivoDocumentoResponse.model_validate(a) for a in entrega.archivos],
         ))
     return resultado
 
@@ -122,11 +160,11 @@ def obtener_documento(
 ):
     """Estado actual del expediente con su versión vigente y archivos."""
     try:
-        doc = documento_service.obtener_documento(db, documento_id)
+        acred = documento_service.obtener_documento(db, documento_id)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
-    verificar_acceso_documento(db, doc, usuario)
-    return doc
+    verificar_acceso_documento(db, acred, usuario)
+    return _documento_response(acred)
 
 
 @router.get("/{documento_id}/historial", response_model=HistorialDocumentoResponse)
@@ -137,14 +175,16 @@ def historial_documento(
 ):
     """Historial completo del expediente: todas las versiones y la bitácora de eventos."""
     try:
-        doc = documento_service.obtener_documento(db, documento_id)
+        acred = documento_service.obtener_documento(db, documento_id)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
-    verificar_acceso_documento(db, doc, usuario)
+    verificar_acceso_documento(db, acred, usuario)
+    # Versiones = entregas del expediente (uploads del contratista); bitácora =
+    # eventos de ESTA acreditación (no se filtran las revisiones de otro mandante).
     return HistorialDocumentoResponse(
-        documento_id=doc.id,
-        versiones=doc.versiones,
-        eventos=doc.eventos,
+        documento_id=acred.id,
+        versiones=[_version_response(e, acred) for e in acred.expediente.entregas],
+        eventos=[DocumentoEventoResponse.model_validate(ev) for ev in acred.eventos],
     )
 
 
@@ -187,6 +227,9 @@ def aprobar_por_excepcion(
     Registra quién aprobó, cuándo y con qué justificación.
     """
     try:
+        acred = documento_service.obtener_documento(db, documento_id)
+        if usuario.mandante_id and acred.mandante_id != usuario.mandante_id:
+            raise HTTPException(status_code=403, detail="El documento no pertenece a su mandante")
         documento_service.aprobar_por_excepcion(db, documento_id, usuario.id, justificacion)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
@@ -202,10 +245,14 @@ def url_descarga_archivo(
     usuario=Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
 ):
     """URL firmada temporal (1 hora) para un archivo específico del expediente."""
-    archivo = db.get(ArchivoDocumento, archivo_id)
-    if not archivo or archivo.version.documento_id != documento_id:
+    try:
+        acred = documento_service.obtener_documento(db, documento_id)
+    except DocumentoNoEncontrado:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    verificar_acceso_documento(db, acred, usuario)
+    archivo = db.get(Archivo, archivo_id)
+    if not archivo or archivo.entrega.expediente_id != acred.expediente_id:
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
-    verificar_acceso_documento(db, archivo.version.documento, usuario)
     return UrlDescargaResponse(url=archivo_service.url_descarga(archivo.storage_key))
 
 
@@ -220,12 +267,12 @@ def obtener_url_descarga(
     Para expedientes multi-archivo usar /archivos/{archivo_id}/url-descarga.
     """
     try:
-        doc = documento_service.obtener_documento(db, documento_id)
+        acred = documento_service.obtener_documento(db, documento_id)
     except DocumentoNoEncontrado:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
-    verificar_acceso_documento(db, doc, usuario)
+    verificar_acceso_documento(db, acred, usuario)
 
-    version = doc.version_vigente
-    if not version or not version.archivos:
+    entrega = acred.entrega
+    if not entrega or not entrega.archivos:
         raise HTTPException(status_code=404, detail="El expediente no tiene archivos")
-    return UrlDescargaResponse(url=archivo_service.url_descarga(version.archivos[0].storage_key))
+    return UrlDescargaResponse(url=archivo_service.url_descarga(entrega.archivos[0].storage_key))
