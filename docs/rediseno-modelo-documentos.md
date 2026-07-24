@@ -147,9 +147,24 @@ el job `backend-test` de CI que gatea el deploy.
 - **C (aceptada):** subcontratistas con **revisión delegada completa**. El
   mandante revisa los documentos del subcontratista directamente — es él quien
   responde ante la Ley 20.123, así que no puede delegar la verificación en el
-  contratista principal y quedarse con un reporte agregado. Implicancia de
-  diseño: `Acreditacion.mandante_id` apunta al mandante real, no al contratista
-  principal, y el subcontratista necesita su propio acceso al portal.
+  contratista principal y quedarse con un reporte agregado. Implicancias:
+  1. `Acreditacion.mandante_id` apunta al mandante real, no al contratista
+     principal. Eso define **quién revisa**.
+  2. **Quién revisa ≠ por quién entró.** La relación con el contratista
+     principal NO se pierde: vive en `ServicioSubcontratista → Servicio →
+     ContratistaMandante`. Desde cualquier documento del subcontratista se llega
+     al servicio, y de ahí al principal y al mandante.
+  3. Esa relación **no puede ir como columna en `Acreditacion`**: un mismo
+     subcontratista puede llegar al mismo mandante por **dos principales
+     distintos a la vez** (bajo ABC en Obra Norte y bajo XYZ en Obra Sur).
+     Ponerla en la acreditación obligaría a elegir uno arbitrariamente o a
+     duplicar la revisión del mismo F30. Con la relación en el servicio, el
+     documento ENTIDAD del subcontratista se revisa **una vez por mandante** y
+     vale para todas sus obras — consistente con la reutilización de Fase 2.
+  4. **Responsabilidad ≠ verificación.** Ante una brecha del subcontratista se
+     recorre esa cadena para escalar al principal, que es quien debe
+     solucionarla; la verificación sigue siendo del mandante.
+  5. El subcontratista necesita su propio acceso al portal (rol nuevo).
 - **D (aceptada):** reutilización **automática** para genéricos (sin fricción) y
   **con autorización explícita** para sensibles. Se descartó pedir autorización
   siempre: convertía cada mandante nuevo en una fila de aprobaciones para el
