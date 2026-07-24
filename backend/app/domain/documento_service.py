@@ -339,7 +339,7 @@ def procesar_documento(
 
     empresa_efectiva = doc.empresa_id or (doc.trabajador.empresa_id if doc.trabajador_id else None)
     resultado_validacion = reglas_service.validar_documento(
-        db, requisito.codigo, campos_dict, doc.mandante_id, contratista_id=empresa_efectiva
+        db, requisito.id, campos_dict, doc.mandante_id, contratista_id=empresa_efectiva
     )
 
     version.campos_extraidos = campos_dict

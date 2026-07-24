@@ -75,7 +75,7 @@ def configs_para_requisito(
 
 def validar_documento(
     db: Session,
-    requisito_codigo: str,
+    requisito_id: uuid.UUID,
     campos_extraidos: dict,
     mandante_id: uuid.UUID,
     contratista_id: uuid.UUID | None = None,
@@ -86,12 +86,16 @@ def validar_documento(
     y matemática — nunca la toma un LLM. Para documentos compartidos entre
     servicios se aplica la configuración MÁS ESTRICTA entre los perfiles
     de los servicios activos.
+
+    Se resuelve por requisito_id (UUID) y NO por código: desde los requisitos
+    propios por mandante el código dejó de ser único global, así que resolver
+    por string podía apuntar a la fila equivocada.
     """
-    requisito = db.query(RequisitoDocumental).filter_by(codigo=requisito_codigo).first()
+    requisito = db.get(RequisitoDocumental, requisito_id)
     if not requisito:
         return ResultadoValidacion(
             aprobado=False, estado=EstadoDocumento.OBSERVADO,
-            brechas=[f"Requisito '{requisito_codigo}' no encontrado en el sistema."],
+            brechas=["Requisito no encontrado en el sistema."],
         )
 
     config = config_mas_estricta(
@@ -107,7 +111,7 @@ def validar_documento(
         "CONTRATO": lambda c: _validar_contrato(c),
     }
 
-    validar_fn = validadores.get(requisito_codigo)
+    validar_fn = validadores.get(requisito.codigo)
     if validar_fn:
         brechas = validar_fn(campos_extraidos)
     else:

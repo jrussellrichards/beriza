@@ -99,10 +99,22 @@ def crear_requisito(
         raise HTTPException(status_code=404, detail="Pilar no encontrado o sin subpilares")
 
     mandante_id = usuario.mandante_id if usuario.rol == "mandante_admin" else None
-    duplicado = db.query(RequisitoDocumental).filter_by(codigo=body.codigo.strip().upper(), mandante_id=mandante_id).first()
+    codigo_norm = body.codigo.strip().upper()
+    duplicado = db.query(RequisitoDocumental).filter_by(codigo=codigo_norm, mandante_id=mandante_id).first()
     if duplicado:
         ambito = "tu organización" if mandante_id else "el catálogo global"
         raise HTTPException(status_code=400, detail=f"Ya existe un requisito con código {body.codigo} en {ambito}")
+    # Un requisito propio NO puede colisionar con el catálogo global: las reglas
+    # se resuelven por código en varios puntos y un código duplicado (propio vs
+    # global) sería ambiguo. Ver docs/rediseno-modelo-documentos.md (Fase 0).
+    if mandante_id is not None:
+        global_existente = db.query(RequisitoDocumental).filter_by(codigo=codigo_norm, mandante_id=None).first()
+        if global_existente:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El código {codigo_norm} ya existe en el catálogo global de BERISA. "
+                       "Usa un código distinto para tu requisito propio.",
+            )
     if body.entidad_tipo not in (EntidadTipo.EMPRESA, EntidadTipo.TRABAJADOR):
         raise HTTPException(status_code=400, detail="entidad_tipo debe ser EMPRESA o TRABAJADOR")
     if body.alcance not in (Alcance.ENTIDAD, Alcance.SERVICIO):
@@ -112,7 +124,7 @@ def crear_requisito(
     req = RequisitoDocumental(
         subpilar_id=subpilar.id,
         mandante_id=mandante_id,
-        codigo=body.codigo.strip().upper(),
+        codigo=codigo_norm,
         nombre=body.nombre,
         descripcion=body.descripcion,
         entidad_tipo=body.entidad_tipo,
