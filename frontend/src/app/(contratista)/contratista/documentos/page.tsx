@@ -341,6 +341,7 @@ export default function DocumentosPage() {
         <HistorialDialog
           documentoId={historial.m.documento_id}
           titulo={`${historial.doc.requisito_nombre} — ${historial.m.mandante_razon_social}`}
+          estadoAcreditacion={historial.m.estado}
           onClose={() => setHistorial(null)}
         />
       )}
