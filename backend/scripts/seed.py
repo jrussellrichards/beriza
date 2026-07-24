@@ -389,25 +389,36 @@ def _eliminar_expedientes(session: Session, expedientes: list[Expediente]):
 # ── Contratistas Codelco ──────────────────────────────────────────────────────
 
 def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
-    # Si ya existe Cóndor (la primera empresa del nuevo seed) se asume que todo está creado
-    condor_ya_existe = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
-    if condor_ya_existe:
-        print("  OK Contratistas Codelco ya existen, saltando.")
+    # El guard mira los EXPEDIENTES, no solo la empresa: si Cóndor existe pero
+    # se quedó sin documentos (le pasó en producción tras la migración de Fase 1,
+    # que reemplazó el modelo documental), hay que recrearlos. Con el guard
+    # anterior —"si existe la empresa, saltar todo"— la demo quedaba sin un solo
+    # documento y el portal se veía vacío para siempre.
+    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
+    if condor and session.query(Expediente).filter_by(empresa_id=condor.id).first():
+        print("  OK Contratistas Codelco ya existen con documentos, saltando.")
         return
 
     # Limpiar contratistas viejos del seed anterior (Constructora Demo SpA, etc.)
-    for rel in session.query(ContratistaMandante).filter_by(mandante_id=codelco.id).all():
-        empresa = session.get(EmpresaContratista, rel.contratista_id)
-        # Borrar servicios, documentos, trabajadores, usuarios y la relación
+    # Se purga cada empresa COMPLETA —todas sus relaciones, no solo la de
+    # Codelco— porque borrarla dejando una relación viva con otro mandante
+    # violaría la foreign key.
+    empresas = [
+        session.get(EmpresaContratista, rel.contratista_id)
+        for rel in session.query(ContratistaMandante).filter_by(mandante_id=codelco.id).all()
+    ]
+    for empresa in [e for e in empresas if e]:
         _eliminar_expedientes(session, session.query(Expediente).filter_by(empresa_id=empresa.id).all())
         for t in session.query(Trabajador).filter_by(empresa_id=empresa.id).all():
             _eliminar_expedientes(session, session.query(Expediente).filter_by(trabajador_id=t.id).all())
-        for s in session.query(Servicio).filter_by(contratista_mandante_id=rel.id).all():
-            session.query(ServicioTrabajador).filter_by(servicio_id=s.id).delete()
-            session.delete(s)
+        for rel in session.query(ContratistaMandante).filter_by(contratista_id=empresa.id).all():
+            for s in session.query(Servicio).filter_by(contratista_mandante_id=rel.id).all():
+                session.query(ServicioTrabajador).filter_by(servicio_id=s.id).delete()
+                session.delete(s)
+            session.delete(rel)
         session.query(Trabajador).filter_by(empresa_id=empresa.id).delete()
         session.query(Usuario).filter_by(contratista_id=empresa.id).delete()
-        session.delete(rel)
+        session.flush()
         session.delete(empresa)
     session.flush()
     print("  OK Contratistas viejos de Codelco eliminados, creando nuevos...")
