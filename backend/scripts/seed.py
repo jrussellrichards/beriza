@@ -755,6 +755,7 @@ def main():
         # SERVICIO (MIPER) se anclan al servicio "General", que se crea ahí.
         seed_documentos_condor(session, mandantes["codelco-demo"], reqs)
         seed_segundo_mandante_condor(session)
+        seed_showcase_demo(session)
     print("\nCredenciales de acceso:")
     print("  admin@berisa.cl       / admin123  (berisa_admin)")
     print("  mandante@demo.cl      / demo123   (mandante_admin — Codelco)")
@@ -764,3 +765,119 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ── Showcase para demo comercial ──────────────────────────────────────────────
+
+# Nombres reales del rubro por mandante. Se reparten entre sus contratistas para
+# que la demo no muestre 17 servicios llamados "General": un cliente que ve eso
+# no puede imaginarse su propia operación en el producto.
+SERVICIOS_DEMO = {
+    "codelco-demo": [
+        ("Chuquicamata — Mantención planta concentradora", "FAENA"),
+        ("Radomiro Tomic — Movimiento de tierras", "FAENA"),
+        ("Ampliación planta de cátodos", "OBRA"),
+        ("Transporte de personal turno noche", "SERVICIO"),
+        ("Ministro Hales — Sostenimiento de túneles", "FAENA"),
+        ("Aseo industrial y manejo de residuos", "SERVICIO"),
+        ("Montaje estructuras área seca", "OBRA"),
+    ],
+    "los-pelambres": [
+        ("Ampliación planta concentradora", "OBRA"),
+        ("Mantención correa transportadora", "SERVICIO"),
+        ("Habilitación campamento Cuncumén", "OBRA"),
+        ("Perforación y tronadura rajo", "FAENA"),
+        ("Servicio de alimentación casino", "SERVICIO"),
+    ],
+    "echeverria-izquierdo": [
+        ("Edificio Nueva Las Condes — Torre B", "OBRA"),
+        ("Habilitación oficinas piso 12", "OBRA"),
+        ("Instalaciones eléctricas subterráneo", "OBRA"),
+        ("Suministro de hormigón", "SERVICIO"),
+    ],
+    "enap-refinerias": [
+        ("Refinería Aconcagua — Parada de planta", "FAENA"),
+        ("Inspección técnica de estanques", "SERVICIO"),
+    ],
+}
+
+
+def seed_showcase_demo(session: Session):
+    """
+    Da variedad realista a la demo: nombres y tipos de servicio del rubro, y
+    documentos en estados distintos para que cada pantalla tenga contenido.
+
+    Sin esto la demo mostraba 17 servicios llamados "General", todos de tipo
+    SERVICIO, todos "en riesgo" y con la cola de revisión del mandante vacía —
+    justo la pantalla donde el mandante hace su trabajo diario.
+
+    Idempotente: solo toca los servicios que siguen llamándose "General".
+    """
+    renombrados = 0
+    for slug, nombres in SERVICIOS_DEMO.items():
+        mandante = session.query(Mandante).filter_by(slug=slug).first()
+        if not mandante:
+            continue
+        relaciones = (
+            session.query(ContratistaMandante)
+            .filter_by(mandante_id=mandante.id)
+            .order_by(ContratistaMandante.created_at)
+            .all()
+        )
+        for i, rel in enumerate(relaciones):
+            servicio = session.query(Servicio).filter_by(
+                contratista_mandante_id=rel.id, nombre="General"
+            ).first()
+            if not servicio:
+                continue
+            nombre, tipo = nombres[i % len(nombres)]
+            servicio.nombre = nombre
+            servicio.tipo = tipo
+            servicio.codigo_referencia = f"{slug[:3].upper()}-2026-{100 + i}"
+            renombrados += 1
+    session.commit()
+    if renombrados:
+        print(f"  OK {renombrados} servicio(s) con nombre y tipo realistas.")
+    else:
+        print("  OK Servicios ya tienen nombres realistas, saltando.")
+
+    _showcase_estados_documentos(session)
+
+
+def _showcase_estados_documentos(session: Session):
+    """
+    Reparte estados para que ninguna pantalla quede vacía en la demo:
+    algunos documentos esperando revisión (la cola del mandante), algunos
+    observados, y algunos por vencer (las alertas del contratista).
+    """
+    codelco = session.query(Mandante).filter_by(slug="codelco-demo").first()
+    if not codelco:
+        return
+
+    acreds = (
+        session.query(Acreditacion)
+        .filter_by(mandante_id=codelco.id, eliminado_en=None)
+        .filter(Acreditacion.entrega_id.isnot(None))
+        .order_by(Acreditacion.created_at)
+        .all()
+    )
+    aprobadas = [a for a in acreds if a.estado == 4]
+    if len(aprobadas) < 6:
+        print("  OK Sin suficientes documentos aprobados para repartir estados, saltando.")
+        return
+
+    # Ya se repartió antes si hay algo esperando revisión.
+    if any(a.estado == 1 for a in acreds):
+        print("  OK Estados de demo ya repartidos, saltando.")
+        return
+
+    for a in aprobadas[:4]:                      # cola de revisión del mandante
+        a.estado = 1
+    for a in aprobadas[4:6]:                     # observados: brecha con motivo
+        a.estado = 3
+        a.mensaje_brecha = "El documento está ilegible en la última página."
+    for a in aprobadas[6:9]:                     # por vencer: alertas del contratista
+        if a.entrega:
+            a.entrega.fecha_vigencia_hasta = HOY + timedelta(days=5)
+    session.commit()
+    print("  OK Estados de demo repartidos: 4 por revisar, 2 observados, 3 por vencer.")
