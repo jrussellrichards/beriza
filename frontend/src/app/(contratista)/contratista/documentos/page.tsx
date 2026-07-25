@@ -9,6 +9,7 @@ import { cn } from "@/shared/lib/utils"
 import { SubirDocumentoDialog, type RequisitoSubida } from "@/features/subir-documento/subir-documento-dialog"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
 import { BadgesMandante } from "@/entities/documento/badges-mandante"
+import { ResolverSolicitudDialog } from "@/features/subir-documento/resolver-solicitud-dialog"
 import { PILAR_COLOR, PILAR_DEFAULT } from "@/entities/documento/exigencia"
 import type { DocumentoContratista, EstadoPorMandante } from "@/entities/contratista/resumen"
 import { getSession } from "@/shared/lib/auth"
@@ -23,11 +24,12 @@ type Ambito = "EMPRESA" | "TRABAJADORES"
  * mandante — el que el token eligiera al azar. Ahora el F30 es UNA fila con N
  * badges: es lo que hace visible que se sube una vez y sirve para todos.
  */
-function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad }: {
+function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }: {
   doc: DocumentoContratista
   onSubir: (d: DocumentoContratista) => void
   onHistorial: (d: DocumentoContratista, m: EstadoPorMandante) => void
   onSensibilidad: (d: DocumentoContratista) => void
+  onResolver: (d: DocumentoContratista, m: EstadoPorMandante) => void
 }) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl px-4 py-3.5">
@@ -48,7 +50,11 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad }: {
             )}
           </div>
           <div className="mt-2">
-            <BadgesMandante mandantes={doc.mandantes} onSelect={m => onHistorial(doc, m)} />
+            <BadgesMandante
+              mandantes={doc.mandantes}
+              onSelect={m => onHistorial(doc, m)}
+              onAutorizar={m => onResolver(doc, m)}
+            />
           </div>
         </div>
 
@@ -202,6 +208,7 @@ export default function DocumentosPage() {
   const [subirDoc, setSubirDoc] = useState<DocumentoContratista | null>(null)
   const [historial, setHistorial] = useState<{ doc: DocumentoContratista; m: EstadoPorMandante } | null>(null)
   const [sensibilidadDoc, setSensibilidadDoc] = useState<DocumentoContratista | null>(null)
+  const [solicitud, setSolicitud] = useState<{ doc: DocumentoContratista; m: EstadoPorMandante } | null>(null)
 
   const cargar = useCallback(() => {
     setLoading(true)
@@ -354,6 +361,7 @@ export default function DocumentosPage() {
                   onSubir={setSubirDoc}
                   onHistorial={(doc, m) => setHistorial({ doc, m })}
                   onSensibilidad={setSensibilidadDoc}
+                  onResolver={(d, m) => setSolicitud({ doc: d, m })}
                 />
               )}
             </Grupo>
@@ -395,6 +403,15 @@ export default function DocumentosPage() {
               ? { id: subirDoc.servicio_id, nombre: subirDoc.servicio_nombre }
               : undefined
           }
+        />
+      )}
+
+      {solicitud && (
+        <ResolverSolicitudDialog
+          mandante={solicitud.m}
+          requisitoNombre={solicitud.doc.requisito_nombre}
+          onClose={() => setSolicitud(null)}
+          onResuelto={() => { setSolicitud(null); cargar() }}
         />
       )}
 
