@@ -85,9 +85,6 @@ def obtener_invitacion(token: str, db: Session = Depends(get_db)):
     if not usuario or usuario.activo:
         raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
 
-    # La invitación puede ser de un contratista (lo invita un mandante) o de un
-    # mandante (lo invita BERISA). El flujo es el mismo; cambia de qué tabla
-    # salen los datos a prellenar y quién aparece como invitante.
     if usuario.contratista_id:
         empresa = db.query(EmpresaContratista).filter_by(id=usuario.contratista_id).first()
         if not empresa:
@@ -100,6 +97,9 @@ def obtener_invitacion(token: str, db: Session = Depends(get_db)):
         )
         return InvitacionInfoResponse(
             email=usuario.email,
+            nombre=usuario.nombre,
+            tipo=_tipo_invitacion(db, usuario),
+            organizacion=empresa.razon_social,
             razon_social=empresa.razon_social,
             rut=empresa.rut,
             giro=empresa.giro,
@@ -113,6 +113,9 @@ def obtener_invitacion(token: str, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Invitación no encontrada")
         return InvitacionInfoResponse(
             email=usuario.email,
+            nombre=usuario.nombre,
+            tipo=_tipo_invitacion(db, usuario),
+            organizacion=mandante.razon_social,
             razon_social=mandante.razon_social,
             rut=mandante.rut,
             giro=None,
@@ -125,12 +128,45 @@ def obtener_invitacion(token: str, db: Session = Depends(get_db)):
     raise HTTPException(status_code=404, detail="Invitación no encontrada")
 
 
+def _tipo_invitacion(db: Session, invitado: Usuario) -> str:
+    """
+    ORGANIZACION si el invitado ES la empresa que se está dando de alta; EQUIPO
+    si se suma a una que ya existe.
+
+    Se decide por la presencia de OTRO usuario activo en la misma organización:
+    cuando BERISA da de alta un mandante, ese mandante no tiene ningún usuario
+    activo todavía; cuando un mandante invita a un colega, existe al menos el que
+    invitó. No hace falta una columna nueva para saberlo.
+
+    Importa porque de esto depende si el formulario de activación pide confirmar
+    la razón social y el RUT. A un miembro del equipo no le corresponde editarlos
+    —podría cambiar el RUT de su propia empresa— y además es confuso: lo único
+    que tiene que hacer es elegir su contraseña.
+    """
+    q = db.query(Usuario).filter(Usuario.id != invitado.id, Usuario.activo.is_(True))
+    if invitado.mandante_id:
+        q = q.filter(Usuario.mandante_id == invitado.mandante_id)
+    elif invitado.contratista_id:
+        q = q.filter(Usuario.contratista_id == invitado.contratista_id)
+    else:
+        return "ORGANIZACION"
+    return "EQUIPO" if q.first() else "ORGANIZACION"
+
+
 @router.post("/activar", response_model=TokenResponse)
 def activar_cuenta(body: ActivarCuentaRequest, db: Session = Depends(get_db)):
     """
-    Activa la cuenta de un contratista invitado. Recibe el token del email
-    de invitación, la contraseña elegida y los datos básicos de la empresa.
-    El token es el usuario_id enviado en la invitación.
+    Activa una cuenta invitada. El token es el usuario_id enviado en el email.
+
+    Hay dos tipos de invitación y solo uno toca los datos de la organización:
+
+    - ORGANIZACION: el invitado ES la empresa que se da de alta (BERISA invita a
+      un mandante, un mandante invita a un contratista). Confirma o corrige su
+      razón social y RUT.
+    - EQUIPO: el invitado se suma a una organización que ya existe. Solo define su
+      contraseña. Los datos de la empresa se IGNORAN aunque vengan en el body: no
+      le corresponde editarlos, y sin este bloqueo un miembro nuevo del equipo
+      podía cambiar el RUT de su propia empresa desde el formulario de activación.
     """
     try:
         usuario_id = uuid.UUID(body.token)
@@ -141,8 +177,20 @@ def activar_cuenta(body: ActivarCuentaRequest, db: Session = Depends(get_db)):
     if not usuario or usuario.activo:
         raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
 
+    es_equipo = _tipo_invitacion(db, usuario) == "EQUIPO"
+
+    if es_equipo:
+        # Solo su propia cuenta. Nada de la organización.
+        if body.nombre:
+            usuario.nombre = body.nombre
+    elif not body.razon_social or not body.rut:
+        raise HTTPException(
+            status_code=400,
+            detail="Falta la razón social o el RUT de la empresa.",
+        )
+
     mandante = db.get(Mandante, usuario.mandante_id) if usuario.mandante_id else None
-    if mandante:
+    if mandante and not es_equipo:
         if body.rut != mandante.rut:
             conflicto = db.query(Mandante).filter(
                 Mandante.rut == body.rut, Mandante.id != mandante.id
@@ -158,7 +206,7 @@ def activar_cuenta(body: ActivarCuentaRequest, db: Session = Depends(get_db)):
         # Mandante no tiene giro; el campo del formulario se ignora.
 
     empresa = db.query(EmpresaContratista).filter_by(id=usuario.contratista_id).first()
-    if empresa:
+    if empresa and not es_equipo:
         if body.rut != empresa.rut:
             conflicto = db.query(EmpresaContratista).filter(
                 EmpresaContratista.rut == body.rut,

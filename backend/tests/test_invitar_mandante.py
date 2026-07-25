@@ -104,6 +104,49 @@ def run():
         "al contratista si se le muestra quien lo invita"
     print("PASS: la invitacion de contratista sigue funcionando")
 
+    # ── Invitar a un MIEMBRO DEL EQUIPO es distinto ─────────────────────────
+    # Bug reportado: el formulario de activacion le pedia al invitado "confirmar
+    # los datos de tu empresa" con la razon social y el RUT del mandante
+    # precargados, asi que un miembro nuevo podia CAMBIAR EL RUT de Codelco.
+    from app.api.schemas import InvitarUsuarioMandanteRequest
+    from app.api import mandantes as api_m
+
+    admin_activo = db.query(Usuario).filter_by(mandante_id=mandante.id, activo=True).first()
+    assert admin_activo is not None, "precondicion: el mandante ya tiene un usuario activo"
+
+    api_m.invitar_usuario_mandante(
+        mandante_id=mandante.id,
+        body=InvitarUsuarioMandanteRequest(email="patricia@minera.cl", nombre="Patricia Rojas",
+                                           rol="prevencionista", pilar_ids=[]),
+        db=db, usuario=admin_activo,
+    )
+    miembro = db.query(Usuario).filter_by(email="patricia@minera.cl").first()
+
+    info_eq = api_usuarios.obtener_invitacion(token=str(miembro.id), db=db)
+    assert info_eq.tipo == "EQUIPO", f"debio ser EQUIPO, fue {info_eq.tipo}"
+    assert info_eq.organizacion == mandante.razon_social
+    assert info_eq.nombre == "Patricia Rojas"
+    print("PASS: invitar a un colega se marca como EQUIPO, no como alta de empresa")
+
+    # Y el mandante que invito sigue siendo ORGANIZACION si aun no activo... pero
+    # ya activo, asi que el caso de alta se verifico arriba con tipo por defecto.
+
+    # Lo central: aunque manden un RUT distinto, NO se toca la organizacion.
+    rut_original = mandante.rut
+    razon_original = mandante.razon_social
+    api_usuarios.activar_cuenta(
+        body=ActivarCuentaRequest(token=str(miembro.id), password="secreto123",
+                                  razon_social="Empresa Pirata SpA", rut="99.999.999-9",
+                                  nombre="Patricia Rojas Soto"),
+        db=db,
+    )
+    db.refresh(mandante); db.refresh(miembro)
+    assert mandante.rut == rut_original,         f"un miembro del equipo NO puede cambiar el RUT de la empresa: {mandante.rut}"
+    assert mandante.razon_social == razon_original,         "un miembro del equipo NO puede cambiar la razon social"
+    assert miembro.activo is True and miembro.password_hash != ""
+    assert miembro.nombre == "Patricia Rojas Soto", "si puede corregir SU propio nombre"
+    print("PASS: un miembro del equipo NO puede alterar los datos de la empresa")
+
     print("TODOS LOS TESTS DE INVITACION PASARON")
 
 

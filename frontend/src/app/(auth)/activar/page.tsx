@@ -17,6 +17,11 @@ interface TokenResponse {
 
 interface InvitacionInfo {
   email: string
+  nombre: string
+  /** ORGANIZACION: el invitado ES la empresa que se da de alta y confirma sus
+   *  datos. EQUIPO: se suma a una que ya existe y solo elige su contraseña. */
+  tipo: "ORGANIZACION" | "EQUIPO"
+  organizacion: string
   razon_social: string
   rut: string
   giro: string | null
@@ -29,6 +34,7 @@ function ActivarForm() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
 
+  const [nombre, setNombre] = useState("")
   const [razonSocial, setRazonSocial] = useState("")
   const [rut, setRut] = useState("")
   const [giro, setGiro] = useState("")
@@ -48,6 +54,7 @@ function ActivarForm() {
     api.get<InvitacionInfo>(`/api/v1/usuarios/invitacion/${token}`)
       .then((data) => {
         setInvitacion(data)
+        setNombre(data.nombre)
         setRazonSocial(data.razon_social)
         setRut(data.rut)
         setGiro(data.giro ?? "")
@@ -71,12 +78,14 @@ function ActivarForm() {
     setLoading(true)
     setError(null)
     try {
+      // Un miembro del equipo no manda datos de la empresa: no le corresponden.
+      // El backend además los ignoraría, pero tampoco tiene sentido enviarlos.
       const data = await api.post<TokenResponse>("/api/v1/usuarios/activar", {
         token,
         password,
-        razon_social: razonSocial,
-        rut,
-        giro: giro || null,
+        ...(esEquipo
+          ? { nombre }
+          : { razon_social: razonSocial, rut, giro: giro || null }),
       })
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("rol", data.rol)
@@ -124,6 +133,8 @@ function ActivarForm() {
     )
   }
 
+  const esEquipo = invitacion.tipo === "EQUIPO"
+  // El giro es un dato del contratista; el modelo Mandante no lo tiene.
   const esMandante = invitacion.rol === "mandante_admin"
 
   return (
@@ -137,44 +148,63 @@ function ActivarForm() {
         <span className="font-medium text-ink-secondary">{invitacion.email}</span>. Confirma o corrige los datos de tu empresa.
       </p>
 
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium text-ink-secondary">Razón social de tu empresa</label>
-        <div className="relative">
-          <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
-          <input
-            value={razonSocial}
-            onChange={e => setRazonSocial(e.target.value)}
-            placeholder="Constructora Ejemplo SpA"
-            required
-            className={cn(inputCls, "pl-9")}
-          />
-        </div>
-      </div>
-
-      <div className={cn("gap-3", esMandante ? "" : "grid grid-cols-2")}>
+      {esEquipo ? (
+        // Un miembro del equipo solo confirma su propio nombre. Los datos de la
+        // empresa NO se muestran: no le corresponde editarlos —podría cambiar el
+        // RUT de su propia organización— y pedírselos era desconcertante, porque
+        // veía la razón social de otra empresa como si fuera suya.
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">RUT empresa</label>
+          <label className="text-sm font-medium text-ink-secondary">Tu nombre</label>
           <input
-            value={rut}
-            onChange={e => setRut(e.target.value)}
-            placeholder="76.123.456-7"
+            value={nombre}
+            onChange={e => setNombre(e.target.value)}
+            placeholder="Patricia Rojas"
             required
             className={inputCls}
           />
         </div>
-        {/* El giro es un dato del contratista; el modelo Mandante no lo tiene. */}
-        {!esMandante && (
+      ) : (
+        <>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Giro (opcional)</label>
-            <input
-              value={giro}
-              onChange={e => setGiro(e.target.value)}
-              placeholder="Construcción"
-              className={inputCls}
-            />
+            <label className="text-sm font-medium text-ink-secondary">Razón social de tu empresa</label>
+            <div className="relative">
+              <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
+              <input
+                value={razonSocial}
+                onChange={e => setRazonSocial(e.target.value)}
+                placeholder="Constructora Ejemplo SpA"
+                required
+                className={cn(inputCls, "pl-9")}
+              />
+            </div>
           </div>
-        )}
-      </div>
+
+          <div className={cn("gap-3", esMandante ? "" : "grid grid-cols-2")}>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-ink-secondary">RUT empresa</label>
+              <input
+                value={rut}
+                onChange={e => setRut(e.target.value)}
+                placeholder="76.123.456-7"
+                required
+                className={inputCls}
+              />
+            </div>
+            {/* El giro es un dato del contratista; el modelo Mandante no lo tiene. */}
+            {!esMandante && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-ink-secondary">Giro (opcional)</label>
+                <input
+                  value={giro}
+                  onChange={e => setGiro(e.target.value)}
+                  placeholder="Construcción"
+                  className={inputCls}
+                />
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="space-y-1.5">
         <label className="text-sm font-medium text-ink-secondary">Contraseña</label>
@@ -237,9 +267,8 @@ export default function ActivarPage() {
         <div className="bg-surface rounded-xl border border-line p-8">
           <div className="mb-6">
             <h1 className="text-lg font-semibold text-ink">Activa tu cuenta</h1>
-            <p className="text-sm text-ink-muted mt-1">
-              Confirma los datos de tu empresa y crea tu contraseña para comenzar a acreditarte.
-            </p>
+            {/* El subtítulo específico lo pone el formulario, que sí sabe si es
+                un alta de empresa o alguien sumándose a un equipo. */}
           </div>
           <Suspense fallback={<p className="text-sm text-ink-subtle">Cargando...</p>}>
             <ActivarForm />
