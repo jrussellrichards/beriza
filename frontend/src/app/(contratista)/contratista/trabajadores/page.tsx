@@ -1,10 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { CheckCircle2, ChevronDown, ChevronRight, Plus, Search, UserX } from "lucide-react"
+import { CheckCircle2, ChevronDown, ChevronRight, FileSpreadsheet, Plus, Search, UserX } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 import { AgregarTrabajadorDialog } from "@/features/agregar-trabajador/agregar-trabajador-dialog"
+import { CargarNominaDialog } from "@/features/agregar-trabajador/cargar-nomina-dialog"
 import { TIPO_LABEL, type TrabajadorHabilitacion } from "@/entities/contratista/resumen"
 
 /**
@@ -127,6 +128,7 @@ export default function TrabajadoresPage() {
   const [busqueda, setBusqueda] = useState("")
   const [soloBloqueados, setSoloBloqueados] = useState(false)
   const [agregando, setAgregando] = useState(false)
+  const [cargandoNomina, setCargandoNomina] = useState(false)
 
   const cargar = useCallback(() => {
     setCargando(true)
@@ -163,12 +165,23 @@ export default function TrabajadoresPage() {
                 : `${bloqueados} no ${bloqueados === 1 ? "puede" : "pueden"} ingresar a alguno de sus servicios`}
           </p>
         </div>
-        <button
-          onClick={() => setAgregando(true)}
-          className="inline-flex items-center justify-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
-        >
-          <Plus size={14} /> Agregar trabajador
-        </button>
+        {/* La carga masiva va primero y el alta individual queda secundaria:
+            partir con la nómina completa es el caso del día 1, y agregar de a
+            uno es lo que se hace después, cuando entra alguien nuevo. */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCargandoNomina(true)}
+            className="inline-flex items-center justify-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+          >
+            <FileSpreadsheet size={14} /> Cargar nómina
+          </button>
+          <button
+            onClick={() => setAgregando(true)}
+            className="inline-flex items-center justify-center gap-2 border border-line text-ink-secondary text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-app transition-colors"
+          >
+            <Plus size={14} /> Agregar uno
+          </button>
+        </div>
       </div>
 
       <div className="px-6 sm:px-8 py-4 border-b border-line bg-surface flex items-center gap-3 flex-wrap">
@@ -213,6 +226,13 @@ export default function TrabajadoresPage() {
         onClose={() => setAgregando(false)}
         onSuccess={() => { setAgregando(false); cargar() }}
       />
+
+      {cargandoNomina && (
+        <CargarNominaDialog
+          onClose={() => setCargandoNomina(false)}
+          onCargado={cargar}
+        />
+      )}
     </div>
   )
 }
