@@ -10,7 +10,7 @@ const ICONO: Record<TipoPendiente, { icon: typeof Lock; color: string }> = {
   AUTORIZACION:          { icon: Lock,        color: "text-violet-500" },
   OBSERVADO:             { icon: AlertCircle, color: "text-red-500" },
   POR_VENCER:            { icon: Clock,       color: "text-orange-500" },
-  TRABAJADOR_INCOMPLETO: { icon: UserX,       color: "text-slate-500" },
+  TRABAJADOR_INCOMPLETO: { icon: UserX,       color: "text-ink-muted" },
 }
 
 /**
@@ -46,12 +46,12 @@ export function PendienteRow({ p, onResuelto }: {
   }
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 border-b border-line-subtle last:border-0">
       <Icono size={17} className={cn("shrink-0", color)} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-900">{p.titulo}</p>
-        {p.detalle && <p className="text-xs text-slate-400 mt-0.5">{p.detalle}</p>}
+        <p className="text-sm text-ink">{p.titulo}</p>
+        {p.detalle && <p className="text-xs text-ink-subtle mt-0.5">{p.detalle}</p>}
         {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       </div>
 
@@ -61,7 +61,7 @@ export function PendienteRow({ p, onResuelto }: {
             <button
               onClick={() => resolver("rechazar")}
               disabled={ocupado}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-ink-muted hover:bg-surface-app disabled:opacity-50 transition-colors"
             >
               Rechazar
             </button>
@@ -76,7 +76,7 @@ export function PendienteRow({ p, onResuelto }: {
         ) : (
           <button
             onClick={irA}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-ink-muted hover:bg-surface-app transition-colors"
           >
             {p.tipo === "OBSERVADO" ? "Subir corrección"
               : p.tipo === "POR_VENCER" ? "Renovar"

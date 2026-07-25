@@ -37,23 +37,23 @@ export function ResolverSolicitudDialog({ mandante, requisitoNombre, onClose, on
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+      <div className="bg-surface rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <Lock size={14} className="text-violet-600" />
-          <p className="text-sm font-semibold text-slate-900">Solicitud de acceso</p>
+          <p className="text-sm font-semibold text-ink">Solicitud de acceso</p>
         </div>
 
-        <p className="text-sm text-slate-600 mt-3">
-          <strong className="font-medium text-slate-900">{mandante.mandante_razon_social}</strong>{" "}
-          quiere revisar tu <strong className="font-medium text-slate-900">{requisitoNombre.toLowerCase()}</strong>.
+        <p className="text-sm text-ink-muted mt-3">
+          <strong className="font-medium text-ink">{mandante.mandante_razon_social}</strong>{" "}
+          quiere revisar tu <strong className="font-medium text-ink">{requisitoNombre.toLowerCase()}</strong>.
         </p>
 
-        <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 space-y-1.5">
-          <p className="text-[11px] text-slate-600">
+        <div className="mt-4 rounded-lg bg-surface-app border border-line px-3 py-2.5 space-y-1.5">
+          <p className="text-[11px] text-ink-muted">
             <strong className="font-medium">Si autorizas:</strong> solo este cliente lo verá. El documento
             sigue marcado como sensible, así que el próximo cliente que lo exija volverá a pedirte permiso.
           </p>
-          <p className="text-[11px] text-slate-600">
+          <p className="text-[11px] text-ink-muted">
             <strong className="font-medium">Si rechazas:</strong> el requisito quedará como brecha con este
             cliente hasta que le subas el documento aparte, y no se te volverá a preguntar.
           </p>
@@ -67,7 +67,7 @@ export function ResolverSolicitudDialog({ mandante, requisitoNombre, onClose, on
             disabled={ocupado !== null}
             className={cn(
               "flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium border transition-colors",
-              ocupado ? "border-slate-200 text-slate-300 cursor-not-allowed" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              ocupado ? "border-line text-ink-subtle cursor-not-allowed" : "border-line text-ink-muted hover:bg-surface-app"
             )}
           >
             <X size={14} />
@@ -78,7 +78,7 @@ export function ResolverSolicitudDialog({ mandante, requisitoNombre, onClose, on
             disabled={ocupado !== null}
             className={cn(
               "flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-colors",
-              ocupado ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-slate-900 text-white hover:bg-slate-800"
+              ocupado ? "bg-slate-200 text-ink-subtle cursor-not-allowed" : "bg-slate-900 text-white hover:bg-slate-800"
             )}
           >
             <Check size={14} />
@@ -86,7 +86,7 @@ export function ResolverSolicitudDialog({ mandante, requisitoNombre, onClose, on
           </button>
         </div>
 
-        <button onClick={onClose} className="w-full mt-3 py-1.5 text-xs text-slate-500 hover:text-slate-800">
+        <button onClick={onClose} className="w-full mt-3 py-1.5 text-xs text-ink-muted hover:text-ink">
           Decidir después
         </button>
       </div>

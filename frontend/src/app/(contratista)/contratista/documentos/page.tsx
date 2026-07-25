@@ -32,14 +32,14 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
   onResolver: (d: DocumentoContratista, m: EstadoPorMandante) => void
 }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3.5">
+    <div className="bg-surface border border-line rounded-xl px-4 py-3.5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="text-sm font-medium text-slate-900">{doc.requisito_nombre}</p>
-            <span className="text-[10px] font-mono text-slate-400">{doc.requisito_codigo}</span>
+            <p className="text-sm font-medium text-ink">{doc.requisito_nombre}</p>
+            <span className="text-[10px] font-mono text-ink-subtle">{doc.requisito_codigo}</span>
             {doc.servicio_nombre && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+              <span className="inline-flex items-center gap-1 text-[10px] text-ink-muted">
                 <Briefcase size={10} /> {doc.servicio_nombre}
               </span>
             )}
@@ -63,7 +63,7 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
             <button
               onClick={() => onSensibilidad(doc)}
               title="Definir si se comparte sin pedirte autorización"
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+              className="p-2 rounded-lg text-ink-subtle hover:text-ink-secondary hover:bg-surface-app transition-colors"
             >
               {doc.sensible ? <Lock size={14} /> : <LockOpen size={14} />}
             </button>
@@ -98,8 +98,8 @@ function Grupo({ titulo, color, docs, children }: {
       >
         <span className={cn("w-2 h-2 rounded-full shrink-0", c.dot)} />
         <p className={cn("text-xs font-semibold flex-1 uppercase tracking-wider", c.text)}>{titulo}</p>
-        <span className="text-[10px] text-slate-500">{docs.length}</span>
-        {open ? <ChevronDown size={13} className="text-slate-400" /> : <ChevronRight size={13} className="text-slate-400" />}
+        <span className="text-[10px] text-ink-muted">{docs.length}</span>
+        {open ? <ChevronDown size={13} className="text-ink-subtle" /> : <ChevronRight size={13} className="text-ink-subtle" />}
       </button>
       {open && <div className="space-y-2 mt-2">{docs.map(children)}</div>}
     </div>
@@ -148,9 +148,9 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-        <p className="text-sm font-semibold text-slate-900">Compartir este documento</p>
-        <p className="text-xs text-slate-500 mt-1">{doc.requisito_nombre}</p>
+      <div className="bg-surface rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <p className="text-sm font-semibold text-ink">Compartir este documento</p>
+        <p className="text-xs text-ink-muted mt-1">{doc.requisito_nombre}</p>
         {doc.sensible && doc.puede_relajar && (
           <p className="text-[11px] text-violet-700 bg-violet-50 border border-violet-200 rounded-md px-2.5 py-1.5 mt-3">
             Si eliges compartir sin preguntar, las solicitudes que ya estén esperando tu
@@ -169,17 +169,17 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
                 className={cn(
                   "w-full text-left px-3 py-2.5 rounded-lg border transition-colors",
                   deshabilitado
-                    ? "border-slate-100 opacity-50 cursor-not-allowed"
+                    ? "border-line-subtle opacity-50 cursor-not-allowed"
                     : activo
-                      ? "border-slate-900 bg-slate-50"
-                      : "border-slate-200 hover:border-slate-400"
+                      ? "border-slate-900 bg-surface-app"
+                      : "border-line hover:border-slate-400"
                 )}
               >
-                <span className="text-sm text-slate-900 flex items-center gap-2">
+                <span className="text-sm text-ink flex items-center gap-2">
                   <Icono size={13} /> {titulo}
-                  {activo && <span className="text-[10px] text-slate-500">· actual</span>}
+                  {activo && <span className="text-[10px] text-ink-muted">· actual</span>}
                 </span>
-                <span className="block text-[11px] text-slate-500 mt-0.5">{texto}</span>
+                <span className="block text-[11px] text-ink-muted mt-0.5">{texto}</span>
               </button>
             )
           })}
@@ -187,7 +187,7 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
 
         {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-md mt-3">{error}</p>}
 
-        <button onClick={onClose} className="w-full mt-4 py-2 text-sm text-slate-500 hover:text-slate-800">
+        <button onClick={onClose} className="w-full mt-4 py-2 text-sm text-ink-muted hover:text-ink">
           Cancelar
         </button>
       </div>
@@ -269,15 +269,15 @@ export default function DocumentosPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
-        <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Mis documentos</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
+        <h1 className="text-lg sm:text-xl font-semibold text-ink">Mis documentos</h1>
+        <p className="text-sm text-ink-muted mt-0.5">
           Tu biblioteca. Cada documento se sube una vez y vale para todos los clientes que lo exijan.
         </p>
       </div>
 
-      <div className="px-6 sm:px-8 py-4 border-b border-slate-200 bg-white flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
+      <div className="px-6 sm:px-8 py-4 border-b border-line bg-surface flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 p-1 bg-surface-sunken rounded-lg">
           {([
             { v: "EMPRESA" as const, label: "Empresa", icon: Building2, n: totalEmpresa },
             { v: "TRABAJADORES" as const, label: "Trabajadores", icon: Users, n: totalTrabajadores },
@@ -287,29 +287,29 @@ export default function DocumentosPage() {
               onClick={() => setAmbito(v)}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                ambito === v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                ambito === v ? "bg-surface text-ink shadow-sm" : "text-ink-muted hover:text-ink-secondary"
               )}
             >
               <Icon size={13} /> {label}
-              <span className="text-[10px] text-slate-400">{n}</span>
+              <span className="text-[10px] text-ink-subtle">{n}</span>
             </button>
           ))}
         </div>
 
         <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
           <input
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
             placeholder="Buscar documento..."
-            className="pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="pl-8 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
           />
         </div>
 
         <select
           value={filtroEstado}
           onChange={e => setFiltroEstado(e.target.value)}
-          className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          className="px-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         >
           <option value="TODOS">Cualquier estado</option>
           <option value="FALTA">Falta subir</option>
@@ -324,7 +324,7 @@ export default function DocumentosPage() {
           <select
             value={filtroMandante}
             onChange={e => setFiltroMandante(e.target.value)}
-            className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="px-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
           >
             <option value="TODOS">Todos los clientes</option>
             {mandantes.map(([id, nombre]) => (
@@ -336,17 +336,17 @@ export default function DocumentosPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-5">
         {loading ? (
-          <p className="text-sm text-slate-400 py-14 text-center">Cargando documentos...</p>
+          <p className="text-sm text-ink-subtle py-14 text-center">Cargando documentos...</p>
         ) : grupos.length === 0 ? (
-          <div className="py-14 text-center bg-white rounded-xl border border-dashed border-slate-200">
-            <FileText size={26} className="text-slate-300 mx-auto mb-3" />
-            <p className="text-sm text-slate-500">
+          <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
+            <FileText size={26} className="text-ink-subtle mx-auto mb-3" />
+            <p className="text-sm text-ink-muted">
               {docs.length === 0
                 ? "Todavía no hay documentos exigidos"
                 : "Ningún documento coincide con el filtro"}
             </p>
             {docs.length === 0 && (
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-ink-subtle mt-1">
                 Cuando un cliente cree un servicio para tu empresa, sus exigencias aparecerán aquí.
               </p>
             )}

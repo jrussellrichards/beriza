@@ -2,22 +2,21 @@ export type EstadoDoc = "APROBADO" | "EN_ANALISIS" | "OBSERVADO" | "ENVIADO" | "
 
 export const ESTADO_NUM: Record<number, EstadoDoc> = { 1: "ENVIADO", 2: "EN_ANALISIS", 3: "OBSERVADO", 4: "APROBADO", 5: "VENCIDO", 6: "PENDIENTE_AUTORIZACION" }
 
-export const ESTADO_CFG: Record<EstadoDoc, { label: string; dot: string; text: string; bg: string; border: string }> = {
-  APROBADO:    { label: "Aprobado",    dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  EN_ANALISIS: { label: "En análisis", dot: "bg-blue-400",    text: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
-  OBSERVADO:   { label: "Observado",   dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
-  ENVIADO:     { label: "En revisión", dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-  VENCIDO:     { label: "Vencido",     dot: "bg-orange-500",  text: "text-orange-700",  bg: "bg-orange-50",  border: "border-orange-200" },
-  PENDIENTE_AUTORIZACION: { label: "Requiere autorización", dot: "bg-violet-400", text: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200" },
-  FALTA:       { label: "Falta",       dot: "bg-slate-300",   text: "text-slate-500",   bg: "bg-slate-50",   border: "border-slate-200" },
+/**
+ * Agrupadores de pilar: NEUTROS a propósito.
+ *
+ * Antes HSE era ámbar y Compliance púrpura, que son los matices reservados a
+ * "falta algo tuyo" y "excepción del mandante". Un encabezado de grupo compitiendo
+ * con el vocabulario de estado impide que el ojo aprenda qué significa cada color.
+ * El nombre del pilar ya lo identifica.
+ */
+export const PILAR_COLOR: Record<string, { border: string; bg: string; dot: string; text: string }> = {}
+export const PILAR_DEFAULT = {
+  border: "border-line",
+  bg: "bg-surface-sunken",
+  dot: "bg-ink-subtle",
+  text: "text-ink-muted",
 }
-
-export const PILAR_COLOR: Record<string, { border: string; bg: string; dot: string; text: string }> = {
-  LEGAL:      { border: "border-blue-200",   bg: "bg-blue-50",   dot: "bg-blue-500",   text: "text-blue-700" },
-  HSE:        { border: "border-amber-200",  bg: "bg-amber-50",  dot: "bg-amber-500",  text: "text-amber-700" },
-  COMPLIANCE: { border: "border-purple-200", bg: "bg-purple-50", dot: "bg-purple-500", text: "text-purple-700" },
-}
-export const PILAR_DEFAULT = { border: "border-slate-200", bg: "bg-slate-50", dot: "bg-slate-500", text: "text-slate-700" }
 
 export function formatFecha(iso: string | null): string | null {
   if (!iso) return null

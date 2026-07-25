@@ -33,29 +33,29 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
 
   return (
     <div className={cn(
-      "bg-white border rounded-xl overflow-hidden",
-      bloqueados.length > 0 ? "border-red-200" : "border-slate-200",
+      "bg-surface border rounded-xl overflow-hidden",
+      bloqueados.length > 0 ? "border-red-200" : "border-line",
       !t.activo && "opacity-60"
     )}>
       <button
         onClick={() => setAbierto(!abierto)}
-        className="w-full flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-50/70 transition-colors"
+        className="w-full flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3.5 text-left hover:bg-surface-app/70 transition-colors"
       >
-        <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-semibold flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-surface-sunken text-ink-muted text-[11px] font-semibold flex items-center justify-center shrink-0">
           {t.nombre_completo.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-900">
+          <p className="text-sm font-medium text-ink">
             {t.nombre_completo}
-            {!t.activo && <span className="ml-2 text-[10px] text-slate-400">inactivo</span>}
+            {!t.activo && <span className="ml-2 text-[10px] text-ink-subtle">inactivo</span>}
           </p>
-          <p className="text-xs text-slate-400 font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
+          <p className="text-xs text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           {sinAsignar ? (
-            <span className="text-xs text-slate-400">Sin asignar a ningún servicio</span>
+            <span className="text-xs text-ink-subtle">Sin asignar a ningún servicio</span>
           ) : bloqueados.length === 0 ? (
             <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700">
               <CheckCircle2 size={13} />
@@ -67,23 +67,23 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
               No puede ingresar a {bloqueados.length === 1 ? bloqueados[0].servicio_nombre : `${bloqueados.length} servicios`}
             </span>
           )}
-          {abierto ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+          {abierto ? <ChevronDown size={14} className="text-ink-subtle" /> : <ChevronRight size={14} className="text-ink-subtle" />}
         </div>
       </button>
 
       {abierto && (
-        <div className="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/50 space-y-2">
+        <div className="px-4 pb-4 pt-1 border-t border-line-subtle bg-surface-app/50 space-y-2">
           {sinAsignar ? (
-            <p className="text-xs text-slate-500 py-2">
+            <p className="text-xs text-ink-muted py-2">
               No está asignado a ningún servicio. Asígnalo desde la pantalla de Servicios.
             </p>
           ) : (
             t.servicios.map(s => (
-              <div key={s.servicio_id} className="bg-white border border-slate-100 rounded-lg px-3 py-2.5">
+              <div key={s.servicio_id} className="bg-surface border border-line-subtle rounded-lg px-3 py-2.5">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="text-sm text-slate-900">{s.servicio_nombre}</span>
-                  <span className="text-[10px] text-slate-400">{TIPO_LABEL[s.servicio_tipo] ?? s.servicio_tipo}</span>
-                  <span className="text-[10px] text-slate-400">· {s.mandante_razon_social}</span>
+                  <span className="text-sm text-ink">{s.servicio_nombre}</span>
+                  <span className="text-[10px] text-ink-subtle">{TIPO_LABEL[s.servicio_tipo] ?? s.servicio_tipo}</span>
+                  <span className="text-[10px] text-ink-subtle">· {s.mandante_razon_social}</span>
                   <span className={cn(
                     "sm:ml-auto text-[11px] font-medium",
                     s.habilitado ? "text-emerald-700" : "text-red-600"
@@ -92,7 +92,7 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
                   </span>
                 </div>
                 {!s.habilitado && (
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className="text-[11px] text-ink-muted mt-1">
                     Le falta: {s.faltantes.join(", ")}
                   </p>
                 )}
@@ -103,14 +103,14 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
           <div className="flex flex-wrap gap-2 pt-1">
             <button
               onClick={() => window.location.href = "/contratista/documentos"}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-white transition-colors"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-ink-muted hover:bg-surface transition-colors"
             >
               Subir sus documentos
             </button>
             <button
               onClick={alternarActivo}
               disabled={ocupado}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-ink-muted hover:bg-surface disabled:opacity-50 transition-colors"
             >
               {t.activo ? "Desactivar" : "Reactivar"}
             </button>
@@ -152,10 +152,10 @@ export default function TrabajadoresPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Trabajadores</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-lg sm:text-xl font-semibold text-ink">Trabajadores</h1>
+          <p className="text-sm text-ink-muted mt-0.5">
             {trabajadores.length === 0
               ? "Aún no has registrado trabajadores"
               : bloqueados === 0
@@ -171,14 +171,14 @@ export default function TrabajadoresPage() {
         </button>
       </div>
 
-      <div className="px-6 sm:px-8 py-4 border-b border-slate-200 bg-white flex items-center gap-3 flex-wrap">
+      <div className="px-6 sm:px-8 py-4 border-b border-line bg-surface flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle" />
           <input
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre o RUT..."
-            className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="w-full pl-8 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
           />
         </div>
         <button
@@ -187,7 +187,7 @@ export default function TrabajadoresPage() {
             "px-3 py-2 rounded-lg text-xs font-medium border transition-colors",
             soloBloqueados
               ? "border-red-200 bg-red-50 text-red-700"
-              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              : "border-line text-ink-muted hover:bg-surface-app"
           )}
         >
           Solo los bloqueados
@@ -196,10 +196,10 @@ export default function TrabajadoresPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-2">
         {cargando ? (
-          <p className="text-sm text-slate-400 py-14 text-center">Cargando trabajadores...</p>
+          <p className="text-sm text-ink-subtle py-14 text-center">Cargando trabajadores...</p>
         ) : visibles.length === 0 ? (
-          <div className="py-14 text-center bg-white rounded-xl border border-dashed border-slate-200">
-            <p className="text-sm text-slate-500">
+          <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
+            <p className="text-sm text-ink-muted">
               {trabajadores.length === 0 ? "No hay trabajadores registrados" : "Ninguno coincide con el filtro"}
             </p>
           </div>

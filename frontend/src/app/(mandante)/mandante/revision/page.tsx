@@ -89,7 +89,7 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
                 value={fechaVigencia}
                 onChange={(e) => setFechaVigencia(e.target.value)}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-ink-muted">
                 Fecha de vencimiento del documento, si aplica (ej. F30 vence a 30 días).
               </p>
             </div>
@@ -104,7 +104,7 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
                 required
                 rows={3}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-ink-muted">
                 El contratista verá este mensaje exacto para corregir su entrega.
               </p>
             </div>
@@ -158,17 +158,17 @@ export default function RevisionPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Revisión de documentos</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <h1 className="text-lg sm:text-xl font-semibold text-ink">Revisión de documentos</h1>
+            <p className="text-sm text-ink-muted mt-0.5">
               Entregas de contratistas pendientes de tu aprobación
             </p>
           </div>
           <button
             onClick={cargar}
-            className="flex items-center gap-2 text-sm text-slate-500 border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-2 text-sm text-ink-muted border border-line px-3 py-2 rounded-lg hover:bg-surface-app transition-colors"
           >
             <RefreshCw size={13} />
             Actualizar
@@ -178,28 +178,28 @@ export default function RevisionPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-ink-secondary">
             {pendientes.length} entrega{pendientes.length !== 1 ? "s" : ""} pendiente{pendientes.length !== 1 ? "s" : ""}
           </span>
         </div>
 
         {loading && pendientes.length === 0 && (
-          <div className="py-14 text-center bg-white rounded-xl border border-slate-200">
-            <p className="text-sm text-slate-400">Cargando entregas...</p>
+          <div className="py-14 text-center bg-surface rounded-xl border border-line">
+            <p className="text-sm text-ink-subtle">Cargando entregas...</p>
           </div>
         )}
 
         {!loading && pendientes.length === 0 && (
-          <div className="py-16 text-center bg-white rounded-xl border border-slate-200">
-            <Inbox size={32} className="text-slate-300 mx-auto mb-3" />
-            <p className="text-sm font-medium text-slate-500">No hay entregas pendientes de revisión</p>
-            <p className="text-xs text-slate-400 mt-1">Cuando un contratista suba un documento aparecerá aquí.</p>
+          <div className="py-16 text-center bg-surface rounded-xl border border-line">
+            <Inbox size={32} className="text-ink-subtle mx-auto mb-3" />
+            <p className="text-sm font-medium text-ink-muted">No hay entregas pendientes de revisión</p>
+            <p className="text-xs text-ink-subtle mt-1">Cuando un contratista suba un documento aparecerá aquí.</p>
           </div>
         )}
 
         <div className="space-y-3">
           {pendientes.map((p) => (
-            <div key={p.documento_id} className="bg-white rounded-xl border border-slate-200 px-5 py-4">
+            <div key={p.documento_id} className="bg-surface rounded-xl border border-line px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
@@ -207,8 +207,8 @@ export default function RevisionPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-slate-900">{p.requisito_nombre}</p>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200">
+                      <p className="text-sm font-semibold text-ink">{p.requisito_nombre}</p>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-surface-sunken text-ink-muted border-line">
                         {p.requisito_codigo}
                       </span>
                       {p.numero_version > 1 && (
@@ -217,18 +217,18 @@ export default function RevisionPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-ink-muted mt-0.5">
                       {p.contratista_razon_social}
                       {p.trabajador_nombre && <> · Trabajador: <span className="font-medium">{p.trabajador_nombre}</span></>}
                       {p.servicio_nombre && <> · Servicio: {p.servicio_nombre}</>}
-                      <span className="text-slate-400"> · {p.pilar_nombre} · {formatFecha(p.subido_en)}</span>
+                      <span className="text-ink-subtle"> · {p.pilar_nombre} · {formatFecha(p.subido_en)}</span>
                     </p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       {p.archivos.map((a) => (
                         <button
                           key={a.id}
                           onClick={() => descargar(p, a)}
-                          className="flex items-center gap-1.5 text-xs text-slate-600 border border-slate-200 px-2 py-1 rounded-md hover:bg-slate-50 transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-ink-muted border border-line px-2 py-1 rounded-md hover:bg-surface-app transition-colors"
                         >
                           <Download size={11} />
                           {a.nombre_original}

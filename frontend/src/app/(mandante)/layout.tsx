@@ -2,7 +2,7 @@ import { SidebarMandante } from "@/features/mandante/sidebar"
 
 export default function MandanteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-[#f8fafc]">
+    <div className="flex min-h-screen bg-surface-app">
       <SidebarMandante />
       {/* En teléfono el contenido esquiva la cabecera y la barra inferior fijas.
           Cada página maneja su propio padding horizontal. */}

@@ -29,7 +29,7 @@ const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text:
   blue:    { border: "border-blue-200",    bg: "bg-blue-50",    dot: "bg-blue-500",    text: "text-blue-700" },
   amber:   { border: "border-amber-200",   bg: "bg-amber-50",   dot: "bg-amber-500",   text: "text-amber-700" },
   purple:  { border: "border-purple-200",  bg: "bg-purple-50",  dot: "bg-purple-500",  text: "text-purple-700" },
-  slate:   { border: "border-slate-200",   bg: "bg-slate-50",   dot: "bg-slate-500",   text: "text-slate-700" },
+  slate:   { border: "border-line",   bg: "bg-surface-app",   dot: "bg-surface-app0",   text: "text-ink-secondary" },
 }
 
 // ── Componente pilar ──────────────────────────────────────────────────────────
@@ -54,30 +54,30 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <p className={cn("text-sm font-bold", c.text)}>{pilar.nombre}</p>
-            <span className="text-xs text-slate-500 font-mono">{pilar.codigo}</span>
+            <span className="text-xs text-ink-muted font-mono">{pilar.codigo}</span>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-slate-500">{requisitos.length} requisitos</span>
-          {open ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
+          <span className="text-xs text-ink-muted">{requisitos.length} requisitos</span>
+          {open ? <ChevronDown size={15} className="text-ink-subtle" /> : <ChevronRight size={15} className="text-ink-subtle" />}
         </div>
       </button>
 
       {open && (
-        <div className="bg-white">
+        <div className="bg-surface">
           <div className="divide-y divide-slate-50">
             {requisitos.map(req => (
-              <div key={req.id} className="px-5 py-3.5 flex items-start gap-3 group hover:bg-slate-50/50 transition-colors">
+              <div key={req.id} className="px-5 py-3.5 flex items-start gap-3 group hover:bg-surface-app/50 transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <p className="text-sm font-medium text-slate-900">{req.nombre}</p>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200">
+                    <p className="text-sm font-medium text-ink">{req.nombre}</p>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-surface-sunken text-ink-muted border-line">
                       {req.codigo}
                     </span>
                     <span className={cn(
                       "text-[10px] px-1.5 py-0.5 rounded border font-medium",
                       req.entidad_tipo === "EMPRESA"
-                        ? "bg-slate-100 text-slate-500 border-slate-200"
+                        ? "bg-surface-sunken text-ink-muted border-line"
                         : "bg-indigo-50 text-indigo-600 border-indigo-200"
                     )}>
                       {req.entidad_tipo === "EMPRESA" ? "Empresa" : "Trabajador"}
@@ -86,30 +86,30 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
                       "text-[10px] px-1.5 py-0.5 rounded border font-medium",
                       req.alcance === "SERVICIO"
                         ? "bg-indigo-50 text-indigo-600 border-indigo-200"
-                        : "bg-slate-100 text-slate-500 border-slate-200"
+                        : "bg-surface-sunken text-ink-muted border-line"
                     )}>
                       {req.alcance === "SERVICIO" ? "Por servicio" : "Una vez"}
                     </span>
                     {req.max_archivos > 1 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-slate-100 text-slate-500 border-slate-200">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-surface-sunken text-ink-muted border-line">
                         hasta {req.max_archivos} archivos
                       </span>
                     )}
                   </div>
-                  {req.descripcion && <p className="text-xs text-slate-400">{req.descripcion}</p>}
+                  {req.descripcion && <p className="text-xs text-ink-subtle">{req.descripcion}</p>}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
                   <button
                     onClick={() => onEdit(req)}
                     title="Editar requisito"
-                    className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="p-1.5 rounded-md hover:bg-surface-sunken text-ink-subtle hover:text-ink-muted transition-colors"
                   >
                     <Edit2 size={12} />
                   </button>
                   <button
                     onClick={() => onDelete(req)}
                     title="Eliminar del catálogo"
-                    className="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                    className="p-1.5 rounded-md hover:bg-red-50 text-ink-subtle hover:text-red-500 transition-colors"
                   >
                     <Trash2 size={12} />
                   </button>
@@ -118,10 +118,10 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
             ))}
           </div>
 
-          <div className="px-5 py-3 border-t border-slate-100">
+          <div className="px-5 py-3 border-t border-line-subtle">
             <button
               onClick={onAdd}
-              className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+              className="flex items-center gap-2 text-xs font-medium text-ink-muted hover:text-ink transition-colors"
             >
               <Plus size={13} />
               Agregar requisito a {pilar.nombre}
@@ -167,11 +167,11 @@ export default function CatalogoPage() {
   return (
     <div className="flex h-screen overflow-hidden">
       <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", panel ? "mr-96" : "")}>
-        <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
+        <div className="px-8 py-6 border-b border-line bg-surface shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Catálogo global</h1>
-              <p className="text-sm text-slate-500 mt-0.5">
+              <h1 className="text-xl font-semibold text-ink">Catálogo global</h1>
+              <p className="text-sm text-ink-muted mt-0.5">
                 {totalRequisitos} requisitos en {pilares.length} pilares — los mandantes los activan en sus perfiles
               </p>
             </div>
@@ -192,8 +192,8 @@ export default function CatalogoPage() {
             />
           ))}
           {loading && pilares.length === 0 && (
-            <div className="py-14 text-center bg-white rounded-xl border border-slate-200">
-              <p className="text-sm text-slate-400">Cargando catálogo...</p>
+            <div className="py-14 text-center bg-surface rounded-xl border border-line">
+              <p className="text-sm text-ink-subtle">Cargando catálogo...</p>
             </div>
           )}
         </div>
@@ -201,7 +201,7 @@ export default function CatalogoPage() {
 
       {/* Panel lateral */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         panel ? "translate-x-0" : "translate-x-full"
       )}>
         {panel && (

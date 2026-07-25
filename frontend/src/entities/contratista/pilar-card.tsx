@@ -16,7 +16,7 @@ export function PilarCard({ pilar, onSubirDocumento }: Props) {
     <Card className={pilar.cumple ? "border-green-200" : "border-red-200"}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-slate-700">
+          <CardTitle className="text-sm font-medium text-ink-secondary">
             {pilar.pilar_nombre}
           </CardTitle>
           {pilar.cumple ? (
@@ -36,7 +36,7 @@ export function PilarCard({ pilar, onSubirDocumento }: Props) {
         <CardContent className="pt-0 space-y-3">
           <ul className="space-y-1.5">
             {pilar.brechas.map((brecha, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
+              <li key={i} className="flex items-start gap-2 text-xs text-ink-muted">
                 <AlertCircle size={13} className="text-amber-500 mt-0.5 shrink-0" />
                 {brecha}
               </li>

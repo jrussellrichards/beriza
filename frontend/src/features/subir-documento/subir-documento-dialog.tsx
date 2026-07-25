@@ -110,7 +110,7 @@ export function SubirDocumentoDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {requiereServicio && servicioFijo && (
-            <p className="text-xs text-slate-600 bg-indigo-50 border border-indigo-200 rounded-md px-3 py-2">
+            <p className="text-xs text-ink-muted bg-indigo-50 border border-indigo-200 rounded-md px-3 py-2">
               Este documento acredita el servicio <strong>{servicioFijo.nombre}</strong>.
             </p>
           )}
@@ -122,14 +122,14 @@ export function SubirDocumentoDialog({
                 value={servicioId}
                 onChange={(e) => setServicioId(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               >
                 <option value="" disabled>Selecciona el servicio...</option>
                 {servicios.map((s) => (
                   <option key={s.id} value={s.id}>{s.nombre}{s.codigo_referencia ? ` (${s.codigo_referencia})` : ""}</option>
                 ))}
               </select>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-ink-muted">
                 Este documento se acredita por cada servicio contratado.
               </p>
             </div>
@@ -146,20 +146,20 @@ export function SubirDocumentoDialog({
               multiple={requisito.max_archivos > 1}
               onChange={(e) => { agregarArchivos(e.target.files); e.target.value = "" }}
             />
-            <p className="text-xs text-slate-500">Máximo 20 MB por archivo. Solo PDF.</p>
+            <p className="text-xs text-ink-muted">Máximo 20 MB por archivo. Solo PDF.</p>
           </div>
 
           {files.length > 0 && (
             <div className="space-y-1.5">
               {files.map((f, i) => (
-                <div key={`${f.name}-${i}`} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
-                  <FileText size={13} className="text-slate-400 shrink-0" />
-                  <span className="text-xs text-slate-700 truncate flex-1">{f.name}</span>
-                  <span className="text-[10px] text-slate-400">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                <div key={`${f.name}-${i}`} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-app border border-line-subtle">
+                  <FileText size={13} className="text-ink-subtle shrink-0" />
+                  <span className="text-xs text-ink-secondary truncate flex-1">{f.name}</span>
+                  <span className="text-[10px] text-ink-subtle">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
                   <button
                     type="button"
                     onClick={() => setFiles(files.filter((_, j) => j !== i))}
-                    className="text-slate-300 hover:text-red-500"
+                    className="text-ink-subtle hover:text-red-500"
                   >
                     <X size={13} />
                   </button>

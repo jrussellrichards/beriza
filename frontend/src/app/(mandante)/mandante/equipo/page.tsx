@@ -7,7 +7,7 @@ import { getSession } from "@/shared/lib/auth"
 import { useApiData } from "@/shared/lib/use-api-data"
 import { UsuarioPermisosDialog, type UsuarioEquipo } from "@/features/mandante/usuario-permisos-dialog"
 
-const ROL_DEFAULT = { label: "Usuario", color: "bg-slate-50 text-slate-600 border-slate-200" }
+const ROL_DEFAULT = { label: "Usuario", color: "bg-surface-app text-ink-muted border-line" }
 
 const ROL_CFG: Record<string, { label: string; color: string }> = {
   mandante_admin: { label: "Aprueba todo", color: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -44,10 +44,10 @@ export default function EquipoPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Equipo</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-lg sm:text-xl font-semibold text-ink">Equipo</h1>
+          <p className="text-sm text-ink-muted mt-0.5">
             {equipo.length === 0
               ? "Invita a quienes revisarán la documentación de tus contratistas"
               : sinPermisos > 0
@@ -70,32 +70,32 @@ export default function EquipoPage() {
         )}
 
         {loading ? (
-          <p className="text-sm text-slate-400 py-14 text-center">Cargando equipo...</p>
+          <p className="text-sm text-ink-subtle py-14 text-center">Cargando equipo...</p>
         ) : equipo.length === 0 ? (
-          <div className="py-14 text-center bg-white rounded-xl border border-dashed border-slate-200">
-            <Users size={26} className="text-slate-300 mx-auto mb-3" />
-            <p className="text-sm text-slate-500">Todavía no hay nadie más en tu equipo</p>
-            <p className="text-xs text-slate-400 mt-1">
+          <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
+            <Users size={26} className="text-ink-subtle mx-auto mb-3" />
+            <p className="text-sm text-ink-muted">Todavía no hay nadie más en tu equipo</p>
+            <p className="text-xs text-ink-subtle mt-1">
               Puedes invitar a alguien y definir qué pilares podrá aprobar.
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+          <div className="bg-surface rounded-xl border border-line divide-y divide-slate-100">
             {equipo.map(u => (
               <div key={u.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-5 py-4">
-                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full bg-surface-sunken text-ink-muted text-xs font-semibold flex items-center justify-center shrink-0">
                   {iniciales(u.nombre)}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm font-medium", u.activo ? "text-slate-900" : "text-slate-400")}>
+                  <p className={cn("text-sm font-medium", u.activo ? "text-ink" : "text-ink-subtle")}>
                     {u.nombre}
-                    {!u.activo && <span className="ml-2 text-[10px] text-slate-400">invitación pendiente</span>}
+                    {!u.activo && <span className="ml-2 text-[10px] text-ink-subtle">invitación pendiente</span>}
                   </p>
-                  <p className="text-xs text-slate-400 font-mono">{u.email}</p>
+                  <p className="text-xs text-ink-subtle font-mono">{u.email}</p>
                   <p className={cn(
                     "text-[11px] mt-0.5",
-                    u.pilares !== null && u.pilares.length === 0 ? "text-amber-700" : "text-slate-500"
+                    u.pilares !== null && u.pilares.length === 0 ? "text-amber-700" : "text-ink-muted"
                   )}>
                     {u.pilares === null
                       ? "Aprueba todos los pilares"
@@ -112,7 +112,7 @@ export default function EquipoPage() {
                   {u.pilares !== null && (
                     <button
                       onClick={() => setDialogo({ usuario: u })}
-                      className="text-xs text-slate-600 hover:text-slate-900 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="text-xs text-ink-muted hover:text-ink border border-line px-2.5 py-1 rounded-lg hover:bg-surface-app transition-colors"
                     >
                       Permisos
                     </button>

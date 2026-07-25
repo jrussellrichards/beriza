@@ -14,14 +14,14 @@ function Skeleton({ className }: { className?: string }) {
 /** Un servicio con su estado derivado de los pendientes que lo afectan. */
 function ServicioRow({ s, motivo }: { s: ServicioContratista; motivo: string | null }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 rounded-lg px-4 py-2.5">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-surface-app rounded-lg px-4 py-2.5">
       <span className={cn(
         "w-1.5 h-1.5 rounded-full shrink-0 hidden sm:block",
         motivo ? "bg-red-500" : "bg-emerald-500"
       )} />
       <div className="flex-1 min-w-0">
-        <span className="text-sm text-slate-900">{s.nombre}</span>
-        <span className="text-[10px] text-slate-400 ml-2">{TIPO_LABEL[s.tipo] ?? s.tipo}</span>
+        <span className="text-sm text-ink">{s.nombre}</span>
+        <span className="text-[10px] text-ink-subtle ml-2">{TIPO_LABEL[s.tipo] ?? s.tipo}</span>
       </div>
       <span className={cn("text-xs shrink-0", motivo ? "text-red-600" : "text-emerald-700")}>
         {motivo ?? "Lista para empezar"}
@@ -84,9 +84,9 @@ export default function InicioContratistaPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
-        <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Mi acreditación</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
+        <h1 className="text-lg sm:text-xl font-semibold text-ink">Mi acreditación</h1>
+        <p className="text-sm text-ink-muted mt-0.5">
           {error
             ? "No pudimos cargar tu estado"
             : servicios.length === 0
@@ -103,33 +103,33 @@ export default function InicioContratistaPage() {
         )}
 
         <section>
-          <p className="text-xs text-slate-500 mb-2">
+          <p className="text-xs text-ink-muted mb-2">
             Pendientes{pendientes.length > 0 && ` · ${pendientes.length}`}
           </p>
           {error ? (
             // Nunca decir "estás al día" si no pudimos leer los pendientes: sería
             // afirmar que no tiene nada que hacer cuando no lo sabemos.
-            <div className="bg-white border border-slate-200 rounded-xl px-5 py-6 flex items-center gap-3">
+            <div className="bg-surface border border-line rounded-xl px-5 py-6 flex items-center gap-3">
               <AlertTriangle size={20} className="text-amber-500 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-slate-900">No pudimos revisar tus pendientes</p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-sm font-medium text-ink">No pudimos revisar tus pendientes</p>
+                <p className="text-xs text-ink-muted mt-0.5">
                   Vuelve a cargar la página. Si sigue fallando, puede haber documentos esperando tu acción.
                 </p>
               </div>
             </div>
           ) : pendientes.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-xl px-5 py-6 flex items-center gap-3">
+            <div className="bg-surface border border-line rounded-xl px-5 py-6 flex items-center gap-3">
               <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-slate-900">Estás al día</p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-sm font-medium text-ink">Estás al día</p>
+                <p className="text-xs text-ink-muted mt-0.5">
                   No hay nada esperando una acción tuya.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div className="bg-surface border border-line rounded-xl overflow-hidden">
               {pendientes.map((p, i) => (
                 <PendienteRow key={`${p.tipo}-${p.documento_id ?? p.trabajador_id ?? i}`} p={p} onResuelto={cargar} />
               ))}
@@ -139,19 +139,19 @@ export default function InicioContratistaPage() {
 
         <section>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-slate-500">Mis servicios</p>
+            <p className="text-xs text-ink-muted">Mis servicios</p>
             <button
               onClick={() => window.location.href = "/contratista/servicios"}
-              className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors"
+              className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors"
             >
               Ver detalle <ArrowRight size={12} />
             </button>
           </div>
 
           {servicios.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
-              <p className="text-sm text-slate-500">Todavía ningún cliente te ha contratado</p>
-              <p className="text-xs text-slate-400 mt-1">
+            <div className="rounded-xl border border-dashed border-line py-10 text-center">
+              <p className="text-sm text-ink-muted">Todavía ningún cliente te ha contratado</p>
+              <p className="text-xs text-ink-subtle mt-1">
                 Cuando creen un servicio para tu empresa, aparecerá aquí.
               </p>
             </div>
@@ -159,7 +159,7 @@ export default function InicioContratistaPage() {
             <div className="space-y-4">
               {[...porCliente.entries()].map(([cliente, ss]) => (
                 <div key={cliente}>
-                  <p className="text-sm font-medium text-slate-900 mb-1.5">{cliente}</p>
+                  <p className="text-sm font-medium text-ink mb-1.5">{cliente}</p>
                   <div className="space-y-1.5">
                     {ss.map(s => (
                       <ServicioRow key={s.id} s={s} motivo={motivoPorServicio.get(s.id) ?? null} />

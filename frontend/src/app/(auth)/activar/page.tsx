@@ -2,9 +2,10 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Building2, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import { Building2, Eye, EyeOff } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
+import { MarcaAcredita } from "@/shared/ui/logo"
 
 interface TokenResponse {
   access_token: string
@@ -94,13 +95,13 @@ function ActivarForm() {
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
 
   if (!token) {
     return (
       <div className="text-center space-y-3">
-        <p className="text-sm font-medium text-slate-900">Enlace de activación inválido</p>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm font-medium text-ink">Enlace de activación inválido</p>
+        <p className="text-sm text-ink-muted">
           Falta el token de invitación. Usa el enlace exacto del email que recibiste,
           o pide al mandante que te invite nuevamente.
         </p>
@@ -109,14 +110,14 @@ function ActivarForm() {
   }
 
   if (cargandoInvitacion) {
-    return <p className="text-sm text-slate-400 text-center">Cargando invitación...</p>
+    return <p className="text-sm text-ink-subtle text-center">Cargando invitación...</p>
   }
 
   if (!invitacion) {
     return (
       <div className="text-center space-y-3">
-        <p className="text-sm font-medium text-slate-900">No pudimos cargar tu invitación</p>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm font-medium text-ink">No pudimos cargar tu invitación</p>
+        <p className="text-sm text-ink-muted">
           {error ?? "El enlace puede haber expirado o la cuenta ya fue activada."}
         </p>
       </div>
@@ -129,17 +130,17 @@ function ActivarForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* A un contratista lo invita un mandante; a un mandante lo invita BERISA
           y no hay un tercero que nombrar. */}
-      <p className="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+      <p className="text-sm text-ink-muted bg-surface-app border border-line rounded-lg px-3 py-2">
         {invitacion.mandante_razon_social
-          ? <>Invitación de <span className="font-medium text-slate-700">{invitacion.mandante_razon_social}</span> para{" "}</>
-          : <>Invitación de <span className="font-medium text-slate-700">BERISA</span> para{" "}</>}
-        <span className="font-medium text-slate-700">{invitacion.email}</span>. Confirma o corrige los datos de tu empresa.
+          ? <>Invitación de <span className="font-medium text-ink-secondary">{invitacion.mandante_razon_social}</span> para{" "}</>
+          : <>Invitación de <span className="font-medium text-ink-secondary">BERISA</span> para{" "}</>}
+        <span className="font-medium text-ink-secondary">{invitacion.email}</span>. Confirma o corrige los datos de tu empresa.
       </p>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-slate-700">Razón social de tu empresa</label>
+        <label className="text-sm font-medium text-ink-secondary">Razón social de tu empresa</label>
         <div className="relative">
-          <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
           <input
             value={razonSocial}
             onChange={e => setRazonSocial(e.target.value)}
@@ -152,7 +153,7 @@ function ActivarForm() {
 
       <div className={cn("gap-3", esMandante ? "" : "grid grid-cols-2")}>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">RUT empresa</label>
+          <label className="text-sm font-medium text-ink-secondary">RUT empresa</label>
           <input
             value={rut}
             onChange={e => setRut(e.target.value)}
@@ -164,7 +165,7 @@ function ActivarForm() {
         {/* El giro es un dato del contratista; el modelo Mandante no lo tiene. */}
         {!esMandante && (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Giro (opcional)</label>
+            <label className="text-sm font-medium text-ink-secondary">Giro (opcional)</label>
             <input
               value={giro}
               onChange={e => setGiro(e.target.value)}
@@ -176,7 +177,7 @@ function ActivarForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-slate-700">Contraseña</label>
+        <label className="text-sm font-medium text-ink-secondary">Contraseña</label>
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
@@ -189,7 +190,7 @@ function ActivarForm() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-muted"
           >
             {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
@@ -197,7 +198,7 @@ function ActivarForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-slate-700">Confirmar contraseña</label>
+        <label className="text-sm font-medium text-ink-secondary">Confirmar contraseña</label>
         <input
           type={showPassword ? "text" : "password"}
           value={confirmar}
@@ -216,7 +217,7 @@ function ActivarForm() {
         disabled={loading}
         className={cn(
           "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
-          loading ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-slate-900 text-white hover:bg-slate-800"
+          loading ? "bg-slate-200 text-ink-subtle cursor-not-allowed" : "bg-slate-900 text-white hover:bg-slate-800"
         )}
       >
         {loading ? "Activando..." : "Activar cuenta y comenzar"}
@@ -227,29 +228,26 @@ function ActivarForm() {
 
 export default function ActivarPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-surface-app px-4">
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-3 justify-center mb-8">
-          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-            <ShieldCheck size={16} className="text-white" strokeWidth={2.5} />
-          </div>
-          <span className="font-semibold text-lg text-slate-900">Acredita</span>
+        <div className="flex justify-center mb-8">
+          <MarcaAcredita />
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-8">
+        <div className="bg-surface rounded-xl border border-line p-8">
           <div className="mb-6">
-            <h1 className="text-lg font-semibold text-slate-900">Activa tu cuenta</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="text-lg font-semibold text-ink">Activa tu cuenta</h1>
+            <p className="text-sm text-ink-muted mt-1">
               Confirma los datos de tu empresa y crea tu contraseña para comenzar a acreditarte.
             </p>
           </div>
-          <Suspense fallback={<p className="text-sm text-slate-400">Cargando...</p>}>
+          <Suspense fallback={<p className="text-sm text-ink-subtle">Cargando...</p>}>
             <ActivarForm />
           </Suspense>
         </div>
 
-        <p className="text-xs text-slate-400 text-center mt-6">
-          ¿Ya tienes cuenta? <a href="/login" className="text-slate-600 font-medium hover:underline">Inicia sesión</a>
+        <p className="text-xs text-ink-subtle text-center mt-6">
+          ¿Ya tienes cuenta? <a href="/login" className="text-ink-muted font-medium hover:underline">Inicia sesión</a>
         </p>
       </div>
     </div>

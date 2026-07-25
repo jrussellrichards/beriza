@@ -3,19 +3,12 @@
 import { useEffect, useState } from "react"
 import { AlertCircle, CheckCircle2, FileText, History, Loader2 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
+import { estadoDocDe, estiloDeEstado, LABEL_DOC } from "@/shared/ui/estado-badge"
 import { api } from "@/shared/lib/api"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
 import type { AvanceServicio, RequisitoAvance } from "./types"
 
 // Estados de documento del backend: 1=Enviado | 2=En Análisis | 3=Observado | 4=Aprobado
-const ESTADO_DOC_CFG: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
-  "4":    { label: "Aprobado",    dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  "3":    { label: "Observado",   dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
-  "2":    { label: "En análisis", dot: "bg-blue-500",    text: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
-  "1":    { label: "Enviado",     dot: "bg-amber-500",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-  "null": { label: "Falta",       dot: "bg-slate-300",   text: "text-slate-500",   bg: "bg-slate-50",   border: "border-slate-200" },
-}
-
 const PILAR_COLOR: Record<string, string> = {
   LEGAL: "bg-blue-50 text-blue-700 border-blue-200",
   HSE: "bg-amber-50 text-amber-700 border-amber-200",
@@ -23,26 +16,26 @@ const PILAR_COLOR: Record<string, string> = {
 }
 
 function EstadoDocBadge({ estado }: { estado: number | null }) {
-  const c = ESTADO_DOC_CFG[String(estado)] ?? ESTADO_DOC_CFG["null"]
+  const c = estiloDeEstado(estadoDocDe(estado))
   return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0", c.bg, c.border, c.text)}>
+    <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0", c.soft, c.line, c.ink)}>
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
-      {c.label}
+      {LABEL_DOC[estadoDocDe(estado)]}
     </span>
   )
 }
 
 function RequisitoRow({ r, onVerArchivos }: { r: RequisitoAvance; onVerArchivos: (r: RequisitoAvance) => void }) {
   return (
-    <div className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-white border border-slate-100">
-      <FileText size={13} className="text-slate-400 shrink-0 mt-0.5" />
+    <div className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-surface border border-line-subtle">
+      <FileText size={13} className="text-ink-subtle shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-slate-800 truncate">
+        <p className="text-xs font-medium text-ink truncate">
           {r.requisito_nombre}
-          {r.trabajador_nombre && <span className="text-slate-400 font-normal"> — {r.trabajador_nombre}</span>}
+          {r.trabajador_nombre && <span className="text-ink-subtle font-normal"> — {r.trabajador_nombre}</span>}
         </p>
         {r.fecha_vigencia_hasta && (
-          <p className="text-[10px] text-slate-400">Vence: {r.fecha_vigencia_hasta}</p>
+          <p className="text-[10px] text-ink-subtle">Vence: {r.fecha_vigencia_hasta}</p>
         )}
         {r.estado === 3 && r.mensaje_brecha && (
           <p className="text-[10px] text-red-600 mt-0.5 flex items-start gap-1">
@@ -55,7 +48,7 @@ function RequisitoRow({ r, onVerArchivos }: { r: RequisitoAvance; onVerArchivos:
         <button
           onClick={() => onVerArchivos(r)}
           title="Ver archivos subidos"
-          className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+          className="p-1 rounded-md hover:bg-surface-sunken text-ink-subtle hover:text-ink-muted transition-colors shrink-0"
         >
           <History size={13} />
         </button>
@@ -83,7 +76,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
   }
   if (!avance) {
     return (
-      <div className="flex items-center justify-center py-10 text-slate-400">
+      <div className="flex items-center justify-center py-10 text-ink-subtle">
         <Loader2 size={18} className="animate-spin" />
       </div>
     )
@@ -95,10 +88,10 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
       {/* Barra de progreso */}
       <div>
         <div className="flex items-baseline justify-between mb-1.5">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Avance de acreditación</p>
-          <p className="text-lg font-semibold text-slate-900">{r.porcentaje_avance}%</p>
+          <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">Avance de acreditación</p>
+          <p className="text-lg font-semibold text-ink">{r.porcentaje_avance}%</p>
         </div>
-        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+        <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
           <div
             className={cn(
               "h-full rounded-full transition-all",
@@ -107,7 +100,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
             style={{ width: `${r.porcentaje_avance}%` }}
           />
         </div>
-        <p className="text-[11px] text-slate-400 mt-1.5">
+        <p className="text-[11px] text-ink-subtle mt-1.5">
           {r.aprobados} de {r.total_requisitos} documentos aprobados
         </p>
       </div>
@@ -118,11 +111,11 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
           { label: "Aprobados", value: r.aprobados, color: "text-emerald-600" },
           { label: "Observados", value: r.observados, color: "text-red-600" },
           { label: "En curso", value: r.en_analisis + r.enviados, color: "text-blue-600" },
-          { label: "Faltan", value: r.faltantes, color: "text-slate-500" },
+          { label: "Faltan", value: r.faltantes, color: "text-ink-muted" },
         ].map((k) => (
-          <div key={k.label} className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-2 text-center">
+          <div key={k.label} className="rounded-lg border border-line-subtle bg-surface-app px-2 py-2 text-center">
             <p className={cn("text-base font-semibold", k.color)}>{k.value}</p>
-            <p className="text-[10px] text-slate-400">{k.label}</p>
+            <p className="text-[10px] text-ink-subtle">{k.label}</p>
           </div>
         ))}
       </div>
@@ -132,10 +125,10 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
         {avance.pilares.map((p) => (
           <div key={p.codigo}>
             <div className="flex items-center gap-2 mb-2">
-              <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[p.codigo] ?? "bg-slate-100 text-slate-600 border-slate-200")}>
+              <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[p.codigo] ?? "bg-surface-sunken text-ink-muted border-line")}>
                 {p.nombre}
               </span>
-              <span className={cn("text-[10px] font-medium", p.cumple ? "text-emerald-600" : "text-slate-400")}>
+              <span className={cn("text-[10px] font-medium", p.cumple ? "text-emerald-600" : "text-ink-subtle")}>
                 {p.aprobados}/{p.total}
               </span>
               {p.cumple && <CheckCircle2 size={11} className="text-emerald-500" />}
@@ -152,22 +145,22 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
           </div>
         ))}
         {avance.pilares.length === 0 && (
-          <p className="text-xs text-slate-400 italic">El perfil de este servicio no tiene requisitos configurados</p>
+          <p className="text-xs text-ink-subtle italic">El perfil de este servicio no tiene requisitos configurados</p>
         )}
       </div>
 
       {/* Trabajadores */}
       {avance.trabajadores.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+          <p className="text-xs font-medium text-ink-muted uppercase tracking-wider mb-2">
             Dotación ({avance.trabajadores.filter((t) => t.cumple).length}/{avance.trabajadores.length} puede ingresar)
           </p>
           <div className="space-y-1.5">
             {avance.trabajadores.map((t) => (
-              <div key={t.trabajador_id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+              <div key={t.trabajador_id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-app border border-line-subtle">
                 <div>
-                  <p className="text-xs font-medium text-slate-800">{t.nombre}</p>
-                  <p className="text-[10px] text-slate-400 font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
+                  <p className="text-xs font-medium text-ink">{t.nombre}</p>
+                  <p className="text-[10px] text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
                 </div>
                 <span className={cn("text-xs font-medium", t.cumple ? "text-emerald-600" : "text-red-600")}>
                   {t.aprobados}/{t.total}

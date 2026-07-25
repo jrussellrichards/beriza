@@ -84,7 +84,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
   }
 
   const selectClass =
-    "w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+    "w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -151,17 +151,17 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
                     "px-2 py-2 rounded-lg border text-xs transition-colors text-left",
                     tipo === o.v
                       ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 text-slate-600 hover:border-slate-300"
+                      : "border-line text-ink-muted hover:border-line-strong"
                   )}
                 >
                   <span className="block font-medium">{o.label}</span>
-                  <span className={cn("block text-[9px] mt-0.5", tipo === o.v ? "text-slate-300" : "text-slate-400")}>
+                  <span className={cn("block text-[9px] mt-0.5", tipo === o.v ? "text-ink-subtle" : "text-ink-subtle")}>
                     {o.ayuda}
                   </span>
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-[10px] text-ink-subtle">
               Es la palabra que verá el contratista en su portal.
             </p>
           </div>
