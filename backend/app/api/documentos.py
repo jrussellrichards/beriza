@@ -21,12 +21,13 @@ from app.api.schemas import (
 )
 from app.core.exceptions import (
     ArchivoInvalido,
+    PermisoInsuficiente,
     DocumentoNoEncontrado,
     EntregaInvalida,
     EstadoDocumentoInvalido,
     TrabajadorNoEncontrado,
 )
-from app.domain import acreditacion_service, archivo_service, documento_service
+from app.domain import acreditacion_service, archivo_service, documento_service, permiso_service
 from app.domain.archivo_service import ArchivoEntrada
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
@@ -219,16 +220,20 @@ def revisar_documento(
     documento_id: uuid.UUID,
     body: RevisarDocumentoRequest,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(require_rol(["mandante_admin", "berisa_admin"])),
+    usuario: Usuario = Depends(require_rol(["mandante_admin", "berisa_admin", "prevencionista"])),
 ):
     """
     Revisión manual del mandante sobre la entrega vigente:
     aprueba (con fecha de vigencia opcional) u observa con motivo.
+
+    Un `prevencionista` solo puede resolver los pilares que tenga asignados
+    (ver domain/permiso_service.py). `mandante_admin` aprueba cualquiera.
     """
     try:
         doc = documento_service.obtener_documento(db, documento_id)
         if usuario.mandante_id and doc.mandante_id != usuario.mandante_id:
             raise HTTPException(status_code=403, detail="El documento no pertenece a su mandante")
+        permiso_service.exigir_puede_aprobar(db, usuario, doc)
         documento_service.revisar_documento(
             db, documento_id, usuario.id,
             aprobar=body.aprobar,
@@ -239,6 +244,8 @@ def revisar_documento(
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     except EstadoDocumentoInvalido as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except PermisoInsuficiente as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 
 @router.post("/{documento_id}/aprobar-excepcion", status_code=status.HTTP_204_NO_CONTENT)

@@ -80,6 +80,31 @@ class MandanteResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class InvitarUsuarioMandanteRequest(BaseModel):
+    """Un mandante invita a alguien de su organización a revisar documentos."""
+    email: EmailStr
+    nombre: str
+    # mandante_admin aprueba cualquier pilar; prevencionista solo los asignados.
+    rol: str = "prevencionista"
+    pilar_ids: list[uuid.UUID] = []
+
+
+class DefinirPermisosRequest(BaseModel):
+    """Reemplaza los pilares que este usuario puede aprobar."""
+    pilar_ids: list[uuid.UUID]
+
+
+class UsuarioMandanteResponse(BaseModel):
+    id: uuid.UUID
+    email: str
+    nombre: str
+    rol: str
+    activo: bool
+    # None = aprueba todos los pilares (mandante_admin / berisa_admin)
+    pilares: list[str] | None
+    pilar_ids: list[uuid.UUID]
+
+
 class InvitarMandanteRequest(BaseModel):
     """BERISA invita a un mandante nuevo. El slug se deriva de la razón social
     si no se indica; el mandante completa el resto al activar su cuenta."""

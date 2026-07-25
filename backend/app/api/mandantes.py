@@ -8,7 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.schemas import (
+    DefinirPermisosRequest,
     InvitarMandanteRequest,
+    InvitarUsuarioMandanteRequest,
+    UsuarioMandanteResponse,
     ActualizarMandanteRequest,
     ConfigurarRequisitoPerfilRequest,
     CrearMandanteRequest,
@@ -18,8 +21,9 @@ from app.api.schemas import (
     PerfilResponse,
 )
 from app.core.config import settings
+from app.core.exceptions import PermisoInsuficiente
 from app.core.exceptions import PerfilNoEncontrado
-from app.domain import acreditacion_service, servicio_service
+from app.domain import permiso_service, acreditacion_service, servicio_service
 from app.domain.estados import EstadoDocumento
 from app.domain.reglas_service import VIGENCIA_DEFAULT_DIAS
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig
@@ -31,6 +35,7 @@ from app.models.expediente import Acreditacion, AcreditacionEvento, Expediente
 from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.models.trabajador import Trabajador
+from app.models.permiso import UsuarioPilarPermiso
 from app.models.usuario import Usuario
 
 logger = logging.getLogger("acredita")
@@ -477,10 +482,16 @@ def configuracion_mandante(
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
 
     equipo = db.query(Usuario).filter_by(mandante_id=mandante_id).all()
-    equipo_data = [
-        {"id": str(u.id), "nombre": u.nombre, "email": u.email, "rol": u.rol, "activo": u.activo}
-        for u in equipo
-    ]
+    equipo_data = []
+    for u in equipo:
+        # None = aprueba todos los pilares (mandante_admin); lista vacia = ninguno.
+        pilares = permiso_service.pilares_que_aprueba(db, u)
+        equipo_data.append({
+            "id": str(u.id), "nombre": u.nombre, "email": u.email,
+            "rol": u.rol, "activo": u.activo,
+            "pilares": None if pilares is None else [p.nombre for p in pilares],
+            "pilar_ids": [] if pilares is None else [str(p.id) for p in pilares],
+        })
 
     return {
         "id": str(mandante.id),
@@ -721,3 +732,106 @@ def configurar_requisito_perfil(
     return {"mensaje": "Requisito configurado en el perfil"}
 
 
+
+
+# ── Usuarios del mandante y sus permisos de aprobación ────────────────────────
+
+@router.get("/{mandante_id}/usuarios", response_model=list[UsuarioMandanteResponse])
+def listar_usuarios_mandante(
+    mandante_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """El equipo del mandante con los pilares que cada uno puede aprobar."""
+    if usuario.mandante_id and usuario.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede ver los usuarios de su propio mandante")
+
+    resultado = []
+    for u in db.query(Usuario).filter_by(mandante_id=mandante_id).order_by(Usuario.nombre).all():
+        pilares = permiso_service.pilares_que_aprueba(db, u)
+        resultado.append(UsuarioMandanteResponse(
+            id=u.id, email=u.email, nombre=u.nombre, rol=u.rol, activo=u.activo,
+            pilares=None if pilares is None else [p.nombre for p in pilares],
+            pilar_ids=[] if pilares is None else [p.id for p in pilares],
+        ))
+    return resultado
+
+
+@router.post("/{mandante_id}/invitar-usuario", status_code=status.HTTP_201_CREATED)
+def invitar_usuario_mandante(
+    mandante_id: uuid.UUID,
+    body: InvitarUsuarioMandanteRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Invita a alguien de la organización del mandante a revisar documentos, con
+    los pilares que podrá aprobar. Mismo flujo de activación que el resto: el
+    invitado define su propia contraseña.
+    """
+    if usuario.mandante_id and usuario.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede invitar usuarios a su propio mandante")
+    mandante = db.get(Mandante, mandante_id)
+    if not mandante:
+        raise HTTPException(status_code=404, detail="Mandante no encontrado")
+    if body.rol not in ("mandante_admin", "prevencionista"):
+        raise HTTPException(
+            status_code=400,
+            detail="El rol debe ser mandante_admin (aprueba todo) o prevencionista (aprueba sus pilares).",
+        )
+    if db.query(Usuario).filter_by(email=body.email).first():
+        raise HTTPException(status_code=400, detail=f"Ya existe un usuario con el email {body.email}.")
+
+    nuevo = Usuario(
+        email=body.email, nombre=body.nombre, password_hash="",
+        rol=body.rol, activo=False, mandante_id=mandante_id,
+    )
+    db.add(nuevo)
+    db.flush()
+
+    if body.rol == "prevencionista" and body.pilar_ids:
+        db.add_all([
+            UsuarioPilarPermiso(usuario_id=nuevo.id, pilar_id=pid) for pid in body.pilar_ids
+        ])
+    db.commit()
+    db.refresh(nuevo)
+
+    link_activacion = f"{settings.FRONTEND_URL}/activar?token={nuevo.id}"
+    try:
+        get_email_cliente().enviar(Email(
+            destinatario=body.email,
+            asunto=f"Invitación a Acredita — {mandante.razon_social}",
+            cuerpo_html=f"""
+            <h2>Te invitaron a Acredita</h2>
+            <p>{mandante.razon_social} te invitó a revisar la documentación de sus
+            empresas contratistas.</p>
+            <p>Para activar tu cuenta y definir tu contraseña:</p>
+            <a href="{link_activacion}">Activar cuenta</a>
+            <p>Este enlace es personal e intransferible.</p>
+            """,
+        ))
+    except Exception:
+        logger.exception("No se pudo enviar el email de invitación a %s", body.email)
+        return {
+            "mensaje": f"Usuario creado, pero el email a {body.email} no pudo enviarse.",
+            "link_activacion": link_activacion,
+        }
+
+    return {"mensaje": f"Invitación enviada a {body.email}"}
+
+
+@router.put("/{mandante_id}/usuarios/{usuario_id}/permisos", status_code=status.HTTP_204_NO_CONTENT)
+def definir_permisos_usuario(
+    mandante_id: uuid.UUID,
+    usuario_id: uuid.UUID,
+    body: DefinirPermisosRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """Reemplaza los pilares que este usuario puede aprobar."""
+    if usuario.mandante_id and usuario.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede cambiar permisos de su propio mandante")
+    try:
+        permiso_service.definir_permisos(db, usuario_id, mandante_id, body.pilar_ids)
+    except PermisoInsuficiente as e:
+        raise HTTPException(status_code=403, detail=str(e))

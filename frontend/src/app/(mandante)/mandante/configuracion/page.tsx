@@ -16,9 +16,7 @@ interface ConfigSeccion {
   icon: React.ElementType
 }
 
-interface UsuarioEquipo {
-  id: string; nombre: string; email: string; rol: string; activo: boolean
-}
+import { UsuarioPermisosDialog, type UsuarioEquipo } from "@/features/mandante/usuario-permisos-dialog"
 
 interface ConfigData {
   razon_social: string; rut: string; email_contacto: string; sitio_web: string
@@ -33,6 +31,8 @@ const SECCIONES: ConfigSeccion[] = [
   { id: "acceso", titulo: "Acceso y usuarios", descripcion: "Equipo con acceso", icon: Users },
   { id: "seguridad", titulo: "Seguridad", descripcion: "Auth y sesiones", icon: Shield },
 ]
+
+const ROL_DEFAULT = { label: "Usuario", color: "bg-slate-50 text-slate-600 border-slate-200" }
 
 const ROL_CFG: Record<string, { label: string; color: string }> = {
   mandante_admin: { label: "Admin", color: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -65,6 +65,7 @@ export default function ConfiguracionPage() {
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
   const [endpoint, setEndpoint] = useState<string | null>(null)
   const [mandanteId, setMandanteId] = useState<string | null>(null)
+  const [dialogo, setDialogo] = useState<{ usuario: UsuarioEquipo | null } | null>(null)
 
   useEffect(() => {
     const s = getSession()
@@ -75,7 +76,7 @@ export default function ConfiguracionPage() {
   }, [])
 
   const FALLBACK: ConfigData = { razon_social: "", rut: "", email_contacto: "", sitio_web: "", equipo: [] }
-  const { data: config } = useApiData<ConfigData>(endpoint, FALLBACK)
+  const { data: config, refetch } = useApiData<ConfigData>(endpoint, FALLBACK)
 
   // Organización
   const [razonSocial, setRazonSocial] = useState("")
@@ -287,7 +288,10 @@ export default function ConfiguracionPage() {
                   <h2 className="text-base font-semibold text-slate-900 mb-1">Equipo con acceso</h2>
                   <p className="text-sm text-slate-400">Usuarios que pueden gestionar la plataforma</p>
                 </div>
-                <button className="flex items-center gap-2 text-sm font-medium border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-700">
+                <button
+                  onClick={() => setDialogo({ usuario: null })}
+                  className="flex items-center gap-2 text-sm font-medium border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-700"
+                >
                   <Users size={14} />
                   Invitar usuario
                 </button>
@@ -302,9 +306,16 @@ export default function ConfiguracionPage() {
                     <div className="flex-1 min-w-0">
                       <p className={cn("text-sm font-medium", u.activo ? "text-slate-900" : "text-slate-400")}>{u.nombre}</p>
                       <p className="text-xs text-slate-400 font-mono">{u.email}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {u.pilares === null
+                          ? "Aprueba todos los pilares"
+                          : u.pilares.length === 0
+                            ? "No aprueba ningún pilar"
+                            : `Aprueba: ${u.pilares.join(", ")}`}
+                      </p>
                     </div>
-                    <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", ROL_CFG[u.rol].color)}>
-                      {ROL_CFG[u.rol].label}
+                    <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", (ROL_CFG[u.rol] ?? ROL_DEFAULT).color)}>
+                      {(ROL_CFG[u.rol] ?? ROL_DEFAULT).label}
                     </span>
                     <span className={cn(
                       "text-[10px] font-medium px-2 py-0.5 rounded border",
@@ -312,8 +323,11 @@ export default function ConfiguracionPage() {
                     )}>
                       {u.activo ? "Activo" : "Inactivo"}
                     </span>
-                    <button className="text-xs text-slate-400 hover:text-slate-600 transition-colors px-2 py-1 rounded hover:bg-slate-100">
-                      Editar
+                    <button
+                      onClick={() => setDialogo({ usuario: u })}
+                      className="text-xs text-slate-500 hover:text-slate-800 transition-colors px-2 py-1 rounded hover:bg-slate-100"
+                    >
+                      Permisos
                     </button>
                   </div>
                 ))}
@@ -367,6 +381,15 @@ export default function ConfiguracionPage() {
 
         </div>
       </div>
+
+      {dialogo && mandanteId && (
+        <UsuarioPermisosDialog
+          mandanteId={mandanteId}
+          usuario={dialogo.usuario}
+          onClose={() => setDialogo(null)}
+          onGuardado={refetch}
+        />
+      )}
     </div>
   )
 }

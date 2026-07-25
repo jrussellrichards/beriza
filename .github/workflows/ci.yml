@@ -60,7 +60,7 @@ jobs:
         run: cd backend && python scripts/seed.py && python scripts/seed.py
 
       - name: Smoke tests (autorización, flujo de expediente, vencimientos, reutilización, portal)
-        run: cd backend && python tests/test_tenant.py && python tests/test_expediente_flujo.py && python tests/test_vencimiento.py && python tests/test_reutilizacion.py && python tests/test_vista_documental.py && python tests/test_portal_contratista.py && python tests/test_invitar_mandante.py
+        run: cd backend && python tests/test_tenant.py && python tests/test_expediente_flujo.py && python tests/test_vencimiento.py && python tests/test_reutilizacion.py && python tests/test_vista_documental.py && python tests/test_portal_contratista.py && python tests/test_invitar_mandante.py && python tests/test_permisos_pilar.py
 
   deploy-prod:
     needs: [build, backend-test]
