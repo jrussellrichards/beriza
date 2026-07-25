@@ -1,18 +1,24 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
-    AgregarTrabajadorRequest, TrabajadorHabilitacionResponse, TrabajadorResponse,
+    AgregarTrabajadorRequest, ReporteImportacionResponse, TrabajadorHabilitacionResponse,
+    TrabajadorResponse,
 )
-from app.domain import acreditacion_service
+from app.domain import acreditacion_service, nomina_service
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
 from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
 
 router = APIRouter()
+
+# Tope de tamaño del archivo. Una nomina de 5000 filas pesa ~200 KB; 5 MB deja
+# holgura de sobra y corta un envio equivocado antes de leerlo a memoria.
+MAX_BYTES_NOMINA = 5 * 1024 * 1024
 
 
 @router.get("/mis-trabajadores", response_model=list[TrabajadorHabilitacionResponse])
@@ -55,6 +61,65 @@ def agregar_trabajador(
     db.commit()
     db.refresh(trabajador)
     return trabajador
+
+
+@router.get("/plantilla-nomina")
+def descargar_plantilla_nomina(
+    usuario: Usuario = Depends(require_rol(["contratista_admin", "prevencionista"])),
+):
+    """Plantilla CSV para la carga masiva, con ejemplos válidos."""
+    return Response(
+        content=nomina_service.plantilla_csv(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="plantilla-nomina.csv"'},
+    )
+
+
+@router.post("/cargar-nomina", response_model=ReporteImportacionResponse)
+async def cargar_nomina(
+    archivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["contratista_admin", "prevencionista"])),
+):
+    """
+    Carga masiva de trabajadores desde CSV o Excel.
+
+    Responde 200 aunque haya filas con error: la importación es parcial a
+    propósito (ver el docstring de nomina_service). El reporte dice qué pasó con
+    cada fila; devolver un 4xx obligaría al frontend a tratar como fallo una
+    carga que sí subió 77 de 80.
+    """
+    if not usuario.contratista_id:
+        raise HTTPException(status_code=400, detail="El usuario no está asociado a una empresa")
+
+    contenido = await archivo.read()
+    if not contenido:
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+    if len(contenido) > MAX_BYTES_NOMINA:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El archivo supera {MAX_BYTES_NOMINA // (1024 * 1024)} MB.",
+        )
+
+    try:
+        reporte = nomina_service.importar_nomina(
+            db, usuario.contratista_id, contenido, archivo.filename or "",
+        )
+    except ValueError as e:
+        # Problemas del ARCHIVO (formato, columnas, vacío): no hay nada que
+        # reportar por fila, así que sí corresponde un 400.
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return ReporteImportacionResponse(
+        filas_leidas=reporte.filas_leidas,
+        cargados=reporte.cargados,
+        ya_existian=reporte.ya_existian,
+        con_error=reporte.con_error,
+        errores=[
+            {"fila": e.fila, "rut": e.rut, "nombre": e.nombre, "motivo": e.motivo}
+            for e in reporte.errores
+        ],
+    )
 
 
 @router.get("/{trabajador_id}", response_model=TrabajadorResponse)

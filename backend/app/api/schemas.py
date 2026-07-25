@@ -94,6 +94,29 @@ class MandanteResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class FilaErrorResponse(BaseModel):
+    """Una fila que no se pudo cargar, con el motivo exacto."""
+    fila: int
+    rut: str
+    nombre: str
+    motivo: str
+
+
+class ReporteImportacionResponse(BaseModel):
+    """
+    Resultado de una carga masiva de nómina.
+
+    `cargados`, `ya_existian` y `con_error` suman `filas_leidas`. Se separan
+    "ya existían" de "con error" porque volver a subir el mismo archivo con tres
+    filas corregidas es el caso normal, no una falla.
+    """
+    filas_leidas: int
+    cargados: int
+    ya_existian: int
+    con_error: int
+    errores: list[FilaErrorResponse]
+
+
 class InvitarUsuarioMandanteRequest(BaseModel):
     """
     Un mandante invita a alguien de su organización a revisar documentos.
