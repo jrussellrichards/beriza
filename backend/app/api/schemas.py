@@ -439,6 +439,7 @@ class PendienteRevisionResponse(BaseModel):
     documento_id: uuid.UUID
     requisito_codigo: str
     requisito_nombre: str
+    pilar_id: uuid.UUID
     pilar_nombre: str
     contratista_razon_social: str
     trabajador_nombre: str | None
@@ -446,6 +447,10 @@ class PendienteRevisionResponse(BaseModel):
     numero_version: int
     subido_en: datetime
     archivos: list[ArchivoDocumentoResponse]
+    # Si ESTE usuario puede resolver esta entrega. Lo decide el backend y no el
+    # frontend recalculando permisos: la autoridad sobre autorización es una
+    # sola. Sirve para no ofrecer un botón que va a devolver 403.
+    puede_aprobar: bool
 
 
 class UrlDescargaResponse(BaseModel):

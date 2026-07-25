@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { CheckCircle2, Download, FileText, Inbox, RefreshCw, XCircle } from "lucide-react"
+import { CheckCircle2, Download, Eye, FileText, Inbox, RefreshCw, XCircle } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 import {
@@ -24,6 +24,7 @@ interface Pendiente {
   documento_id: string
   requisito_codigo: string
   requisito_nombre: string
+  pilar_id: string
   pilar_nombre: string
   contratista_razon_social: string
   trabajador_nombre: string | null
@@ -31,6 +32,8 @@ interface Pendiente {
   numero_version: number
   subido_en: string
   archivos: ArchivoPendiente[]
+  /** Lo decide el backend según los pilares que este usuario puede aprobar. */
+  puede_aprobar: boolean
 }
 
 function formatFecha(iso: string): string {
@@ -128,12 +131,49 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
   )
 }
 
+/** Chip de categoría documental, con su conteo. */
+function Chip({ activo, onClick, label, n, soloLectura }: {
+  activo: boolean
+  onClick: () => void
+  label: string
+  n: number
+  soloLectura?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs transition-colors",
+        activo
+          ? "border-ink bg-surface-inverse text-white font-medium"
+          : "border-line text-ink-muted hover:border-line-strong hover:bg-surface-app",
+      )}
+    >
+      {label}
+      <span className={cn(
+        "text-[10px] tabular-nums",
+        activo ? "text-white/70" : "text-ink-subtle",
+      )}>
+        {n}
+      </span>
+      {soloLectura && (
+        <Eye size={10} className={activo ? "text-white/70" : "text-ink-subtle"} aria-label="solo lectura" />
+      )}
+    </button>
+  )
+}
+
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function RevisionPage() {
   const [pendientes, setPendientes] = useState<Pendiente[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogo, setDialogo] = useState<{ pendiente: Pendiente; accion: "aprobar" | "observar" } | null>(null)
+  /** null = todas las categorías. */
+  const [pilarFiltro, setPilarFiltro] = useState<string | null>(null)
+  // Que el usuario ya haya elegido un chip: sin esto, cada "Actualizar" le
+  // reimpondría el filtro por defecto encima de su elección.
+  const [filtroElegido, setFiltroElegido] = useState(false)
 
   const cargar = useCallback(() => {
     setLoading(true)
@@ -144,6 +184,41 @@ export default function RevisionPage() {
   }, [])
 
   useEffect(() => { cargar() }, [cargar])
+
+  // Quien solo aprueba algunos pilares abre en el suyo. Antes veía primero
+  // documentos que al intentar aprobar le devolvían un 403 — una fricción que
+  // introdujimos nosotros al poner permisos por pilar.
+  useEffect(() => {
+    if (filtroElegido || pendientes.length === 0) return
+    const restringido = pendientes.some(p => !p.puede_aprobar)
+    if (!restringido) return
+    const suyos = pendientes.filter(p => p.puede_aprobar)
+    if (suyos.length > 0) setPilarFiltro(suyos[0].pilar_id)
+  }, [pendientes, filtroElegido])
+
+  function elegirPilar(id: string | null) {
+    setPilarFiltro(id)
+    setFiltroElegido(true)
+  }
+
+  // Las categorías salen de los DATOS, nunca de una lista fija: los pilares son
+  // un catálogo configurable —un mandante minero puede tener Ambiental o
+  // Maquinaria— y cablearlas acá rompería a cualquiera fuera de los tres del seed.
+  const categorias = Array.from(
+    pendientes.reduce((acc, p) => {
+      const prev = acc.get(p.pilar_id)
+      acc.set(p.pilar_id, {
+        id: p.pilar_id,
+        nombre: p.pilar_nombre,
+        n: (prev?.n ?? 0) + 1,
+        aprobables: (prev?.aprobables ?? 0) + (p.puede_aprobar ? 1 : 0),
+      })
+      return acc
+    }, new Map<string, { id: string; nombre: string; n: number; aprobables: number }>()).values()
+  ).sort((a, b) => b.n - a.n)
+
+  const visibles = pilarFiltro ? pendientes.filter(p => p.pilar_id === pilarFiltro) : pendientes
+  const sinPermiso = pendientes.filter(p => !p.puede_aprobar).length
 
   async function descargar(p: Pendiente, archivo: ArchivoPendiente) {
     try {
@@ -177,11 +252,37 @@ export default function RevisionPage() {
       </div>
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-ink-secondary">
-            {pendientes.length} entrega{pendientes.length !== 1 ? "s" : ""} pendiente{pendientes.length !== 1 ? "s" : ""}
-          </span>
-        </div>
+        {pendientes.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Chip
+                activo={pilarFiltro === null}
+                onClick={() => elegirPilar(null)}
+                label="Todas"
+                n={pendientes.length}
+              />
+              {categorias.map(c => (
+                <Chip
+                  key={c.id}
+                  activo={pilarFiltro === c.id}
+                  onClick={() => elegirPilar(c.id)}
+                  label={c.nombre}
+                  n={c.n}
+                  // Marca las categorías que esta persona no puede resolver, para
+                  // que sepa por qué al entrar no tiene botones.
+                  soloLectura={c.aprobables === 0}
+                />
+              ))}
+            </div>
+            {sinPermiso > 0 && (
+              <p className="text-[11px] text-ink-subtle">
+                {sinPermiso === pendientes.length
+                  ? "No puedes aprobar ninguna de estas entregas: pertenecen a pilares que no tienes asignados."
+                  : `${sinPermiso} ${sinPermiso === 1 ? "entrega es" : "entregas son"} de pilares que no tienes asignados — puedes verlas, no aprobarlas.`}
+              </p>
+            )}
+          </div>
+        )}
 
         {loading && pendientes.length === 0 && (
           <div className="py-14 text-center bg-surface rounded-xl border border-line">
@@ -197,8 +298,22 @@ export default function RevisionPage() {
           </div>
         )}
 
+        {/* Vacío POR EL FILTRO, que es otra cosa: sí hay trabajo, pero no en esta
+            categoría. Con el mensaje anterior parecía que la cola estaba limpia. */}
+        {!loading && pendientes.length > 0 && visibles.length === 0 && (
+          <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
+            <p className="text-sm text-ink-muted">Nada pendiente en esta categoría</p>
+            <button
+              onClick={() => elegirPilar(null)}
+              className="text-xs text-ink-muted underline mt-1 hover:text-ink"
+            >
+              Ver las {pendientes.length} entregas
+            </button>
+          </div>
+        )}
+
         <div className="space-y-3">
-          {pendientes.map((p) => (
+          {visibles.map((p) => (
             <div key={p.documento_id} className="bg-surface rounded-xl border border-line px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">
@@ -238,20 +353,33 @@ export default function RevisionPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => setDialogo({ pendiente: p, accion: "observar" })}
-                    className="flex items-center gap-1.5 text-xs font-medium text-bloqueo-ink border border-bloqueo-line bg-bloqueo-soft hover:bg-bloqueo-soft px-3 py-2 rounded-lg transition-colors"
+                {/* Sin permiso sobre este pilar no se ofrecen los botones. Antes
+                    se mostraban y al pulsarlos volvía un 403: ofrecer una acción
+                    que el servidor va a rechazar es peor que no ofrecerla. */}
+                {p.puede_aprobar ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setDialogo({ pendiente: p, accion: "observar" })}
+                      className="flex items-center gap-1.5 text-xs font-medium text-bloqueo-ink border border-bloqueo-line bg-bloqueo-soft hover:bg-bloqueo-soft px-3 py-2 rounded-lg transition-colors"
+                    >
+                      <XCircle size={13} /> Observar
+                    </button>
+                    <button
+                      onClick={() => setDialogo({ pendiente: p, accion: "aprobar" })}
+                      className="flex items-center gap-1.5 text-xs font-medium text-white bg-ok-ink hover:bg-ok-ink px-3 py-2 rounded-lg transition-colors"
+                    >
+                      <CheckCircle2 size={13} /> Aprobar
+                    </button>
+                  </div>
+                ) : (
+                  <span
+                    className="shrink-0 inline-flex items-center gap-1.5 text-[11px] text-ink-subtle border border-line rounded-lg px-2.5 py-2"
+                    title={`Necesitas el pilar ${p.pilar_nombre} para aprobar esta entrega`}
                   >
-                    <XCircle size={13} /> Observar
-                  </button>
-                  <button
-                    onClick={() => setDialogo({ pendiente: p, accion: "aprobar" })}
-                    className="flex items-center gap-1.5 text-xs font-medium text-white bg-ok-ink hover:bg-ok-ink px-3 py-2 rounded-lg transition-colors"
-                  >
-                    <CheckCircle2 size={13} /> Aprobar
-                  </button>
-                </div>
+                    <Eye size={12} />
+                    Solo lectura
+                  </span>
+                )}
               </div>
             </div>
           ))}
