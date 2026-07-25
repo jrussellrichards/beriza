@@ -372,9 +372,7 @@ export default function ConfiguracionPage() {
               <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                 <p className="text-sm font-semibold text-red-800 mb-1">Zona de peligro</p>
                 <p className="text-xs text-red-600 mb-3">Estas acciones son irreversibles. Procede con cuidado.</p>
-                <button className="text-xs font-medium text-red-700 border border-red-300 bg-white hover:bg-red-50 px-3 py-2 rounded-md transition-colors">
-                  Eliminar cuenta del mandante
-                </button>
+                <button disabled title="Eliminar la cuenta requiere contactar a BERISA" className="text-xs font-medium text-red-700 border border-red-300 bg-white hover:bg-red-50 px-3 py-2 rounded-md transition-colors">Eliminar cuenta del mandante</button>
               </div>
             </div>
           )}

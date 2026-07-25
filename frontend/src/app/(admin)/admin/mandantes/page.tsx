@@ -281,22 +281,30 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
           })}
         </div>
 
-        {/* Acciones */}
+        {/* Acciones. Las que no tienen endpoint detras van deshabilitadas y con
+            el motivo: un boton que parece funcionar y no hace nada es peor que
+            un boton apagado, sobre todo en una demo. */}
         <div className="border-t border-slate-100 pt-4 space-y-2">
-          <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+          <button
+            onClick={() => window.location.href = "/admin/mandantes"}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+          >
             <span>Ver contratistas del mandante</span>
             <ChevronRight size={14} className="text-slate-400" />
           </button>
-          <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+          <button
+            disabled
+            title="El cambio de plan aún no está implementado"
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-slate-100 text-sm text-slate-400 cursor-not-allowed"
+          >
             <span>Cambiar plan</span>
-            <ChevronRight size={14} className="text-slate-400" />
+            <span className="text-[10px]">no disponible</span>
           </button>
-          <button className={cn(
-            "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors",
-            m.activo
-              ? "border-red-200 text-red-600 hover:bg-red-50"
-              : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-          )}>
+          <button
+            disabled
+            title="Activar y desactivar mandantes aún no está implementado"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-100 text-sm font-medium text-slate-400 cursor-not-allowed"
+          >
             {m.activo ? <><ToggleLeft size={14} /> Desactivar mandante</> : <><ToggleRight size={14} /> Activar mandante</>}
           </button>
         </div>

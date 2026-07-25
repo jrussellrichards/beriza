@@ -238,9 +238,7 @@ export default function UsuariosPage() {
                     </td>
                     <td className="px-4 py-4 text-xs text-slate-400">{u.ultimo_acceso}</td>
                     <td className="px-4 py-4">
-                      <button className="text-xs text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors">
-                        Editar
-                      </button>
+                      <button disabled title="La edición de usuarios aún no está implementada" className="text-xs text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors">Editar</button>
                     </td>
                   </tr>
                 ))}
