@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Settings,
+  Users,
   LogOut,
   ShieldCheck,
 } from "lucide-react"
@@ -31,6 +32,10 @@ const nav = [
   { href: "/mandante/contratistas", label: "Contratistas", icon: Building2, corta: "Empresas" },
   { href: "/mandante/servicios", label: "Servicios", icon: Briefcase, corta: "Servicios" },
   { href: "/mandante/requisitos", label: "Perfiles", icon: ClipboardList, corta: "Perfiles" },
+  // Invitar gente y decidir quien aprueba que no es un "ajuste" que se toca una
+  // vez: es gestion recurrente con consecuencias reales. Enterrado como
+  // subseccion de Configuracion nadie lo encontraba.
+  { href: "/mandante/equipo", label: "Equipo", icon: Users, corta: "Equipo" },
   { href: "/mandante/configuracion", label: "Configuración", icon: Settings, corta: "Ajustes" },
 ]
 
@@ -114,6 +119,9 @@ export function SidebarMandante() {
         <div className="flex items-center gap-3">
           <Link href="/mandante/requisitos" className="text-slate-400 p-1" aria-label="Perfiles">
             <ClipboardList size={16} />
+          </Link>
+          <Link href="/mandante/equipo" className="text-slate-400 p-1" aria-label="Equipo">
+            <Users size={16} />
           </Link>
           <Link href="/mandante/configuracion" className="text-slate-400 p-1" aria-label="Configuración">
             <Settings size={16} />
