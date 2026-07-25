@@ -26,10 +26,10 @@ interface Pilar {
 }
 
 const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text: string }> = {
-  blue:    { border: "border-brand-line",    bg: "bg-brand-soft",    dot: "bg-brand-soft0",    text: "text-brand-hover" },
-  amber:   { border: "border-accion-line",   bg: "bg-accion-soft",   dot: "bg-accion-soft0",   text: "text-accion-ink" },
-  purple:  { border: "border-excepcion-line",  bg: "bg-excepcion-soft",  dot: "bg-excepcion-soft0",  text: "text-excepcion-ink" },
-  slate:   { border: "border-line",   bg: "bg-surface-app",   dot: "bg-surface-app0",   text: "text-ink-secondary" },
+  blue:    { border: "border-brand-line",    bg: "bg-brand-soft",    dot: "bg-brand",    text: "text-brand-hover" },
+  amber:   { border: "border-accion-line",   bg: "bg-accion-soft",   dot: "bg-accion-ink",   text: "text-accion-ink" },
+  purple:  { border: "border-excepcion-line",  bg: "bg-excepcion-soft",  dot: "bg-excepcion-ink",  text: "text-excepcion-ink" },
+  slate:   { border: "border-line",   bg: "bg-surface-app",   dot: "bg-ink-muted",   text: "text-ink-secondary" },
 }
 
 // ── Componente pilar ──────────────────────────────────────────────────────────

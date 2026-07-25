@@ -32,6 +32,15 @@ jobs:
           fi
           echo "OK: cero utilidades de color crudas"
 
+      # Complemento del guard anterior: aquel prohíbe los colores CRUDOS, este
+      # exige que los semánticos EXISTAN. Hicieron falta los dos: la migración
+      # dejó 23 clases `bg-ok-soft0` / `bg-surface-app0` —un reemplazo que hizo
+      # match dentro de `emerald-500` y dejó el 0 colgando— que parecían
+      # correctas y no pintaban nada. Tailwind no falla ante una clase
+      # desconocida, simplemente no genera la regla.
+      - name: Los tokens de color usados existen
+        run: cd frontend && node scripts/validar-tokens.mjs
+
       - name: Build frontend
         run: cd frontend && npm run build
         env:

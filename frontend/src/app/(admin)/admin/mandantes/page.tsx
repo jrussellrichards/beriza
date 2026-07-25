@@ -183,7 +183,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           className={cn(
             "w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2",
             guardado
-              ? "bg-ok-soft0 text-white"
+              ? "bg-ok-ink text-white"
               : !nombre || !rut || !email
                 ? "bg-line text-ink-subtle cursor-not-allowed"
                 : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
@@ -200,7 +200,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
 
 function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
   const pct = Math.round((m.acreditadas / m.contratistas) * 100)
-  const barColor = pct >= 75 ? "bg-ok-soft0" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
+  const barColor = pct >= 75 ? "bg-ok-ink" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
 
   return (
     <div className="flex flex-col h-full">
@@ -408,7 +408,7 @@ export default function MandantesPage() {
               <tbody className="divide-y divide-slate-100">
                 {filtrados.map(m => {
                   const pct = Math.round((m.acreditadas / m.contratistas) * 100)
-                  const barColor = pct >= 75 ? "bg-ok-soft0" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
+                  const barColor = pct >= 75 ? "bg-ok-ink" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
                   const selected = seleccionado?.id === m.id
                   return (
                     <tr
@@ -444,7 +444,7 @@ export default function MandantesPage() {
                           "inline-flex items-center gap-1.5 text-xs font-medium",
                           m.activo ? "text-ok-ink" : "text-ink-subtle"
                         )}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full", m.activo ? "bg-ok-soft0" : "bg-line-strong")} />
+                          <span className={cn("w-1.5 h-1.5 rounded-full", m.activo ? "bg-ok-ink" : "bg-line-strong")} />
                           {m.activo ? "Activo" : "Inactivo"}
                         </span>
                       </td>

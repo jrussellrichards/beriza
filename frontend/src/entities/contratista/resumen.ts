@@ -56,6 +56,24 @@ export interface DocumentoContratista {
 export type TipoServicio = "OBRA" | "FAENA" | "SERVICIO"
 
 /** La palabra del rubro que corresponde a este contrato. */
+/**
+ * ¿Este documento está en regla? Lo está solo si TODOS los mandantes que lo
+ * exigen lo tienen aprobado y vigente.
+ *
+ * Basta un cliente que lo haya observado, o una vigencia ya pasada, para que el
+ * contratista no pueda trabajar — así que un "al día" que promedie entre
+ * clientes mentiría justo donde importa. El estado 4 es APROBADO (ver
+ * `domain/estados.py`).
+ */
+export function documentoAlDia(d: DocumentoContratista, hoy = new Date()): boolean {
+  if (d.mandantes.length === 0) return false
+  return d.mandantes.every(m => {
+    if (m.estado !== 4) return false
+    if (!m.fecha_vigencia_hasta) return true
+    return new Date(m.fecha_vigencia_hasta) >= hoy
+  })
+}
+
 export const TIPO_LABEL: Record<TipoServicio, string> = {
   OBRA: "Obra",
   FAENA: "Faena",

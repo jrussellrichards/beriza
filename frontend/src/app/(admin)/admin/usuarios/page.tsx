@@ -102,7 +102,7 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
           disabled={!nombre || !email}
           className={cn(
             "w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2",
-            guardado ? "bg-ok-soft0 text-white"
+            guardado ? "bg-ok-ink text-white"
               : !nombre || !email ? "bg-line text-ink-subtle cursor-not-allowed"
                 : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
           )}
@@ -232,7 +232,7 @@ export default function UsuariosPage() {
                     <td className="px-4 py-4 text-sm text-ink-muted">{u.mandante ?? "—"}</td>
                     <td className="px-4 py-4">
                       <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium", u.activo ? "text-ok-ink" : "text-ink-subtle")}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full", u.activo ? "bg-ok-soft0" : "bg-line-strong")} />
+                        <span className={cn("w-1.5 h-1.5 rounded-full", u.activo ? "bg-ok-ink" : "bg-line-strong")} />
                         {u.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>

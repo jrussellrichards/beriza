@@ -149,7 +149,7 @@ export default function LoginPage() {
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3.5 py-2.5 rounded-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-bloqueo-soft0 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-bloqueo-ink shrink-0" />
                 {error}
               </div>
             )}

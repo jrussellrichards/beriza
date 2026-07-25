@@ -136,7 +136,7 @@ export default function ConfiguracionPage() {
             disabled={guardando}
             className={cn(
               "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
-              saved ? "bg-ok-soft0 text-white" : "bg-surface-inverse text-white hover:bg-surface-inverse-hover",
+              saved ? "bg-ok-ink text-white" : "bg-surface-inverse text-white hover:bg-surface-inverse-hover",
               guardando && "opacity-60 cursor-not-allowed"
             )}
           >
