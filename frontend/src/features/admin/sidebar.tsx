@@ -19,13 +19,16 @@ const nav = [
 export function SidebarAdmin() {
   const path = usePathname()
 
+  // `sticky top-0 h-screen` y NO `min-h-screen`: con min-h este aside crecía al
+  // alto de TODA la página y su pie quedaba anclado al final del documento, así
+  // que había que scrollear hasta el fondo para verlo.
   return (
-    <aside className="w-56 min-h-screen bg-surface-inverse flex flex-col shrink-0">
+    <aside className="sticky top-0 h-screen w-56 bg-surface-inverse flex flex-col shrink-0">
       <div className="px-4 py-5 border-b border-line-inverse">
         <MarcaAcredita contexto="oscuro" subtitulo="Panel BERISA" />
       </div>
 
-      <nav className="flex-1 p-3 space-y-0.5">
+      <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-0.5">
         {nav.map(({ href, label, icon: Icon }) => {
           const active = path === href || (href !== "/admin" && path.startsWith(href))
           return (

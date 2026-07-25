@@ -57,13 +57,21 @@ export function SidebarMandante() {
 
   return (
     <>
-      {/* Escritorio */}
-      <aside className="hidden md:flex w-56 min-h-screen bg-surface-inverse flex-col shrink-0">
+      {/* Escritorio.
+          `sticky top-0 h-screen` y NO `min-h-screen`: como hijo de un flex
+          estirado, con min-h el aside crecía al alto de TODA la página, así que
+          "Cerrar sesión" quedaba anclado al final del documento —había que
+          scrollear hasta el fondo para verlo— y en páginas largas la navegación
+          entera se iba hacia arriba. Con h-screen mide una pantalla y sticky la
+          mantiene en su lugar. */}
+      <aside className="hidden md:flex sticky top-0 h-screen w-56 bg-surface-inverse flex-col shrink-0">
         <div className="px-4 py-5 border-b border-line-inverse">
           <MarcaAcredita contexto="oscuro" subtitulo="Portal Mandante" />
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5">
+        {/* overflow-y-auto: en pantallas bajas siete secciones no caben en 100vh
+            y sin esto el pie del sidebar quedaría recortado sin forma de llegar. */}
+        <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-0.5">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = esActivo(path, href)
             return (
