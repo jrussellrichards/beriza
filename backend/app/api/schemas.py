@@ -95,17 +95,30 @@ class MandanteResponse(BaseModel):
 
 
 class InvitarUsuarioMandanteRequest(BaseModel):
-    """Un mandante invita a alguien de su organización a revisar documentos."""
+    """
+    Un mandante invita a alguien de su organización a revisar documentos.
+
+    `rol` responde si ADMINISTRA la cuenta (mandante_admin) o no (prevencionista).
+    El ALCANCE de aprobación es una pregunta aparte: `aprueba_todo` o los pilares
+    de `pilar_ids`. Antes iban juntas y para dar alcance total había que entregar
+    la administración.
+    """
     email: EmailStr
     nombre: str
-    # mandante_admin aprueba cualquier pilar; prevencionista solo los asignados.
     rol: str = "prevencionista"
+    # Ignorado si el rol ya aprueba todo por definición.
+    aprueba_todo: bool = False
     pilar_ids: list[uuid.UUID] = []
+    # Etiqueta, no permiso: "Jefe de Terreno", "Gerente HSE".
+    cargo: str | None = None
 
 
 class DefinirPermisosRequest(BaseModel):
-    """Reemplaza los pilares que este usuario puede aprobar."""
-    pilar_ids: list[uuid.UUID]
+    """Reemplaza el alcance de aprobación de este usuario."""
+    pilar_ids: list[uuid.UUID] = []
+    # Aprueba cualquier pilar sin administrar la cuenta. Si viene en True, los
+    # pilar_ids se descartan (ver permiso_service.definir_permisos).
+    aprueba_todo: bool = False
 
 
 class UsuarioMandanteResponse(BaseModel):
@@ -114,9 +127,13 @@ class UsuarioMandanteResponse(BaseModel):
     nombre: str
     rol: str
     activo: bool
-    # None = aprueba todos los pilares (mandante_admin / berisa_admin)
+    # None = aprueba todos los pilares (por rol o por aprueba_todo)
     pilares: list[str] | None
     pilar_ids: list[uuid.UUID]
+    # Se expone para distinguir "aprueba todo porque administra" de "aprueba todo
+    # y no administra": en la lista del equipo son dos cosas muy distintas.
+    aprueba_todo: bool
+    cargo: str | None
 
 
 class InvitarMandanteRequest(BaseModel):

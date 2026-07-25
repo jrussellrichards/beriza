@@ -36,6 +36,7 @@ from app.api import mandantes as api_mand
 from app.api.schemas import DefinirPermisosRequest, RevisarDocumentoRequest
 from app.domain import permiso_service
 from app.domain.estados import EstadoDocumento
+from app.middleware.auth import require_rol
 
 
 def _acred(db, mandante, req, empresa):
@@ -151,6 +152,80 @@ def run():
     assert permiso_service.pilares_que_aprueba(db, sin_permisos) == []
     assert not permiso_service.puede_aprobar(db, sin_permisos, a_hse)
     print("PASS: sin permisos asignados no aprueba nada")
+
+    # ── Alcance de aprobacion separado de la administracion de la cuenta ──────
+    #
+    # Lo central del cambio: antes, para que alguien aprobara TODOS los pilares
+    # habia que hacerlo mandante_admin, lo que ademas le entregaba invitar gente
+    # y reconfigurar los perfiles de exigencias. El "revisor senior" es ese caso
+    # que era imposible de expresar.
+
+    senior = Usuario(email="senior@cod.cl", password_hash="x", rol="prevencionista",
+                     nombre="Revisor Senior", mandante_id=m.id, activo=True,
+                     aprueba_todo=True, cargo="Jefe de Terreno")
+    db.add(senior); db.commit()
+
+    # 9. Aprueba cualquier pilar sin tener una sola fila de permiso.
+    assert db.query(UsuarioPilarPermiso).filter_by(usuario_id=senior.id).count() == 0
+    assert permiso_service.pilares_que_aprueba(db, senior) is None, \
+        "aprueba_todo debe significar 'todos', igual que el rol sin restriccion"
+    assert permiso_service.puede_aprobar(db, senior, a_legal)
+    api_doc.revisar_documento(documento_id=a_legal.id,
+                              body=RevisarDocumentoRequest(aprobar=True), db=db, usuario=senior)
+    db.refresh(a_legal)
+    assert a_legal.estado == EstadoDocumento.APROBADO
+    print("PASS: el revisor senior aprueba cualquier pilar sin filas de permiso")
+
+    # 10. Y NO administra la cuenta. Es la razon de existir de la separacion:
+    #     si esto falla, volvimos a regalar la administracion para dar alcance.
+    guard = require_rol(["berisa_admin", "mandante_admin"])
+    try:
+        guard(usuario=senior)
+        raise AssertionError("un revisor senior paso el guard de administracion")
+    except HTTPException as e:
+        assert e.status_code == 403, f"debio ser 403, fue {e.status_code}"
+    assert guard(usuario=admin) is admin, "el administrador si debe pasar"
+    print("PASS: el revisor senior NO administra la cuenta (403 en endpoints de admin)")
+
+    # 11. Marcar alcance total BORRA las filas por pilar: una sola fuente de
+    #     verdad. Con las dos vias activas se contradicen y deja de poder
+    #     explicarse por que alguien aprueba algo.
+    api_mand.definir_permisos_usuario(
+        mandante_id=m.id, usuario_id=revisor.id,
+        body=DefinirPermisosRequest(pilar_ids=[hse.id], aprueba_todo=True), db=db, usuario=admin)
+    db.refresh(revisor)
+    assert revisor.aprueba_todo is True
+    assert db.query(UsuarioPilarPermiso).filter_by(usuario_id=revisor.id).count() == 0, \
+        "no deben quedar filas por pilar cuando el alcance es total"
+    assert permiso_service.pilares_que_aprueba(db, revisor) is None
+    print("PASS: alcance total descarta los pilares sueltos")
+
+    # 12. Y se puede volver atras: el alcance total no es irreversible.
+    api_mand.definir_permisos_usuario(
+        mandante_id=m.id, usuario_id=revisor.id,
+        body=DefinirPermisosRequest(pilar_ids=[hse.id], aprueba_todo=False), db=db, usuario=admin)
+    db.refresh(revisor)
+    assert revisor.aprueba_todo is False
+    pilares = permiso_service.pilares_que_aprueba(db, revisor)
+    assert [p.codigo for p in pilares] == ["HSE"], f"debio volver a solo HSE: {pilares}"
+    assert not permiso_service.puede_aprobar(db, revisor, a_legal)
+    print("PASS: se puede volver de alcance total a alcance parcial")
+
+    # 13. El administrador sigue aprobando todo por su ROL, sin la marca.
+    db.refresh(admin)
+    assert admin.aprueba_todo is False, "no se le pone la marca: ya aprueba todo por el rol"
+    assert permiso_service.pilares_que_aprueba(db, admin) is None
+    print("PASS: el administrador aprueba todo por su rol, sin marca redundante")
+
+    # 14. El cargo es una ETIQUETA: no participa de ninguna decision.
+    etiquetado = Usuario(email="cargo@cod.cl", password_hash="x", rol="prevencionista",
+                         nombre="Con Cargo", mandante_id=m.id, activo=True,
+                         cargo="Gerente HSE")
+    db.add(etiquetado); db.commit()
+    assert permiso_service.pilares_que_aprueba(db, etiquetado) == [], \
+        "un cargo no otorga alcance de aprobacion"
+    assert not permiso_service.puede_aprobar(db, etiquetado, a_hse)
+    print("PASS: el cargo no otorga permisos")
 
     print("TODOS LOS TESTS DE PERMISOS PASARON")
 

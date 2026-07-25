@@ -753,6 +753,7 @@ def listar_usuarios_mandante(
             id=u.id, email=u.email, nombre=u.nombre, rol=u.rol, activo=u.activo,
             pilares=None if pilares is None else [p.nombre for p in pilares],
             pilar_ids=[] if pilares is None else [p.id for p in pilares],
+            aprueba_todo=bool(u.aprueba_todo), cargo=u.cargo,
         ))
     return resultado
 
@@ -765,9 +766,11 @@ def invitar_usuario_mandante(
     usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
     """
-    Invita a alguien de la organización del mandante a revisar documentos, con
-    los pilares que podrá aprobar. Mismo flujo de activación que el resto: el
-    invitado define su propia contraseña.
+    Invita a alguien de la organización del mandante a revisar documentos.
+
+    Son dos decisiones independientes: si administra la cuenta (`rol`) y qué
+    alcance de aprobación tiene (`aprueba_todo` o `pilar_ids`). Mismo flujo de
+    activación que el resto: el invitado define su propia contraseña.
     """
     if usuario.mandante_id and usuario.mandante_id != mandante_id:
         raise HTTPException(status_code=403, detail="Solo puede invitar usuarios a su propio mandante")
@@ -777,19 +780,26 @@ def invitar_usuario_mandante(
     if body.rol not in ("mandante_admin", "prevencionista"):
         raise HTTPException(
             status_code=400,
-            detail="El rol debe ser mandante_admin (aprueba todo) o prevencionista (aprueba sus pilares).",
+            detail="El rol debe ser mandante_admin (administra la cuenta) o prevencionista.",
         )
     if db.query(Usuario).filter_by(email=body.email).first():
         raise HTTPException(status_code=400, detail=f"Ya existe un usuario con el email {body.email}.")
 
+    # Un mandante_admin ya aprueba todo por su rol; guardar además la marca sería
+    # un segundo lugar donde dice lo mismo.
+    aprueba_todo = body.aprueba_todo and body.rol not in permiso_service.ROLES_SIN_RESTRICCION
+
     nuevo = Usuario(
         email=body.email, nombre=body.nombre, password_hash="",
         rol=body.rol, activo=False, mandante_id=mandante_id,
+        aprueba_todo=aprueba_todo, cargo=body.cargo or None,
     )
     db.add(nuevo)
     db.flush()
 
-    if body.rol == "prevencionista" and body.pilar_ids:
+    # Sin filas por pilar cuando aprueba todo: una sola fuente de verdad del
+    # alcance (mismo criterio que permiso_service.definir_permisos).
+    if not permiso_service.aprueba_cualquier_pilar(nuevo) and body.pilar_ids:
         db.add_all([
             UsuarioPilarPermiso(usuario_id=nuevo.id, pilar_id=pid) for pid in body.pilar_ids
         ])
@@ -828,10 +838,12 @@ def definir_permisos_usuario(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
-    """Reemplaza los pilares que este usuario puede aprobar."""
+    """Reemplaza el alcance de aprobación de este usuario."""
     if usuario.mandante_id and usuario.mandante_id != mandante_id:
         raise HTTPException(status_code=403, detail="Solo puede cambiar permisos de su propio mandante")
     try:
-        permiso_service.definir_permisos(db, usuario_id, mandante_id, body.pilar_ids)
+        permiso_service.definir_permisos(
+            db, usuario_id, mandante_id, body.pilar_ids, aprueba_todo=body.aprueba_todo
+        )
     except PermisoInsuficiente as e:
         raise HTTPException(status_code=403, detail=str(e))

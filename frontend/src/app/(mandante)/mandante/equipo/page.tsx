@@ -7,11 +7,22 @@ import { getSession } from "@/shared/lib/auth"
 import { useApiData } from "@/shared/lib/use-api-data"
 import { UsuarioPermisosDialog, type UsuarioEquipo } from "@/features/mandante/usuario-permisos-dialog"
 
-const ROL_DEFAULT = { label: "Usuario", color: "bg-surface-app text-ink-muted border-line" }
-
-const ROL_CFG: Record<string, { label: string; color: string }> = {
-  mandante_admin: { label: "Aprueba todo", color: "bg-accion-soft text-accion-ink border-accion-line" },
-  prevencionista: { label: "Revisor", color: "bg-brand-soft text-brand-hover border-brand-line" },
+/**
+ * Etiqueta del perfil: cruce de las dos preguntas independientes —qué aprueba y
+ * si administra la cuenta—. Antes decía "Aprueba todo" para un mandante_admin,
+ * que era cierto pero ocultaba lo importante: que además administra.
+ */
+function perfilDe(u: UsuarioEquipo): { label: string; color: string } {
+  if (u.rol === "mandante_admin") {
+    return { label: "Administrador", color: "bg-accion-soft text-accion-ink border-accion-line" }
+  }
+  if (u.aprueba_todo) {
+    return { label: "Revisor senior", color: "bg-brand-soft text-brand-hover border-brand-line" }
+  }
+  if (u.pilar_ids.length > 0) {
+    return { label: "Revisor", color: "bg-surface-app text-ink-muted border-line" }
+  }
+  return { label: "Observador", color: "bg-espera-soft text-espera-ink border-espera-line" }
 }
 
 function iniciales(nombre: string) {
@@ -93,6 +104,7 @@ export default function EquipoPage() {
                     {!u.activo && <span className="ml-2 text-[10px] text-ink-subtle">invitación pendiente</span>}
                   </p>
                   <p className="text-xs text-ink-subtle font-mono">{u.email}</p>
+                  {u.cargo && <p className="text-[11px] text-ink-muted mt-0.5">{u.cargo}</p>}
                   <p className={cn(
                     "text-[11px] mt-0.5",
                     u.pilares !== null && u.pilares.length === 0 ? "text-accion-ink" : "text-ink-muted"
@@ -106,10 +118,14 @@ export default function EquipoPage() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", (ROL_CFG[u.rol] ?? ROL_DEFAULT).color)}>
-                    {(ROL_CFG[u.rol] ?? ROL_DEFAULT).label}
+                  <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", perfilDe(u).color)}>
+                    {perfilDe(u).label}
                   </span>
-                  {u.pilares !== null && (
+                  {/* Se compara el ROL, no `pilares !== null`: un revisor senior
+                      también tiene pilares null, y con la condición anterior
+                      perdía el botón —dejando su alcance total irreversible—.
+                      A un administrador sí no aplica: su alcance sale del rol. */}
+                  {u.rol !== "mandante_admin" && (
                     <button
                       onClick={() => setDialogo({ usuario: u })}
                       className="text-xs text-ink-muted hover:text-ink border border-line px-2.5 py-1 rounded-lg hover:bg-surface-app transition-colors"

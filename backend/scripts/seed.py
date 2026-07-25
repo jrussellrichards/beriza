@@ -872,26 +872,48 @@ FAENAS_EN_REGLA = 3
 
 def _showcase_permisos_equipo(session: Session):
     """
-    Le asigna a la prevencionista de la demo el pilar HSE.
+    Deja el equipo de la demo mostrando los cuatro perfiles posibles.
 
-    Sin permisos no puede aprobar nada —que es el default seguro correcto— pero
-    entonces la demo no muestra la feature funcionando: se ve un revisor que no
-    revisa. Con HSE asignado se puede demostrar que aprueba examenes medicos y
-    que al intentar un documento tributario recibe el 403 con el motivo.
+    A la prevencionista se le asigna HSE: sin permisos no puede aprobar nada
+    —que es el default seguro correcto— pero entonces la demo muestra un revisor
+    que no revisa. Con HSE se puede demostrar que aprueba examenes medicos y que
+    al intentar un documento tributario recibe el 403 con el motivo.
+
+    Y se agrega un revisor senior, que es el caso que justifica separar el
+    alcance de la administracion: aprueba TODOS los pilares sin poder invitar
+    gente ni reconfigurar los perfiles de exigencias. Antes era imposible de
+    expresar y habia que entregarle la cuenta completa.
     """
+    codelco = session.query(Mandante).filter_by(slug="codelco-demo").first()
     prevencionista = session.query(Usuario).filter_by(email="prevencion@codelco.cl").first()
     hse = session.query(Pilar).filter_by(codigo="HSE").first()
-    if not prevencionista or not hse:
+    if not codelco or not prevencionista or not hse:
         return
+
+    if not prevencionista.cargo:
+        prevencionista.cargo = "Prevencionista de Riesgos"
     ya = session.query(UsuarioPilarPermiso).filter_by(
         usuario_id=prevencionista.id, pilar_id=hse.id
     ).first()
-    if ya:
-        print("  OK Permisos del equipo ya asignados, saltando.")
-        return
-    session.add(UsuarioPilarPermiso(usuario_id=prevencionista.id, pilar_id=hse.id))
+    if not ya:
+        session.add(UsuarioPilarPermiso(usuario_id=prevencionista.id, pilar_id=hse.id))
+        print("  OK Prevencionista de la demo con permiso para aprobar HSE.")
+
+    senior_email = "contratos@codelco.cl"
+    senior = session.query(Usuario).filter_by(email=senior_email).first()
+    if not senior:
+        session.add(Usuario(
+            email=senior_email,
+            nombre="Verónica Ibáñez",
+            password_hash=_hash("demo123"),
+            rol="prevencionista",   # no administra la cuenta
+            aprueba_todo=True,      # pero aprueba cualquier pilar
+            cargo="Jefa de Contratos",
+            activo=True,
+            mandante_id=codelco.id,
+        ))
+        print("  OK Revisor senior de la demo: aprueba todo, no administra.")
     session.commit()
-    print("  OK Prevencionista de la demo con permiso para aprobar HSE.")
 
 
 def _showcase_faenas_en_regla(session: Session):
