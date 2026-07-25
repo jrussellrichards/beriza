@@ -30,6 +30,7 @@ from app.models.pilar import Pilar, Subpilar, RequisitoDocumental
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
 from app.models.expediente import Acreditacion, AcreditacionEvento, Archivo, Entrega, Expediente
+from app.models.permiso import UsuarioPilarPermiso
 
 engine = create_engine(settings.DATABASE_URL)
 
@@ -858,6 +859,7 @@ def seed_showcase_demo(session: Session):
     else:
         print("  OK Servicios ya tienen nombres realistas, saltando.")
 
+    _showcase_permisos_equipo(session)
     en_regla = _showcase_faenas_en_regla(session)
     _showcase_estados_documentos(session, excluir_contratistas=en_regla)
 
@@ -866,6 +868,30 @@ def seed_showcase_demo(session: Session):
 # demo da la impresion de que nada funciona y no se puede mostrar el caso verde,
 # que es el que el cliente quiere ver.
 FAENAS_EN_REGLA = 3
+
+
+def _showcase_permisos_equipo(session: Session):
+    """
+    Le asigna a la prevencionista de la demo el pilar HSE.
+
+    Sin permisos no puede aprobar nada —que es el default seguro correcto— pero
+    entonces la demo no muestra la feature funcionando: se ve un revisor que no
+    revisa. Con HSE asignado se puede demostrar que aprueba examenes medicos y
+    que al intentar un documento tributario recibe el 403 con el motivo.
+    """
+    prevencionista = session.query(Usuario).filter_by(email="prevencion@codelco.cl").first()
+    hse = session.query(Pilar).filter_by(codigo="HSE").first()
+    if not prevencionista or not hse:
+        return
+    ya = session.query(UsuarioPilarPermiso).filter_by(
+        usuario_id=prevencionista.id, pilar_id=hse.id
+    ).first()
+    if ya:
+        print("  OK Permisos del equipo ya asignados, saltando.")
+        return
+    session.add(UsuarioPilarPermiso(usuario_id=prevencionista.id, pilar_id=hse.id))
+    session.commit()
+    print("  OK Prevencionista de la demo con permiso para aprobar HSE.")
 
 
 def _showcase_faenas_en_regla(session: Session):
