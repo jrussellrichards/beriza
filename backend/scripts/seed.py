@@ -256,8 +256,12 @@ def seed_perfiles_y_servicios(session: Session, reqs: dict[str, RequisitoDocumen
         session.flush()
 
         for rel in session.query(ContratistaMandante).filter_by(mandante_id=mandante.id).all():
+            # La clave de idempotencia es el PERFIL, no el nombre: el showcase
+            # renombra estos servicios y con `nombre="General"` la corrida
+            # siguiente no los encontraba y creaba un duplicado, que ademas
+            # colisionaba en uq_servicio_codigo_referencia.
             servicio = session.query(Servicio).filter_by(
-                contratista_mandante_id=rel.id, nombre="General"
+                contratista_mandante_id=rel.id, perfil_requisitos_id=perfil.id
             ).first()
             if not servicio:
                 servicio = Servicio(
@@ -821,8 +825,17 @@ def seed_showcase_demo(session: Session):
             .all()
         )
         for i, rel in enumerate(relaciones):
+            # Solo el servicio del perfil "General" —el que crea el seed— y solo
+            # si sigue sin renombrar. Asi no pisa nombres puestos a mano desde
+            # la interfaz ni depende de un nombre que el mismo cambia.
+            perfil_general = session.query(PerfilRequisitos).filter_by(
+                mandante_id=mandante.id, nombre="General"
+            ).first()
+            if not perfil_general:
+                continue
             servicio = session.query(Servicio).filter_by(
-                contratista_mandante_id=rel.id, nombre="General"
+                contratista_mandante_id=rel.id, perfil_requisitos_id=perfil_general.id,
+                nombre="General",
             ).first()
             if not servicio:
                 continue
