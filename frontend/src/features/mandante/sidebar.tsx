@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Settings,
+  Users,
   LogOut,
   ShieldCheck,
 } from "lucide-react"
@@ -31,15 +32,28 @@ const nav = [
   { href: "/mandante/contratistas", label: "Contratistas", icon: Building2, corta: "Empresas" },
   { href: "/mandante/servicios", label: "Servicios", icon: Briefcase, corta: "Servicios" },
   { href: "/mandante/requisitos", label: "Perfiles", icon: ClipboardList, corta: "Perfiles" },
+  // Invitar gente y decidir quien aprueba que no es un "ajuste" que se toca una
+  // vez: es gestion recurrente con consecuencias reales. Enterrado como
+  // subseccion de Configuracion nadie lo encontraba.
+  { href: "/mandante/configuracion?seccion=acceso", label: "Equipo", icon: Users, corta: "Equipo" },
   { href: "/mandante/configuracion", label: "Configuración", icon: Settings, corta: "Ajustes" },
 ]
 
-function esActivo(path: string, href: string) {
-  return path === href || (href !== "/mandante" && path.startsWith(href))
+function esActivo(path: string, href: string, busqueda: string) {
+  // "Equipo" y "Configuración" comparten pathname y se distinguen por el query,
+  // asi que el activo no se puede decidir solo con el path.
+  const [base, query] = href.split("?")
+  if (base === "/mandante/configuracion") {
+    const esAcceso = busqueda.includes("seccion=acceso")
+    return path.startsWith(base) && (query ? esAcceso : !esAcceso)
+  }
+  return path === base || (base !== "/mandante" && path.startsWith(base))
 }
 
 export function SidebarMandante() {
   const path = usePathname()
+  const params = useSearchParams()
+  const busqueda = params.toString()
   // Documentos esperando su revisión: es su trabajo diario, así que el número
   // va donde lo vea sin entrar.
   const [porRevisar, setPorRevisar] = useState(0)
@@ -68,7 +82,7 @@ export function SidebarMandante() {
 
         <nav className="flex-1 p-3 space-y-0.5">
           {nav.map(({ href, label, icon: Icon }) => {
-            const active = esActivo(path, href)
+            const active = esActivo(path, href, busqueda)
             return (
               <Link
                 key={href}
@@ -115,6 +129,9 @@ export function SidebarMandante() {
           <Link href="/mandante/requisitos" className="text-slate-400 p-1" aria-label="Perfiles">
             <ClipboardList size={16} />
           </Link>
+          <Link href="/mandante/configuracion?seccion=acceso" className="text-slate-400 p-1" aria-label="Equipo">
+            <Users size={16} />
+          </Link>
           <Link href="/mandante/configuracion" className="text-slate-400 p-1" aria-label="Configuración">
             <Settings size={16} />
           </Link>
@@ -130,7 +147,7 @@ export function SidebarMandante() {
 
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[#0f172a] border-t border-white/10 grid grid-cols-4">
         {nav.slice(0, 4).map(({ href, corta, icon: Icon }) => {
-          const active = esActivo(path, href)
+          const active = esActivo(path, href, busqueda)
           return (
             <Link
               key={href}

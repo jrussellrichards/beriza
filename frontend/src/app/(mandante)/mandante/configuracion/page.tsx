@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Save, Building2, Mail, Globe, Bell, Shield, Users, CheckCircle2 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { useApiData } from "@/shared/lib/use-api-data"
@@ -59,7 +60,18 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function ConfiguracionPage() {
-  const [seccion, setSeccion] = useState("organizacion")
+  // Abre en la seccion que pide el query (?seccion=acceso), para que "Equipo"
+  // del sidebar entre directo en vez de dejar al usuario buscando.
+  const params = useSearchParams()
+  const seccionPedida = params.get("seccion")
+  const [seccion, setSeccion] = useState(seccionPedida ?? "organizacion")
+
+  // Sincroniza al cambiar el query: Equipo y Configuracion son la MISMA pagina,
+  // asi que Next no la remonta al pasar de una a otra y `useState` —que solo
+  // inicializa una vez— dejaria la seccion anterior en pantalla.
+  useEffect(() => {
+    setSeccion(seccionPedida ?? "organizacion")
+  }, [seccionPedida])
   const [saved, setSaved] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
