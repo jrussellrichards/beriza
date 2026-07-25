@@ -11,9 +11,11 @@ import type { EstadoPorMandante } from "@/entities/contratista/resumen"
  * F30 —uno solo— está aprobado con Codelco y en revisión con Falabella. Con la
  * vista anterior (una fila por mandante) esa relación era invisible.
  */
-export function BadgesMandante({ mandantes, onSelect }: {
+export function BadgesMandante({ mandantes, onSelect, onAutorizar }: {
   mandantes: EstadoPorMandante[]
   onSelect?: (m: EstadoPorMandante) => void
+  /** Resolver una solicitud de acceso sin salir de esta pantalla. */
+  onAutorizar?: (m: EstadoPorMandante) => void
 }) {
   // La versión solo se muestra si los mandantes están viendo versiones
   // DISTINTAS. Es el caso confuso: uno aprobó la v1 y sigue vigente mientras
@@ -27,6 +29,33 @@ export function BadgesMandante({ mandantes, onSelect }: {
         const estado: EstadoDoc = m.estado ? ESTADO_NUM[m.estado] ?? "FALTA" : "FALTA"
         const c = ESTADO_CFG[estado]
         const clickable = onSelect !== undefined && m.documento_id !== null
+        const pideAutorizacion = m.estado === 6 && onAutorizar !== undefined
+
+        // Estando en la pantalla del documento, tener que irse a Inicio para
+        // apretar "autorizar" es friccion sin motivo: la accion va aqui mismo.
+        if (pideAutorizacion) {
+          return (
+            <span
+              key={m.mandante_id}
+              className={cn(
+                "inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md text-[11px] font-medium border",
+                c.bg, c.border, c.text
+              )}
+            >
+              <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
+              <span className="font-semibold">{m.mandante_razon_social}</span>
+              <span className="opacity-70">·</span>
+              <span>pide autorización</span>
+              <button
+                onClick={() => onAutorizar(m)}
+                className="ml-1 px-2 py-0.5 rounded bg-violet-600 text-white text-[10px] font-semibold hover:bg-violet-700 transition-colors"
+              >
+                Resolver
+              </button>
+            </span>
+          )
+        }
+
         return (
           <button
             key={m.mandante_id}

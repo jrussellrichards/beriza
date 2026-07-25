@@ -146,6 +146,22 @@ def run():
     assert s_gen.numero_version_vigente == 1 and s_gen.fecha_vigencia_hasta == FUTURO
     print("PASS: bandeja API lista los sensibles con mandante, requisito y vigencia")
 
+    # El boton "Resolver" del badge en /contratista/documentos postea al mismo
+    # endpoint que la bandeja, usando el documento_id que expone la vista
+    # documental. Si esos dos ids no coincidieran, el boton daria 404.
+    from app.domain import acreditacion_service as acred_svc
+    docs_vista = acred_svc.vista_documental(db, c.id)
+    ids_vista = {
+        m.documento_id
+        for d in docs_vista for m in d.mandantes
+        if m.estado == EstadoDocumento.PENDIENTE_AUTORIZACION
+    }
+    ids_bandeja = {s.acreditacion_id for s in solicitudes}
+    assert ids_vista == ids_bandeja, (
+        f"el id del badge debe ser el mismo que resuelve la bandeja: "
+        f"vista={ids_vista} bandeja={ids_bandeja}")
+    print("PASS: el id del badge coincide con el que resuelve la bandeja")
+
     # Autorizar: se comparte la entrega vigente y queda a revisión del mandante.
     api_reuso.autorizar(acreditacion_id=a_sens.id, db=db, usuario=usuario)
     db.refresh(a_sens)
