@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
 import { Save, Building2, Mail, Globe, Bell, Shield, Users, CheckCircle2 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { useApiData } from "@/shared/lib/use-api-data"
@@ -29,7 +28,6 @@ interface ConfigData {
 const SECCIONES: ConfigSeccion[] = [
   { id: "organizacion", titulo: "Organización", descripcion: "Datos del mandante", icon: Building2 },
   { id: "notificaciones", titulo: "Notificaciones", descripcion: "Alertas y avisos", icon: Bell },
-  { id: "acceso", titulo: "Acceso y usuarios", descripcion: "Equipo con acceso", icon: Users },
   { id: "seguridad", titulo: "Seguridad", descripcion: "Auth y sesiones", icon: Shield },
 ]
 
@@ -60,18 +58,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function ConfiguracionPage() {
-  // Abre en la seccion que pide el query (?seccion=acceso), para que "Equipo"
-  // del sidebar entre directo en vez de dejar al usuario buscando.
-  const params = useSearchParams()
-  const seccionPedida = params.get("seccion")
-  const [seccion, setSeccion] = useState(seccionPedida ?? "organizacion")
-
-  // Sincroniza al cambiar el query: Equipo y Configuracion son la MISMA pagina,
-  // asi que Next no la remonta al pasar de una a otra y `useState` —que solo
-  // inicializa una vez— dejaria la seccion anterior en pantalla.
-  useEffect(() => {
-    setSeccion(seccionPedida ?? "organizacion")
-  }, [seccionPedida])
+  const [seccion, setSeccion] = useState("organizacion")
   const [saved, setSaved] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
@@ -286,61 +273,6 @@ export default function ConfiguracionPage() {
                       <p className="text-xs text-slate-400 mt-0.5">{n.desc}</p>
                     </div>
                     <Toggle checked={n.value} onChange={n.set} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Acceso y usuarios */}
-          {seccion === "acceso" && (
-            <div className="max-w-2xl space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-slate-900 mb-1">Equipo con acceso</h2>
-                  <p className="text-sm text-slate-400">Usuarios que pueden gestionar la plataforma</p>
-                </div>
-                <button
-                  onClick={() => setDialogo({ usuario: null })}
-                  className="flex items-center gap-2 text-sm font-medium border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-700"
-                >
-                  <Users size={14} />
-                  Invitar usuario
-                </button>
-              </div>
-
-              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-                {config.equipo.map(u => (
-                  <div key={u.email} className="flex items-center gap-4 px-5 py-4">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center shrink-0">
-                      {u.nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn("text-sm font-medium", u.activo ? "text-slate-900" : "text-slate-400")}>{u.nombre}</p>
-                      <p className="text-xs text-slate-400 font-mono">{u.email}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">
-                        {u.pilares === null
-                          ? "Aprueba todos los pilares"
-                          : u.pilares.length === 0
-                            ? "No aprueba ningún pilar"
-                            : `Aprueba: ${u.pilares.join(", ")}`}
-                      </p>
-                    </div>
-                    <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", (ROL_CFG[u.rol] ?? ROL_DEFAULT).color)}>
-                      {(ROL_CFG[u.rol] ?? ROL_DEFAULT).label}
-                    </span>
-                    <span className={cn(
-                      "text-[10px] font-medium px-2 py-0.5 rounded border",
-                      u.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-400 border-slate-200"
-                    )}>
-                      {u.activo ? "Activo" : "Inactivo"}
-                    </span>
-                    <button
-                      onClick={() => setDialogo({ usuario: u })}
-                      className="text-xs text-slate-500 hover:text-slate-800 transition-colors px-2 py-1 rounded hover:bg-slate-100"
-                    >
-                      Permisos
-                    </button>
                   </div>
                 ))}
               </div>
