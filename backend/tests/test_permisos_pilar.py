@@ -217,7 +217,35 @@ def run():
     assert permiso_service.pilares_que_aprueba(db, admin) is None
     print("PASS: el administrador aprueba todo por su rol, sin marca redundante")
 
-    # 14. El cargo es una ETIQUETA: no participa de ninguna decision.
+    # 14. La cola de revision dice, por entrega, si ESTE usuario puede resolverla.
+    #     Lo decide el backend y no el frontend recalculando permisos: la
+    #     autoridad sobre autorizacion es una sola. Sirve para no ofrecer un boton
+    #     que va a devolver 403.
+    # Se reusan las dos acreditaciones ya creadas: el expediente es unico por
+    # (requisito, empresa), asi que no se pueden duplicar. Vuelven a ENVIADO para
+    # que aparezcan en la cola.
+    a_hse.estado = EstadoDocumento.ENVIADO
+    a_legal.estado = EstadoDocumento.ENVIADO
+    db.commit()
+
+    def cola(quien):
+        return {p.requisito_codigo: p.puede_aprobar
+                for p in api_doc.pendientes_revision(db=db, usuario=quien)}
+
+    # El revisor quedo con HSE en el paso 12.
+    del_revisor = cola(revisor)
+    assert del_revisor.get("RIOHS") is True, f"deberia poder aprobar HSE: {del_revisor}"
+    assert del_revisor.get("F30") is False, f"NO deberia poder aprobar Legal: {del_revisor}"
+    # Pero las VE igual: se restringe aprobar, no leer.
+    assert "F30" in del_revisor, "el revisor debe seguir viendo las entregas de otros pilares"
+    print("PASS: la cola marca por entrega si el revisor puede resolverla")
+
+    assert all(cola(admin).values()), "el administrador puede resolver cualquiera"
+    assert all(cola(senior).values()), "el revisor senior tambien, por su alcance"
+    assert not any(cola(sin_permisos).values()), "sin pilares no puede resolver ninguna"
+    print("PASS: puede_aprobar coincide con el alcance de cada perfil")
+
+    # 15. El cargo es una ETIQUETA: no participa de ninguna decision.
     etiquetado = Usuario(email="cargo@cod.cl", password_hash="x", rol="prevencionista",
                          nombre="Con Cargo", mandante_id=m.id, activo=True,
                          cargo="Gerente HSE")

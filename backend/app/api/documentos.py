@@ -133,6 +133,13 @@ def pendientes_revision(
         raise HTTPException(status_code=400, detail="El usuario no está asociado a un mandante")
 
     acreditaciones = documento_service.listar_pendientes_revision(db, usuario.mandante_id)
+
+    # Los pilares que este usuario puede aprobar, resueltos UNA vez. `None`
+    # significa todos. Con una consulta por documento, una cola de 200 entregas
+    # serían 200 viajes a la base para responder siempre lo mismo.
+    pilares = permiso_service.pilares_que_aprueba(db, usuario)
+    ids_aprobables = None if pilares is None else {p.id for p in pilares}
+
     resultado = []
     for acred in acreditaciones:
         entrega = acred.entrega
@@ -142,11 +149,14 @@ def pendientes_revision(
         requisito = exp.requisito
         trabajador = exp.trabajador
         empresa = exp.empresa or (trabajador.empresa if trabajador else None)
+        pilar = requisito.subpilar.pilar
         resultado.append(PendienteRevisionResponse(
             documento_id=acred.id,
             requisito_codigo=requisito.codigo,
             requisito_nombre=requisito.nombre,
-            pilar_nombre=requisito.subpilar.pilar.nombre,
+            pilar_id=pilar.id,
+            pilar_nombre=pilar.nombre,
+            puede_aprobar=ids_aprobables is None or pilar.id in ids_aprobables,
             contratista_razon_social=empresa.razon_social if empresa else "—",
             trabajador_nombre=trabajador.nombre_completo if trabajador else None,
             servicio_nombre=exp.servicio.nombre if exp.servicio else None,
