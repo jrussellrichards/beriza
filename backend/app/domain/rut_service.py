@@ -57,9 +57,14 @@ def validar(rut: str) -> str:
     exacto, que es lo que el reporte de importación le muestra al usuario: decir
     "fila 34 inválida" sin decir por qué obliga a adivinar.
     """
+    if not (rut or "").strip():
+        raise RutInvalido("Falta el RUT")
     limpio = clave(rut)
     if not limpio:
-        raise RutInvalido("RUT vacío")
+        # La celda tenía algo pero no quedó ni un dígito. Decir "RUT vacío" acá
+        # confunde: el usuario mira su planilla, ve texto en la celda, y cree que
+        # el reporte se equivocó de fila.
+        raise RutInvalido(f"'{rut}' no tiene el formato de un RUT")
     cuerpo, dv = limpio[:-1], limpio[-1]
     if not cuerpo.isdigit():
         raise RutInvalido(f"'{rut}' no tiene el formato de un RUT")

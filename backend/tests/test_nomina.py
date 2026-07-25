@@ -58,6 +58,17 @@ def run():
             raise AssertionError(f"acepto un RUT invalido: {malo!r} ({porque})")
         except RutInvalido:
             pass
+
+    # Una celda CON texto que no es un RUT no puede reportarse como "vacio": el
+    # usuario mira su planilla, ve texto en la celda y cree que el reporte se
+    # equivoco de fila. Salio de probar la importacion contra produccion.
+    for texto, esperado in [("no-es-rut", "formato"), ("", "Falta el RUT"), ("   ", "Falta el RUT")]:
+        try:
+            rut_service.validar(texto)
+            raise AssertionError(f"acepto {texto!r}")
+        except RutInvalido as e:
+            assert esperado.lower() in str(e).lower(), \
+                f"para {texto!r} el motivo debio hablar de {esperado!r}, dijo: {e}"
     # La K va en mayuscula y valida igual escrita en minuscula.
     assert rut_service.validar("20.666.777-k") == "20.666.777-K"
     print("PASS: el digito verificador se valida y el RUT se normaliza")
