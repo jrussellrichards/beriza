@@ -321,8 +321,16 @@ def _servicio_general(session: Session, mandante_id, empresa_id):
     ).first()
     if not rel:
         return None
+    # Se busca por PERFIL y no por nombre: el showcase renombra estos servicios
+    # y con nombre="General" los expedientes de alcance SERVICIO quedarian sin
+    # faena asignada (servicio_id NULL), que es un bug silencioso.
+    perfil = session.query(PerfilRequisitos).filter_by(
+        mandante_id=mandante_id, nombre="General"
+    ).first()
+    if not perfil:
+        return None
     return session.query(Servicio).filter_by(
-        contratista_mandante_id=rel.id, nombre="General"
+        contratista_mandante_id=rel.id, perfil_requisitos_id=perfil.id
     ).first()
 
 
@@ -850,15 +858,98 @@ def seed_showcase_demo(session: Session):
     else:
         print("  OK Servicios ya tienen nombres realistas, saltando.")
 
-    _showcase_estados_documentos(session)
+    en_regla = _showcase_faenas_en_regla(session)
+    _showcase_estados_documentos(session, excluir_contratistas=en_regla)
 
 
-def _showcase_estados_documentos(session: Session):
+# Cuantas relaciones de Codelco se dejan 100% cumpliendo. Con todas en riesgo la
+# demo da la impresion de que nada funciona y no se puede mostrar el caso verde,
+# que es el que el cliente quiere ver.
+FAENAS_EN_REGLA = 3
+
+
+def _showcase_faenas_en_regla(session: Session):
+    """
+    Completa los documentos de unas pocas relaciones para que sus faenas queden
+    "todo en regla".
+
+    El perfil "General" exige TODO el catalogo, asi que sin esto ningun
+    contratista puede cumplir del todo y el dashboard del mandante muestra el
+    100% de las faenas en riesgo.
+    """
+    codelco = session.query(Mandante).filter_by(slug="codelco-demo").first()
+    if not codelco:
+        return
+
+    relaciones = (
+        session.query(ContratistaMandante)
+        .filter_by(mandante_id=codelco.id)
+        .order_by(ContratistaMandante.created_at)
+        .all()
+    )
+    # Condor se deja FUERA a proposito: es el login con el que se demuestra el
+    # lado del contratista, y si estuviera 100% verde su Inicio diria "Estas al
+    # dia" sin nada que mostrar. Su estado variado es el que hace la demo.
+    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
+    condor_id = condor.id if condor else None
+
+    completadas = creados = 0
+    en_regla: set = set()
+    for rel in relaciones:
+        if completadas >= FAENAS_EN_REGLA:
+            break
+        if rel.contratista_id == condor_id:
+            continue
+        servicio = _servicio_general(session, codelco.id, rel.contratista_id)
+        if not servicio:
+            continue
+        trabajadores = session.query(Trabajador).filter_by(
+            empresa_id=rel.contratista_id, activo=True
+        ).all()
+        if not trabajadores:
+            continue   # sin dotacion no hay caso interesante que mostrar
+
+        for cfg in session.query(PerfilRequisitoConfig).filter_by(
+            perfil_id=servicio.perfil_requisitos_id
+        ).all():
+            req = cfg.requisito
+            if req.entidad_tipo == "EMPRESA":
+                existe = session.query(Expediente).filter_by(
+                    requisito_id=req.id, empresa_id=rel.contratista_id, eliminado_en=None
+                ).first()
+                if not existe:
+                    _doc_empresa(session, req, codelco.id, rel.contratista_id, 4, 365)
+                    creados += 1
+            else:
+                for t in trabajadores:
+                    existe = session.query(Expediente).filter_by(
+                        requisito_id=req.id, trabajador_id=t.id, eliminado_en=None
+                    ).first()
+                    if not existe:
+                        _doc_trabajador(session, req, codelco.id, t.id, 4, 365)
+                        creados += 1
+        completadas += 1
+        en_regla.add(rel.contratista_id)
+
+    session.commit()
+    if creados:
+        print(f"  OK {creados} documento(s) creado(s) para dejar {completadas} faena(s) en regla.")
+    else:
+        print("  OK Faenas en regla ya completas, saltando.")
+    return en_regla
+
+
+def _showcase_estados_documentos(session: Session, excluir_contratistas: set | None = None):
     """
     Reparte estados para que ninguna pantalla quede vacía en la demo:
     algunos documentos esperando revisión (la cola del mandante), algunos
     observados, y algunos por vencer (las alertas del contratista).
+
+    `excluir_contratistas` protege a las faenas que se dejaron en regla: si se
+    les tocara un documento dejarian de estar verdes y volveriamos al problema
+    de que el 100% aparece en riesgo.
     """
+    excluir = excluir_contratistas or set()
     codelco = session.query(Mandante).filter_by(slug="codelco-demo").first()
     if not codelco:
         return
@@ -870,7 +961,12 @@ def _showcase_estados_documentos(session: Session):
         .order_by(Acreditacion.created_at)
         .all()
     )
-    aprobadas = [a for a in acreds if a.estado == 4]
+    def es_de_excluido(a):
+        exp = a.expediente
+        dueño = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+        return dueño in excluir
+
+    aprobadas = [a for a in acreds if a.estado == 4 and not es_de_excluido(a)]
     if len(aprobadas) < 6:
         print("  OK Sin suficientes documentos aprobados para repartir estados, saltando.")
         return
