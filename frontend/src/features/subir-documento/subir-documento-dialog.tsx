@@ -110,7 +110,7 @@ export function SubirDocumentoDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {requiereServicio && servicioFijo && (
-            <p className="text-xs text-ink-muted bg-indigo-50 border border-indigo-200 rounded-md px-3 py-2">
+            <p className="text-xs text-ink-muted bg-brand-soft border border-brand-line rounded-md px-3 py-2">
               Este documento acredita el servicio <strong>{servicioFijo.nombre}</strong>.
             </p>
           )}
@@ -159,7 +159,7 @@ export function SubirDocumentoDialog({
                   <button
                     type="button"
                     onClick={() => setFiles(files.filter((_, j) => j !== i))}
-                    className="text-ink-subtle hover:text-red-500"
+                    className="text-ink-subtle hover:text-bloqueo-ink"
                   >
                     <X size={13} />
                   </button>
@@ -169,7 +169,7 @@ export function SubirDocumentoDialog({
           )}
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>
+            <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>

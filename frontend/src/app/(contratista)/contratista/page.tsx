@@ -8,7 +8,7 @@ import { PendienteRow } from "@/entities/contratista/pendiente-row"
 import { TIPO_LABEL, type Pendiente, type ServicioContratista } from "@/entities/contratista/resumen"
 
 function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse bg-slate-200 rounded-lg", className)} />
+  return <div className={cn("animate-pulse bg-line rounded-lg", className)} />
 }
 
 /** Un servicio con su estado derivado de los pendientes que lo afectan. */
@@ -17,13 +17,13 @@ function ServicioRow({ s, motivo }: { s: ServicioContratista; motivo: string | n
     <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-surface-app rounded-lg px-4 py-2.5">
       <span className={cn(
         "w-1.5 h-1.5 rounded-full shrink-0 hidden sm:block",
-        motivo ? "bg-red-500" : "bg-emerald-500"
+        motivo ? "bg-bloqueo-soft0" : "bg-ok-soft0"
       )} />
       <div className="flex-1 min-w-0">
         <span className="text-sm text-ink">{s.nombre}</span>
         <span className="text-[10px] text-ink-subtle ml-2">{TIPO_LABEL[s.tipo] ?? s.tipo}</span>
       </div>
-      <span className={cn("text-xs shrink-0", motivo ? "text-red-600" : "text-emerald-700")}>
+      <span className={cn("text-xs shrink-0", motivo ? "text-bloqueo-ink" : "text-ok-ink")}>
         {motivo ?? "Lista para empezar"}
       </span>
     </div>
@@ -99,7 +99,7 @@ export default function InicioContratistaPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-6">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg">{error}</p>
         )}
 
         <section>
@@ -110,7 +110,7 @@ export default function InicioContratistaPage() {
             // Nunca decir "estás al día" si no pudimos leer los pendientes: sería
             // afirmar que no tiene nada que hacer cuando no lo sabemos.
             <div className="bg-surface border border-line rounded-xl px-5 py-6 flex items-center gap-3">
-              <AlertTriangle size={20} className="text-amber-500 shrink-0" />
+              <AlertTriangle size={20} className="text-accion-ink shrink-0" />
               <div>
                 <p className="text-sm font-medium text-ink">No pudimos revisar tus pendientes</p>
                 <p className="text-xs text-ink-muted mt-0.5">
@@ -120,7 +120,7 @@ export default function InicioContratistaPage() {
             </div>
           ) : pendientes.length === 0 ? (
             <div className="bg-surface border border-line rounded-xl px-5 py-6 flex items-center gap-3">
-              <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
+              <CheckCircle2 size={20} className="text-ok-ink shrink-0" />
               <div>
                 <p className="text-sm font-medium text-ink">Estás al día</p>
                 <p className="text-xs text-ink-muted mt-0.5">

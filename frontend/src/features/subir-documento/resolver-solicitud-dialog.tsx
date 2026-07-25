@@ -36,10 +36,10 @@ export function ResolverSolicitudDialog({ mandante, requisitoNombre, onClose, on
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-surface-inverse/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-surface rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          <Lock size={14} className="text-violet-600" />
+          <Lock size={14} className="text-excepcion-ink" />
           <p className="text-sm font-semibold text-ink">Solicitud de acceso</p>
         </div>
 
@@ -59,7 +59,7 @@ export function ResolverSolicitudDialog({ mandante, requisitoNombre, onClose, on
           </p>
         </div>
 
-        {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-md mt-3">{error}</p>}
+        {error && <p className="text-xs text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md mt-3">{error}</p>}
 
         <div className="flex gap-2 mt-4">
           <button
@@ -78,7 +78,7 @@ export function ResolverSolicitudDialog({ mandante, requisitoNombre, onClose, on
             disabled={ocupado !== null}
             className={cn(
               "flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-colors",
-              ocupado ? "bg-slate-200 text-ink-subtle cursor-not-allowed" : "bg-slate-900 text-white hover:bg-slate-800"
+              ocupado ? "bg-line text-ink-subtle cursor-not-allowed" : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
             )}
           >
             <Check size={14} />

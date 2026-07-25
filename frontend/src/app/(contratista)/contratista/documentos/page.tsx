@@ -44,7 +44,7 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
               </span>
             )}
             {doc.sensible && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-200">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-excepcion-soft text-excepcion-ink border border-excepcion-line">
                 <Lock size={9} /> sensible
               </span>
             )}
@@ -70,7 +70,7 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
           )}
           <button
             onClick={() => onSubir(doc)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-colors"
           >
             <Upload size={12} />
             Subir
@@ -147,12 +147,12 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
   ]
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-surface-inverse/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-surface rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
         <p className="text-sm font-semibold text-ink">Compartir este documento</p>
         <p className="text-xs text-ink-muted mt-1">{doc.requisito_nombre}</p>
         {doc.sensible && doc.puede_relajar && (
-          <p className="text-[11px] text-violet-700 bg-violet-50 border border-violet-200 rounded-md px-2.5 py-1.5 mt-3">
+          <p className="text-[11px] text-excepcion-ink bg-excepcion-soft border border-excepcion-line rounded-md px-2.5 py-1.5 mt-3">
             Si eliges compartir sin preguntar, las solicitudes que ya estén esperando tu
             autorización se aprueban de inmediato.
           </p>
@@ -171,8 +171,8 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
                   deshabilitado
                     ? "border-line-subtle opacity-50 cursor-not-allowed"
                     : activo
-                      ? "border-slate-900 bg-surface-app"
-                      : "border-line hover:border-slate-400"
+                      ? "border-ink bg-surface-app"
+                      : "border-line hover:border-line-strong"
                 )}
               >
                 <span className="text-sm text-ink flex items-center gap-2">
@@ -185,7 +185,7 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
           })}
         </div>
 
-        {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-md mt-3">{error}</p>}
+        {error && <p className="text-xs text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md mt-3">{error}</p>}
 
         <button onClick={onClose} className="w-full mt-4 py-2 text-sm text-ink-muted hover:text-ink">
           Cancelar

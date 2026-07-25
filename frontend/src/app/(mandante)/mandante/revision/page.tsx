@@ -109,7 +109,7 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
               </p>
             </div>
           )}
-          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
@@ -117,7 +117,7 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
             <Button
               type="submit"
               disabled={loading || (accion === "observar" && !motivo.trim())}
-              className={accion === "aprobar" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}
+              className={accion === "aprobar" ? "bg-ok-ink hover:bg-ok-ink" : "bg-bloqueo-ink hover:bg-bloqueo-ink"}
             >
               {loading ? "Guardando..." : accion === "aprobar" ? "Aprobar" : "Observar"}
             </Button>
@@ -202,7 +202,7 @@ export default function RevisionPage() {
             <div key={p.documento_id} className="bg-surface rounded-xl border border-line px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-lg bg-accion-soft border border-accion-line text-accion-ink flex items-center justify-center shrink-0 mt-0.5">
                     <FileText size={14} />
                   </div>
                   <div className="min-w-0">
@@ -212,7 +212,7 @@ export default function RevisionPage() {
                         {p.requisito_codigo}
                       </span>
                       {p.numero_version > 1 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded border bg-blue-50 text-blue-600 border-blue-200">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded border bg-brand-soft text-brand-hover border-brand-line">
                           v{p.numero_version}
                         </span>
                       )}
@@ -241,13 +241,13 @@ export default function RevisionPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => setDialogo({ pendiente: p, accion: "observar" })}
-                    className="flex items-center gap-1.5 text-xs font-medium text-red-700 border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-medium text-bloqueo-ink border border-bloqueo-line bg-bloqueo-soft hover:bg-bloqueo-soft px-3 py-2 rounded-lg transition-colors"
                   >
                     <XCircle size={13} /> Observar
                   </button>
                   <button
                     onClick={() => setDialogo({ pendiente: p, accion: "aprobar" })}
-                    className="flex items-center gap-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-medium text-white bg-ok-ink hover:bg-ok-ink px-3 py-2 rounded-lg transition-colors"
                   >
                     <CheckCircle2 size={13} /> Aprobar
                   </button>

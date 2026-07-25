@@ -55,7 +55,7 @@ interface Estilo {
  *
  * El tipo `Record<EstadoDoc, Estilo>` es deliberado: si el backend agrega un
  * estado, el build ROMPE hasta que alguien decida su color aquí. Es lo que
- * impide que el próximo estado se pinte con un `bg-purple-100` un viernes.
+ * impide que el próximo estado se pinte con un `bg-excepcion-soft` un viernes.
  */
 const ESTILO: Record<EstadoDoc, Estilo> = {
   // Exigido y sin subir. Es una AUSENCIA, no un estado: al día 1 un contratista

@@ -7,9 +7,9 @@ import { api } from "@/shared/lib/api"
 import type { Pendiente, TipoPendiente } from "@/entities/contratista/resumen"
 
 const ICONO: Record<TipoPendiente, { icon: typeof Lock; color: string }> = {
-  AUTORIZACION:          { icon: Lock,        color: "text-violet-500" },
-  OBSERVADO:             { icon: AlertCircle, color: "text-red-500" },
-  POR_VENCER:            { icon: Clock,       color: "text-orange-500" },
+  AUTORIZACION:          { icon: Lock,        color: "text-excepcion-ink" },
+  OBSERVADO:             { icon: AlertCircle, color: "text-bloqueo-ink" },
+  POR_VENCER:            { icon: Clock,       color: "text-accion-ink" },
   TRABAJADOR_INCOMPLETO: { icon: UserX,       color: "text-ink-muted" },
 }
 
@@ -52,7 +52,7 @@ export function PendienteRow({ p, onResuelto }: {
       <div className="flex-1 min-w-0">
         <p className="text-sm text-ink">{p.titulo}</p>
         {p.detalle && <p className="text-xs text-ink-subtle mt-0.5">{p.detalle}</p>}
-        {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+        {error && <p className="text-xs text-bloqueo-ink mt-1">{error}</p>}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -68,7 +68,7 @@ export function PendienteRow({ p, onResuelto }: {
             <button
               onClick={() => resolver("autorizar")}
               disabled={ocupado}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover disabled:opacity-50 transition-colors"
             >
               Autorizar
             </button>

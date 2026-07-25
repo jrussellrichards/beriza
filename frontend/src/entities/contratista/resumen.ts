@@ -50,14 +50,6 @@ export interface DocumentoContratista {
   mandantes: EstadoPorMandante[]
 }
 
-export const ESTADO_GLOBAL_CFG: Record<EstadoGlobal, {
-  label: string; text: string; bg: string; border: string; dot: string
-}> = {
-  ACREDITADA: { label: "Acreditada", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500" },
-  EN_PROCESO: { label: "En proceso", text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200",   dot: "bg-amber-500" },
-  BLOQUEADA:  { label: "Bloqueada",  text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200",     dot: "bg-red-500" },
-  PENDIENTE:  { label: "Pendiente",  text: "text-slate-600",   bg: "bg-slate-50",   border: "border-slate-200",   dot: "bg-slate-400" },
-}
 
 // ── Portal v2 ────────────────────────────────────────────────────────────────
 

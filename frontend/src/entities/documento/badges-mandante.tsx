@@ -48,7 +48,7 @@ export function BadgesMandante({ mandantes, onSelect, onAutorizar }: {
               <span>pide autorización</span>
               <button
                 onClick={() => onAutorizar(m)}
-                className="ml-1 px-2 py-0.5 rounded bg-violet-600 text-white text-[10px] font-semibold hover:bg-violet-700 transition-colors"
+                className="ml-1 px-2 py-0.5 rounded bg-excepcion-ink text-white text-[10px] font-semibold hover:bg-excepcion-ink transition-colors"
               >
                 Resolver
               </button>

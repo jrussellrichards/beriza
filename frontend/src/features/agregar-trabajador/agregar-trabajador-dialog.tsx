@@ -93,7 +93,7 @@ export function AgregarTrabajadorDialog({ open, onClose, onSuccess }: Props) {
             />
           </div>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>
+            <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>

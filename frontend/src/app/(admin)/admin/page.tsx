@@ -24,14 +24,14 @@ interface Actividad {
 }
 
 const PLAN_CFG: Record<string, string> = {
-  Enterprise: "bg-amber-50 text-amber-700 border-amber-200",
-  Pro:        "bg-blue-50 text-blue-700 border-blue-200",
+  Enterprise: "bg-accion-soft text-accion-ink border-accion-line",
+  Pro:        "bg-brand-soft text-brand-hover border-brand-line",
 }
 
 const TIPO_CFG = {
-  ok:   { dot: "bg-emerald-500" },
-  warn: { dot: "bg-red-500" },
-  info: { dot: "bg-blue-400" },
+  ok:   { dot: "bg-ok-soft0" },
+  warn: { dot: "bg-bloqueo-soft0" },
+  info: { dot: "bg-brand" },
 }
 
 function initials(name: string) {
@@ -75,9 +75,9 @@ export default function AdminDashboardPage() {
         <div className="grid grid-cols-4 gap-4">
           {[
             { label: "Mandantes activos",        value: stats.total_mandantes,    sub: "empresas en plataforma",    color: "text-ink",   icon: Building2    },
-            { label: "Contratistas totales",      value: totalContratistas,        sub: "en todos los mandantes",    color: "text-blue-600",    icon: Users        },
-            { label: "Documentos procesados",     value: stats.docs_procesados,    sub: "aprobados u observados",    color: "text-purple-600",  icon: FileText     },
-            { label: "Tasa global acreditación",  value: `${pct}%`,               sub: "promedio entre mandantes",  color: "text-emerald-600", icon: CheckCircle2 },
+            { label: "Contratistas totales",      value: totalContratistas,        sub: "en todos los mandantes",    color: "text-brand-hover",    icon: Users        },
+            { label: "Documentos procesados",     value: stats.docs_procesados,    sub: "aprobados u observados",    color: "text-excepcion-ink",  icon: FileText     },
+            { label: "Tasa global acreditación",  value: `${pct}%`,               sub: "promedio entre mandantes",  color: "text-ok-ink", icon: CheckCircle2 },
           ].map(k => {
             const Icon = k.icon
             return (
@@ -109,7 +109,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="divide-y divide-slate-100">
               {mandantes.map(m => {
-                const color = m.pct_acreditacion >= 75 ? "bg-emerald-500" : m.pct_acreditacion >= 50 ? "bg-amber-400" : "bg-red-400"
+                const color = m.pct_acreditacion >= 75 ? "bg-ok-soft0" : m.pct_acreditacion >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
                 return (
                   <div key={m.id} className="px-5 py-4 flex items-center gap-4 hover:bg-surface-app/60 transition-colors cursor-pointer">
                     <div className="w-8 h-8 rounded-lg bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">
@@ -149,10 +149,16 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-center flex-1 py-2">
               <div className="relative w-36 h-36">
                 <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="#f1f5f9" strokeWidth="12" />
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="var(--color-surface-sunken)" strokeWidth="12" />
                   <circle
                     cx="60" cy="60" r="50" fill="none"
-                    stroke={pct >= 70 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444"}
+                    // Los atributos SVG no toman clases de Tailwind, pero sí variables CSS,
+                    // así que el donut queda igual de atado a los tokens.
+                    stroke={
+                      pct >= 70 ? "var(--color-ok-ink)"
+                      : pct >= 50 ? "var(--color-accion-ink)"
+                      : "var(--color-bloqueo-ink)"
+                    }
                     strokeWidth="12"
                     strokeDasharray={`${2 * Math.PI * 50}`}
                     strokeDashoffset={`${2 * Math.PI * 50 * (1 - pct / 100)}`}
@@ -168,7 +174,7 @@ export default function AdminDashboardPage() {
 
             <div className="grid grid-cols-2 gap-3 mt-2">
               <div className="rounded-lg bg-surface-app border border-line-subtle px-3 py-2.5 text-center">
-                <p className="text-lg font-semibold text-emerald-600">{totalAcreditadas}</p>
+                <p className="text-lg font-semibold text-ok-ink">{totalAcreditadas}</p>
                 <p className="text-[10px] text-ink-subtle">Acreditados</p>
               </div>
               <div className="rounded-lg bg-surface-app border border-line-subtle px-3 py-2.5 text-center">

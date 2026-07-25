@@ -93,7 +93,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           <button
             onClick={asignar}
             disabled={!seleccion || cargando}
-            className="flex items-center gap-1.5 bg-slate-900 text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-40"
+            className="flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors disabled:opacity-40"
           >
             <Plus size={13} /> Asignar
           </button>
@@ -104,7 +104,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
         </p>
       )}
 
-      {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+      {error && <p className="text-xs text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
 
       <div className="space-y-1.5">
         {asignados.map((t) => (
@@ -118,7 +118,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
                 onClick={() => desasignar(t.id)}
                 disabled={cargando}
                 title="Desasignar de la faena"
-                className="text-ink-subtle hover:text-red-500 transition-colors disabled:opacity-40"
+                className="text-ink-subtle hover:text-bloqueo-ink transition-colors disabled:opacity-40"
               >
                 <UserMinus size={14} />
               </button>
@@ -163,7 +163,7 @@ function DetailPanel({ s, onClose, onCambio }: { s: Servicio; onClose: () => voi
               onClick={() => setTab(id)}
               className={cn(
                 "px-3 py-2 text-xs font-medium border-b-2 transition-colors",
-                tab === id ? "border-slate-900 text-ink" : "border-transparent text-ink-subtle hover:text-ink-muted"
+                tab === id ? "border-ink text-ink" : "border-transparent text-ink-subtle hover:text-ink-muted"
               )}
             >
               {label}

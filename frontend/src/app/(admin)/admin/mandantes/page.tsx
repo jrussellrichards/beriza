@@ -47,8 +47,8 @@ function mapMandante(a: ApiMandante): Mandante {
 }
 
 const PLAN_CFG: Record<Plan, { label: string; color: string }> = {
-  Enterprise: { label: "Enterprise", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  Pro:        { label: "Pro",        color: "bg-blue-50 text-blue-700 border-blue-200" },
+  Enterprise: { label: "Enterprise", color: "bg-accion-soft text-accion-ink border-accion-line" },
+  Pro:        { label: "Pro",        color: "bg-brand-soft text-brand-hover border-brand-line" },
   Starter:    { label: "Starter",    color: "bg-surface-sunken text-ink-muted border-line" },
 }
 
@@ -117,7 +117,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           <input
             value={nombre} onChange={e => setNombre(e.target.value)}
             placeholder="Empresa S.A."
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -125,7 +125,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           <input
             value={rut} onChange={e => setRut(e.target.value)}
             placeholder="76.123.456-7"
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -133,7 +133,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="admin@empresa.cl"
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -145,7 +145,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
                 onClick={() => setPlan(p)}
                 className={cn(
                   "py-2 rounded-lg border text-sm font-medium transition-colors",
-                  plan === p ? "border-slate-900 bg-slate-900 text-white" : "border-line text-ink-muted hover:border-line-strong"
+                  plan === p ? "border-ink bg-surface-inverse text-white" : "border-line text-ink-muted hover:border-line-strong"
                 )}
               >
                 {p}
@@ -154,22 +154,22 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           </div>
         </div>
 
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-700">
+        <div className="rounded-lg bg-brand-soft border border-brand-line p-3 text-xs text-brand-hover">
           Se le envía un email para que active su cuenta y defina su propia contraseña.
           Al entrar podrá configurar qué requisitos exige e invitar a sus contratistas.
         </div>
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg">{error}</p>
         )}
 
         {linkRespaldo && (
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
-            <p className="text-xs text-amber-800">
+          <div className="rounded-lg bg-accion-soft border border-accion-line p-3 space-y-2">
+            <p className="text-xs text-accion-ink">
               El mandante se creó, pero el email no pudo enviarse. Entrégale este enlace
               de activación por otro medio:
             </p>
-            <code className="block text-[10px] bg-surface border border-amber-200 rounded px-2 py-1.5 break-all text-ink-secondary">
+            <code className="block text-[10px] bg-surface border border-accion-line rounded px-2 py-1.5 break-all text-ink-secondary">
               {linkRespaldo}
             </code>
           </div>
@@ -183,10 +183,10 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           className={cn(
             "w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2",
             guardado
-              ? "bg-emerald-500 text-white"
+              ? "bg-ok-soft0 text-white"
               : !nombre || !rut || !email
-                ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
-                : "bg-slate-900 text-white hover:bg-slate-800"
+                ? "bg-line text-ink-subtle cursor-not-allowed"
+                : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
           )}
         >
           {guardado ? <><CheckCircle2 size={14} /> Mandante creado</> : "Crear y enviar invitación"}
@@ -200,7 +200,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
 
 function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
   const pct = Math.round((m.acreditadas / m.contratistas) * 100)
-  const barColor = pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-400" : "bg-red-400"
+  const barColor = pct >= 75 ? "bg-ok-soft0" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
 
   return (
     <div className="flex flex-col h-full">
@@ -225,7 +225,7 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
           </span>
           <span className={cn(
             "text-[10px] font-medium px-2 py-0.5 rounded border",
-            m.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-surface-sunken text-ink-subtle border-line"
+            m.activo ? "bg-ok-soft text-ok-ink border-ok-line" : "bg-surface-sunken text-ink-subtle border-line"
           )}>
             {m.activo ? "Activo" : "Inactivo"}
           </span>
@@ -353,7 +353,7 @@ export default function MandantesPage() {
             </div>
             <button
               onClick={abrirCrear}
-              className="flex items-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
             >
               <Plus size={15} />
               Nuevo mandante
@@ -367,9 +367,9 @@ export default function MandantesPage() {
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: "Total", value: MANDANTES.length, color: "text-ink" },
-              { label: "Activos", value: MANDANTES.filter(m => m.activo).length, color: "text-emerald-600" },
-              { label: "Enterprise", value: MANDANTES.filter(m => m.plan === "Enterprise").length, color: "text-amber-600" },
-              { label: "Pro", value: MANDANTES.filter(m => m.plan === "Pro").length, color: "text-blue-600" },
+              { label: "Activos", value: MANDANTES.filter(m => m.activo).length, color: "text-ok-ink" },
+              { label: "Enterprise", value: MANDANTES.filter(m => m.plan === "Enterprise").length, color: "text-accion-ink" },
+              { label: "Pro", value: MANDANTES.filter(m => m.plan === "Pro").length, color: "text-brand-hover" },
             ].map(k => (
               <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
                 <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
@@ -386,7 +386,7 @@ export default function MandantesPage() {
               placeholder="Buscar mandante o RUT..."
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
             />
           </div>
 
@@ -408,7 +408,7 @@ export default function MandantesPage() {
               <tbody className="divide-y divide-slate-100">
                 {filtrados.map(m => {
                   const pct = Math.round((m.acreditadas / m.contratistas) * 100)
-                  const barColor = pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-400" : "bg-red-400"
+                  const barColor = pct >= 75 ? "bg-ok-soft0" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
                   const selected = seleccionado?.id === m.id
                   return (
                     <tr
@@ -442,9 +442,9 @@ export default function MandantesPage() {
                       <td className="px-4 py-4">
                         <span className={cn(
                           "inline-flex items-center gap-1.5 text-xs font-medium",
-                          m.activo ? "text-emerald-600" : "text-ink-subtle"
+                          m.activo ? "text-ok-ink" : "text-ink-subtle"
                         )}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full", m.activo ? "bg-emerald-500" : "bg-slate-300")} />
+                          <span className={cn("w-1.5 h-1.5 rounded-full", m.activo ? "bg-ok-soft0" : "bg-line-strong")} />
                           {m.activo ? "Activo" : "Inactivo"}
                         </span>
                       </td>

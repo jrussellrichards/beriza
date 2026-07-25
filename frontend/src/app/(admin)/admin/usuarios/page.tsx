@@ -16,10 +16,10 @@ interface Usuario {
 
 
 const ROL_CFG: Record<Rol, { label: string; color: string }> = {
-  berisa_admin:      { label: "BERISA Admin",   color: "bg-slate-900 text-white border-slate-900" },
-  mandante_admin:    { label: "Mandante Admin", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  prevencionista:    { label: "Prevencionista", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  contratista_admin: { label: "Contratista",    color: "bg-purple-50 text-purple-700 border-purple-200" },
+  berisa_admin:      { label: "BERISA Admin",   color: "bg-surface-inverse text-white border-ink" },
+  mandante_admin:    { label: "Mandante Admin", color: "bg-accion-soft text-accion-ink border-accion-line" },
+  prevencionista:    { label: "Prevencionista", color: "bg-brand-soft text-brand-hover border-brand-line" },
+  contratista_admin: { label: "Contratista",    color: "bg-excepcion-soft text-excepcion-ink border-excepcion-line" },
 }
 
 const ROLES_FILTRO: (Rol | "TODOS")[] = ["TODOS", "berisa_admin", "mandante_admin", "prevencionista", "contratista_admin"]
@@ -58,7 +58,7 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
           <input
             value={nombre} onChange={e => setNombre(e.target.value)}
             placeholder="María González"
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -66,7 +66,7 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="mgonzalez@empresa.cl"
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -78,7 +78,7 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setRol(key)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors",
-                  rol === key ? "border-slate-900 bg-surface-app" : "border-line hover:border-line-strong"
+                  rol === key ? "border-ink bg-surface-app" : "border-line hover:border-line-strong"
                 )}
               >
                 <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded border shrink-0", cfg.color)}>
@@ -102,9 +102,9 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
           disabled={!nombre || !email}
           className={cn(
             "w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2",
-            guardado ? "bg-emerald-500 text-white"
-              : !nombre || !email ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
-                : "bg-slate-900 text-white hover:bg-slate-800"
+            guardado ? "bg-ok-soft0 text-white"
+              : !nombre || !email ? "bg-line text-ink-subtle cursor-not-allowed"
+                : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
           )}
         >
           {guardado ? <><CheckCircle2 size={14} /> Invitación enviada</> : "Crear y enviar invitación"}
@@ -143,7 +143,7 @@ export default function UsuariosPage() {
             </div>
             <button
               onClick={() => setCreando(true)}
-              className="flex items-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
             >
               <Plus size={15} />
               Nuevo usuario
@@ -157,9 +157,9 @@ export default function UsuariosPage() {
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: "Total usuarios", value: USUARIOS.length, color: "text-ink" },
-              { label: "Activos", value: USUARIOS.filter(u => u.activo).length, color: "text-emerald-600" },
-              { label: "Mandante admin", value: USUARIOS.filter(u => u.rol === "mandante_admin").length, color: "text-amber-600" },
-              { label: "Contratistas", value: USUARIOS.filter(u => u.rol === "contratista_admin").length, color: "text-purple-600" },
+              { label: "Activos", value: USUARIOS.filter(u => u.activo).length, color: "text-ok-ink" },
+              { label: "Mandante admin", value: USUARIOS.filter(u => u.rol === "mandante_admin").length, color: "text-accion-ink" },
+              { label: "Contratistas", value: USUARIOS.filter(u => u.rol === "contratista_admin").length, color: "text-excepcion-ink" },
             ].map(k => (
               <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
                 <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
@@ -185,7 +185,7 @@ export default function UsuariosPage() {
                   onClick={() => setFiltroRol(r)}
                   className={cn(
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                    filtroRol === r ? "bg-slate-900 text-white" : "text-ink-muted hover:text-ink"
+                    filtroRol === r ? "bg-surface-inverse text-white" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   {r === "TODOS" ? "Todos" : ROL_CFG[r].label}
@@ -231,8 +231,8 @@ export default function UsuariosPage() {
                     </td>
                     <td className="px-4 py-4 text-sm text-ink-muted">{u.mandante ?? "—"}</td>
                     <td className="px-4 py-4">
-                      <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium", u.activo ? "text-emerald-600" : "text-ink-subtle")}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full", u.activo ? "bg-emerald-500" : "bg-slate-300")} />
+                      <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium", u.activo ? "text-ok-ink" : "text-ink-subtle")}>
+                        <span className={cn("w-1.5 h-1.5 rounded-full", u.activo ? "bg-ok-soft0" : "bg-line-strong")} />
                         {u.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>

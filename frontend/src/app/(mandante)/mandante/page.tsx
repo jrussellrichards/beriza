@@ -7,7 +7,7 @@ import { api } from "@/shared/lib/api"
 import { TIPO_LABEL, type RiesgoMandante, type ServicioEnRiesgo } from "@/entities/contratista/resumen"
 
 function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse bg-slate-200 rounded-lg", className)} />
+  return <div className={cn("animate-pulse bg-line rounded-lg", className)} />
 }
 
 /** Una faena con su exposición. El rojo se reserva para gente que no puede entrar. */
@@ -19,7 +19,7 @@ function FaenaRow({ s }: { s: ServicioEnRiesgo }) {
       onClick={() => window.location.href = "/mandante/servicios"}
       className={cn(
         "w-full text-left bg-surface border rounded-xl px-4 py-3.5 hover:bg-surface-app/70 transition-colors",
-        s.trabajadores_no_habilitados > 0 ? "border-red-200" : "border-line"
+        s.trabajadores_no_habilitados > 0 ? "border-bloqueo-line" : "border-line"
       )}
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -33,16 +33,16 @@ function FaenaRow({ s }: { s: ServicioEnRiesgo }) {
 
         <div className="flex flex-wrap items-center gap-3 shrink-0 text-xs">
           {s.trabajadores_no_habilitados > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-red-600 font-medium">
+            <span className="inline-flex items-center gap-1.5 text-bloqueo-ink font-medium">
               <UserX size={12} />
               {s.trabajadores_no_habilitados} de {s.trabajadores_asignados} no puede{s.trabajadores_no_habilitados === 1 ? "" : "n"} ingresar
             </span>
           )}
           {s.documentos_pendientes > 0 && (
-            <span className="text-amber-700">{s.documentos_pendientes} por revisar</span>
+            <span className="text-accion-ink">{s.documentos_pendientes} por revisar</span>
           )}
           {!enRiesgo && (
-            <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 text-ok-ink">
               <CheckCircle2 size={12} /> Todo en regla
             </span>
           )}
@@ -97,8 +97,8 @@ export default function InicioMandantePage() {
   if (error || !riesgo) {
     return (
       <div className="p-6 sm:p-8">
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-3">
-          <AlertTriangle size={18} className="text-amber-500 mt-0.5 shrink-0" />
+        <div className="rounded-xl border border-accion-line bg-accion-soft px-5 py-4 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-accion-ink mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-medium text-ink">No pudimos revisar el estado de tus faenas</p>
             <p className="text-xs text-ink-muted mt-1">
@@ -130,12 +130,12 @@ export default function InicioMandantePage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className={cn(
             "rounded-xl border p-4",
-            riesgo.personas_no_habilitadas > 0 ? "border-red-200 bg-red-50" : "border-line bg-surface"
+            riesgo.personas_no_habilitadas > 0 ? "border-bloqueo-line bg-bloqueo-soft" : "border-line bg-surface"
           )}>
             <p className="text-xs text-ink-muted">Personas sin poder ingresar</p>
             <p className={cn(
               "text-2xl font-semibold mt-1",
-              riesgo.personas_no_habilitadas > 0 ? "text-red-700" : "text-ink"
+              riesgo.personas_no_habilitadas > 0 ? "text-bloqueo-ink" : "text-ink"
             )}>
               {riesgo.personas_no_habilitadas}
             </p>

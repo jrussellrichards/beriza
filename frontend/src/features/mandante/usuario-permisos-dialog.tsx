@@ -96,7 +96,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
   const puedeGuardar = editando ? true : Boolean(email && nombre)
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-surface-inverse/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-surface rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
           <div>
@@ -135,7 +135,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
                       onClick={() => setRol(o.v)}
                       className={cn(
                         "py-2 rounded-lg border text-xs font-medium transition-colors",
-                        rol === o.v ? "border-slate-900 bg-slate-900 text-white"
+                        rol === o.v ? "border-ink bg-surface-inverse text-white"
                                     : "border-line text-ink-muted hover:border-line-strong"
                       )}
                     >
@@ -144,7 +144,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
                   ))}
                 </div>
                 {apruebaTodo && (
-                  <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                  <p className="text-[10px] text-accion-ink bg-accion-soft border border-accion-line rounded px-2 py-1.5">
                     También podrá configurar los perfiles de exigencias, invitar contratistas
                     y otorgar excepciones.
                   </p>
@@ -177,21 +177,21 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
                 confunde— pero solo <strong>aprobar</strong> los de estos pilares.
               </p>
               {elegidos.length === 0 && (
-                <p className="text-[10px] text-amber-700">
+                <p className="text-[10px] text-accion-ink">
                   Sin ningún pilar asignado no podrá aprobar nada, solo revisar.
                 </p>
               )}
             </div>
           )}
 
-          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
 
           {linkRespaldo && (
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
-              <p className="text-xs text-amber-800">
+            <div className="rounded-lg bg-accion-soft border border-accion-line p-3 space-y-2">
+              <p className="text-xs text-accion-ink">
                 El usuario se creó pero el email no pudo enviarse. Entrégale este enlace:
               </p>
-              <code className="block text-[10px] bg-surface border border-amber-200 rounded px-2 py-1.5 break-all text-ink-secondary">
+              <code className="block text-[10px] bg-surface border border-accion-line rounded px-2 py-1.5 break-all text-ink-secondary">
                 {linkRespaldo}
               </code>
             </div>
@@ -205,8 +205,8 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
             className={cn(
               "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
               !puedeGuardar || guardando
-                ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
-                : "bg-slate-900 text-white hover:bg-slate-800"
+                ? "bg-line text-ink-subtle cursor-not-allowed"
+                : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
             )}
           >
             {guardando ? "Guardando..." : editando ? "Guardar permisos" : "Enviar invitación"}

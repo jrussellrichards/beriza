@@ -34,7 +34,7 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
   return (
     <div className={cn(
       "bg-surface border rounded-xl overflow-hidden",
-      bloqueados.length > 0 ? "border-red-200" : "border-line",
+      bloqueados.length > 0 ? "border-bloqueo-line" : "border-line",
       !t.activo && "opacity-60"
     )}>
       <button
@@ -57,12 +57,12 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
           {sinAsignar ? (
             <span className="text-xs text-ink-subtle">Sin asignar a ningún servicio</span>
           ) : bloqueados.length === 0 ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 text-xs text-ok-ink">
               <CheckCircle2 size={13} />
               Habilitado en {t.servicios.length === 1 ? "su servicio" : `sus ${t.servicios.length} servicios`}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-xs text-red-600">
+            <span className="inline-flex items-center gap-1.5 text-xs text-bloqueo-ink">
               <UserX size={13} />
               No puede ingresar a {bloqueados.length === 1 ? bloqueados[0].servicio_nombre : `${bloqueados.length} servicios`}
             </span>
@@ -86,7 +86,7 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
                   <span className="text-[10px] text-ink-subtle">· {s.mandante_razon_social}</span>
                   <span className={cn(
                     "sm:ml-auto text-[11px] font-medium",
-                    s.habilitado ? "text-emerald-700" : "text-red-600"
+                    s.habilitado ? "text-ok-ink" : "text-bloqueo-ink"
                   )}>
                     {s.habilitado ? "Puede ingresar" : "No puede ingresar"}
                   </span>
@@ -165,7 +165,7 @@ export default function TrabajadoresPage() {
         </div>
         <button
           onClick={() => setAgregando(true)}
-          className="inline-flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center justify-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
         >
           <Plus size={14} /> Agregar trabajador
         </button>
@@ -186,7 +186,7 @@ export default function TrabajadoresPage() {
           className={cn(
             "px-3 py-2 rounded-lg text-xs font-medium border transition-colors",
             soloBloqueados
-              ? "border-red-200 bg-red-50 text-red-700"
+              ? "border-bloqueo-line bg-bloqueo-soft text-bloqueo-ink"
               : "border-line text-ink-muted hover:bg-surface-app"
           )}
         >
