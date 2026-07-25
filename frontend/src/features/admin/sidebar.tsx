@@ -19,15 +19,15 @@ export function SidebarAdmin() {
   const path = usePathname()
 
   return (
-    <aside className="w-56 min-h-screen bg-[#0f172a] flex flex-col shrink-0">
-      <div className="px-4 py-5 border-b border-white/8">
+    <aside className="w-56 min-h-screen bg-surface-inverse flex flex-col shrink-0">
+      <div className="px-4 py-5 border-b border-line-inverse">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 bg-brand-mark rounded-lg flex items-center justify-center shrink-0">
             <ShieldCheck size={14} className="text-white" strokeWidth={2.5} />
           </div>
           <div>
             <p className="text-sm font-semibold text-white leading-none">Acredita</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Panel BERISA</p>
+            <p className="text-[10px] text-ink-muted mt-0.5">Panel BERISA</p>
           </div>
         </div>
       </div>
@@ -42,8 +42,8 @@ export function SidebarAdmin() {
               className={cn(
                 "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
                 active
-                  ? "bg-amber-500/15 text-amber-400 font-medium"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                  ? "bg-white/[0.06] text-ink-inverse font-medium border-l-2 border-brand-on-dark pl-[10px]"
+                  : "text-ink-inverse-muted hover:text-ink-inverse hover:bg-white/5"
               )}
             >
               <Icon size={15} strokeWidth={active ? 2.5 : 2} />
@@ -53,10 +53,10 @@ export function SidebarAdmin() {
         })}
       </nav>
 
-      <div className="p-3 border-t border-white/8">
+      <div className="p-3 border-t border-line-inverse">
         <button
           onClick={() => { localStorage.clear(); window.location.href = "/login" }}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-500 hover:text-slate-300 hover:bg-white/5 w-full transition-colors"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-ink-inverse-muted hover:text-ink-inverse hover:bg-white/5 w-full transition-colors"
         >
           <LogOut size={14} />
           Cerrar sesión

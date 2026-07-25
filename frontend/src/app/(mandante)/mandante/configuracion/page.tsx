@@ -31,7 +31,7 @@ const SECCIONES: ConfigSeccion[] = [
   { id: "seguridad", titulo: "Seguridad", descripcion: "Auth y sesiones", icon: Shield },
 ]
 
-const ROL_DEFAULT = { label: "Usuario", color: "bg-slate-50 text-slate-600 border-slate-200" }
+const ROL_DEFAULT = { label: "Usuario", color: "bg-surface-app text-ink-muted border-line" }
 
 const ROL_CFG: Record<string, { label: string; color: string }> = {
   mandante_admin: { label: "Admin", color: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -48,7 +48,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       )}
     >
       <span className={cn(
-        "pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+        "pointer-events-none inline-block h-4 w-4 rounded-full bg-surface shadow-sm transition-transform",
         checked ? "translate-x-4" : "translate-x-0"
       )} />
     </button>
@@ -125,11 +125,11 @@ export default function ConfiguracionPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Configuración</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Ajustes de tu organización y cuenta</p>
+            <h1 className="text-lg sm:text-xl font-semibold text-ink">Configuración</h1>
+            <p className="text-sm text-ink-muted mt-0.5">Ajustes de tu organización y cuenta</p>
           </div>
           <button
             onClick={handleSave}
@@ -151,7 +151,7 @@ export default function ConfiguracionPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Nav lateral */}
-        <div className="w-52 shrink-0 border-r border-slate-100 bg-slate-50/50 p-3 space-y-0.5">
+        <div className="w-52 shrink-0 border-r border-line-subtle bg-surface-app/50 p-3 space-y-0.5">
           {SECCIONES.map(s => {
             const Icon = s.icon
             const active = seccion === s.id
@@ -161,13 +161,13 @@ export default function ConfiguracionPage() {
                 onClick={() => setSeccion(s.id)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
-                  active ? "bg-white border border-slate-200 shadow-sm" : "hover:bg-white/60"
+                  active ? "bg-surface border border-line shadow-sm" : "hover:bg-surface/60"
                 )}
               >
-                <Icon size={15} className={active ? "text-slate-800" : "text-slate-400"} />
+                <Icon size={15} className={active ? "text-ink" : "text-ink-subtle"} />
                 <div>
-                  <p className={cn("text-sm font-medium", active ? "text-slate-900" : "text-slate-500")}>{s.titulo}</p>
-                  <p className="text-[10px] text-slate-400">{s.descripcion}</p>
+                  <p className={cn("text-sm font-medium", active ? "text-ink" : "text-ink-muted")}>{s.titulo}</p>
+                  <p className="text-[10px] text-ink-subtle">{s.descripcion}</p>
                 </div>
               </button>
             )
@@ -181,69 +181,69 @@ export default function ConfiguracionPage() {
           {seccion === "organizacion" && (
             <div className="max-w-xl space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 mb-1">Datos de la organización</h2>
-                <p className="text-sm text-slate-400">Información del mandante mostrada a los contratistas</p>
+                <h2 className="text-base font-semibold text-ink mb-1">Datos de la organización</h2>
+                <p className="text-sm text-ink-subtle">Información del mandante mostrada a los contratistas</p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700">Razón social</label>
+                  <label className="text-sm font-medium text-ink-secondary">Razón social</label>
                   <div className="relative">
-                    <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
                     <input
                       value={razonSocial}
                       onChange={e => setRazonSocial(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700">RUT</label>
+                  <label className="text-sm font-medium text-ink-secondary">RUT</label>
                   <input
                     value={rut}
                     onChange={e => setRut(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700">Email de contacto</label>
+                  <label className="text-sm font-medium text-ink-secondary">Email de contacto</label>
                   <div className="relative">
-                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
                     <input
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700">Sitio web</label>
+                  <label className="text-sm font-medium text-ink-secondary">Sitio web</label>
                   <div className="relative">
-                    <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
                     <input
                       value={sitioWeb}
                       onChange={e => setSitioWeb(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-5">
-                <h3 className="text-sm font-semibold text-slate-900 mb-3">Alertas de vencimiento</h3>
+              <div className="border-t border-line-subtle pt-5">
+                <h3 className="text-sm font-semibold text-ink mb-3">Alertas de vencimiento</h3>
                 <div className="flex items-center gap-3">
-                  <label className="text-sm text-slate-600">Avisar con</label>
+                  <label className="text-sm text-ink-muted">Avisar con</label>
                   <input
                     type="number"
                     value={diasAviso}
                     onChange={e => setDiasAviso(e.target.value)}
-                    className="w-16 px-2 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                    className="w-16 px-2 py-1.5 text-sm border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                   />
-                  <label className="text-sm text-slate-600">días de anticipación</label>
+                  <label className="text-sm text-ink-muted">días de anticipación</label>
                 </div>
               </div>
             </div>
@@ -253,14 +253,14 @@ export default function ConfiguracionPage() {
           {seccion === "notificaciones" && (
             <div className="max-w-xl space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 mb-1">Notificaciones por email</h2>
-                <p className="text-sm text-slate-400">Controla qué alertas recibes en tu correo</p>
+                <h2 className="text-base font-semibold text-ink mb-1">Notificaciones por email</h2>
+                <p className="text-sm text-ink-subtle">Controla qué alertas recibes en tu correo</p>
               </div>
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
                 Estas preferencias aún no se guardan — la configuración de notificaciones está en desarrollo.
               </p>
 
-              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+              <div className="bg-surface rounded-xl border border-line divide-y divide-slate-100">
                 {[
                   { label: "Documentos próximos a vencer", desc: "Aviso cuando un documento vence en los próximos días configurados", value: notifVencimiento, set: setNotifVencimiento },
                   { label: "Nueva brecha detectada por IA", desc: "Cuando el sistema rechaza un documento de un contratista", value: notifBrecha, set: setNotifBrecha },
@@ -269,8 +269,8 @@ export default function ConfiguracionPage() {
                 ].map(n => (
                   <div key={n.label} className="flex items-center justify-between px-5 py-4">
                     <div>
-                      <p className="text-sm font-medium text-slate-800">{n.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{n.desc}</p>
+                      <p className="text-sm font-medium text-ink">{n.label}</p>
+                      <p className="text-xs text-ink-subtle mt-0.5">{n.desc}</p>
                     </div>
                     <Toggle checked={n.value} onChange={n.set} />
                   </div>
@@ -283,32 +283,32 @@ export default function ConfiguracionPage() {
           {seccion === "seguridad" && (
             <div className="max-w-xl space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 mb-1">Seguridad de la cuenta</h2>
-                <p className="text-sm text-slate-400">Configuración de autenticación y sesiones</p>
+                <h2 className="text-base font-semibold text-ink mb-1">Seguridad de la cuenta</h2>
+                <p className="text-sm text-ink-subtle">Configuración de autenticación y sesiones</p>
               </div>
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
                 Estas preferencias aún no se guardan — la configuración de seguridad está en desarrollo.
               </p>
 
-              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+              <div className="bg-surface rounded-xl border border-line divide-y divide-slate-100">
                 <div className="flex items-center justify-between px-5 py-4">
                   <div>
-                    <p className="text-sm font-medium text-slate-800">Doble factor de autenticación (2FA)</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Requiere código adicional al iniciar sesión</p>
+                    <p className="text-sm font-medium text-ink">Doble factor de autenticación (2FA)</p>
+                    <p className="text-xs text-ink-subtle mt-0.5">Requiere código adicional al iniciar sesión</p>
                   </div>
                   <Toggle checked={sesion2fa} onChange={setSesion2fa} />
                 </div>
                 <div className="px-5 py-4">
-                  <p className="text-sm font-medium text-slate-800 mb-1">Duración de sesión</p>
-                  <p className="text-xs text-slate-400 mb-3">Cierra sesión automáticamente después de</p>
+                  <p className="text-sm font-medium text-ink mb-1">Duración de sesión</p>
+                  <p className="text-xs text-ink-subtle mb-3">Cierra sesión automáticamente después de</p>
                   <div className="flex items-center gap-3">
                     <input
                       type="number"
                       value={sesionDias}
                       onChange={e => setSesionDias(e.target.value)}
-                      className="w-16 px-2 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                      className="w-16 px-2 py-1.5 text-sm border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                     />
-                    <span className="text-sm text-slate-600">días de inactividad</span>
+                    <span className="text-sm text-ink-muted">días de inactividad</span>
                   </div>
                 </div>
               </div>
@@ -316,7 +316,7 @@ export default function ConfiguracionPage() {
               <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                 <p className="text-sm font-semibold text-red-800 mb-1">Zona de peligro</p>
                 <p className="text-xs text-red-600 mb-3">Estas acciones son irreversibles. Procede con cuidado.</p>
-                <button disabled title="Eliminar la cuenta requiere contactar a BERISA" className="text-xs font-medium text-red-700 border border-red-300 bg-white hover:bg-red-50 px-3 py-2 rounded-md transition-colors">Eliminar cuenta del mandante</button>
+                <button disabled title="Eliminar la cuenta requiere contactar a BERISA" className="text-xs font-medium text-red-700 border border-red-300 bg-surface hover:bg-red-50 px-3 py-2 rounded-md transition-colors">Eliminar cuenta del mandante</button>
               </div>
             </div>
           )}

@@ -41,15 +41,15 @@ export function SidebarContratista() {
   return (
     <>
       {/* Escritorio */}
-      <aside className="hidden md:flex w-56 min-h-screen bg-[#0f172a] flex-col shrink-0">
-        <div className="px-4 py-5 border-b border-white/8">
+      <aside className="hidden md:flex w-56 min-h-screen bg-surface-inverse flex-col shrink-0">
+        <div className="px-4 py-5 border-b border-line-inverse">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 bg-brand-mark rounded-lg flex items-center justify-center shrink-0">
               <ShieldCheck size={14} className="text-white" strokeWidth={2.5} />
             </div>
             <div>
               <p className="text-sm font-semibold text-white leading-none">Acredita</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Portal Contratista</p>
+              <p className="text-[10px] text-ink-muted mt-0.5">Portal Contratista</p>
             </div>
           </div>
         </div>
@@ -64,14 +64,14 @@ export function SidebarContratista() {
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
                   active
-                    ? "bg-amber-500/15 text-amber-400 font-medium"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                    ? "bg-white/[0.06] text-ink-inverse font-medium border-l-2 border-brand-on-dark pl-[10px]"
+                    : "text-ink-inverse-muted hover:text-ink-inverse hover:bg-white/5"
                 )}
               >
                 <Icon size={15} strokeWidth={active ? 2.5 : 2} />
                 {label}
                 {href === "/contratista" && pendientes > 0 && (
-                  <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-[10px] font-semibold text-slate-900 flex items-center justify-center">
+                  <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-accion-line text-accion-ink text-[10px] font-semibold flex items-center justify-center">
                     {pendientes}
                   </span>
                 )}
@@ -80,10 +80,10 @@ export function SidebarContratista() {
           })}
         </nav>
 
-        <div className="p-3 border-t border-white/8">
+        <div className="p-3 border-t border-line-inverse">
           <button
             onClick={() => { localStorage.clear(); window.location.href = "/login" }}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-500 hover:text-slate-300 hover:bg-white/5 w-full transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-ink-inverse-muted hover:text-ink-inverse hover:bg-white/5 w-full transition-colors"
           >
             <LogOut size={14} />
             Cerrar sesión
@@ -92,23 +92,23 @@ export function SidebarContratista() {
       </aside>
 
       {/* Teléfono: cabecera + barra inferior */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-30 bg-[#0f172a] px-4 py-3 flex items-center justify-between">
+      <header className="md:hidden fixed top-0 inset-x-0 z-30 bg-surface-inverse px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-amber-500 rounded-md flex items-center justify-center">
+          <div className="w-6 h-6 bg-brand-mark rounded-md flex items-center justify-center">
             <ShieldCheck size={12} className="text-white" strokeWidth={2.5} />
           </div>
           <p className="text-sm font-semibold text-white">Acredita</p>
         </div>
         <button
           onClick={() => { localStorage.clear(); window.location.href = "/login" }}
-          className="text-slate-400 p-1"
+          className="text-ink-inverse-muted p-1"
           aria-label="Cerrar sesión"
         >
           <LogOut size={16} />
         </button>
       </header>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[#0f172a] border-t border-white/10 grid grid-cols-4">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-surface-inverse border-t border-white/10 grid grid-cols-4">
         {nav.map(({ href, label, icon: Icon }) => {
           const active = esActivo(path, href)
           return (
@@ -117,13 +117,13 @@ export function SidebarContratista() {
               href={href}
               className={cn(
                 "relative flex flex-col items-center gap-1 py-2.5 text-[10px] transition-colors",
-                active ? "text-amber-400 font-medium" : "text-slate-400"
+                active ? "text-brand-on-dark font-medium" : "text-ink-inverse-muted"
               )}
             >
               <Icon size={18} strokeWidth={active ? 2.5 : 2} />
               {label}
               {href === "/contratista" && pendientes > 0 && (
-                <span className="absolute top-1.5 right-1/2 translate-x-4 min-w-[16px] h-[16px] px-1 rounded-full bg-amber-500 text-[9px] font-semibold text-slate-900 flex items-center justify-center">
+                <span className="absolute top-1.5 right-1/2 translate-x-4 min-w-[16px] h-[16px] px-1 rounded-full bg-accion-line text-accion-ink text-[9px] font-semibold flex items-center justify-center">
                   {pendientes}
                 </span>
               )}

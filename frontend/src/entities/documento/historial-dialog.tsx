@@ -109,21 +109,21 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
 
         {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
         {!historial && !error && (
-          <div className="flex justify-center py-8 text-slate-400"><Loader2 size={18} className="animate-spin" /></div>
+          <div className="flex justify-center py-8 text-ink-subtle"><Loader2 size={18} className="animate-spin" /></div>
         )}
 
         {historial && (
           <div className="space-y-5">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
                 Versiones ({historial.versiones.length})
               </p>
               {historial.versiones.length === 0 && (
-                <div className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center">
-                  <p className="text-xs text-slate-500">
+                <div className="rounded-lg border border-dashed border-line px-3 py-4 text-center">
+                  <p className="text-xs text-ink-muted">
                     El contratista todavía no autorizó compartir este documento.
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <p className="text-[10px] text-ink-subtle mt-0.5">
                     Está marcado como sensible: verás el archivo cuando lo apruebe.
                   </p>
                 </div>
@@ -143,12 +143,12 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
                       : sinCompartir ? "Aún no compartida" : "Versión anterior",
                     cls: sinCompartir
                       ? "bg-violet-50 text-violet-700 border-violet-200"
-                      : "bg-slate-50 text-slate-600 border-slate-200",
+                      : "bg-surface-app text-ink-muted border-line",
                   }
                   return (
-                    <div key={v.id} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
+                    <div key={v.id} className="rounded-lg border border-line-subtle bg-surface-app px-3 py-2.5">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-slate-800">
+                        <p className="text-xs font-semibold text-ink">
                           Versión {v.numero_version}
                           {v.aprobado_por_excepcion && (
                             <span className="ml-2 text-[10px] font-medium text-purple-600 border border-purple-200 bg-purple-50 rounded px-1.5 py-0.5">
@@ -160,7 +160,7 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
                           {e.label}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
+                      <p className="text-[10px] text-ink-subtle mt-0.5">
                         {fecha(v.created_at)}
                         {v.fecha_vigencia_hasta ? ` · vigente hasta ${v.fecha_vigencia_hasta}` : ""}
                       </p>
@@ -173,7 +173,7 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
                             key={a.id}
                             onClick={() => descargar(a.id)}
                             disabled={descargando === a.id}
-                            className="inline-flex items-center gap-1 text-[10px] text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 rounded px-1.5 py-0.5 transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-[10px] text-ink-muted border border-line bg-surface hover:bg-surface-app hover:border-line-strong rounded px-1.5 py-0.5 transition-colors disabled:opacity-50"
                           >
                             {descargando === a.id ? <Loader2 size={9} className="animate-spin" /> : <Download size={9} />}
                             {a.nombre_original}
@@ -187,22 +187,22 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
                 Bitácora ({historial.eventos.length})
               </p>
               <div className="space-y-0">
                 {[...historial.eventos].reverse().map((ev, i) => (
-                  <div key={i} className="flex items-start gap-2.5 py-1.5 border-l-2 border-slate-100 pl-3 ml-1">
+                  <div key={i} className="flex items-start gap-2.5 py-1.5 border-l-2 border-line-subtle pl-3 ml-1">
                     <div className="flex-1">
-                      <p className="text-xs text-slate-700">
+                      <p className="text-xs text-ink-secondary">
                         {EVENTO_LABEL[ev.tipo_evento] ?? ev.tipo_evento}
                         {ev.estado_anterior !== null && ev.estado_nuevo !== null && (
-                          <span className="text-slate-400">
+                          <span className="text-ink-subtle">
                             {" "}· {ESTADO_LABEL[String(ev.estado_anterior)]?.label ?? ev.estado_anterior} → {ESTADO_LABEL[String(ev.estado_nuevo)]?.label ?? ev.estado_nuevo}
                           </span>
                         )}
                       </p>
-                      <p className="text-[10px] text-slate-400">{fecha(ev.created_at)}</p>
+                      <p className="text-[10px] text-ink-subtle">{fecha(ev.created_at)}</p>
                     </div>
                   </div>
                 ))}

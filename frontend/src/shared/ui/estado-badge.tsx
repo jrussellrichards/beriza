@@ -17,6 +17,9 @@ export type EstadoDoc =
 /** Estado agregado de la relación contratista ↔ mandante. */
 export type EstadoAgregado = "PENDIENTE" | "EN_PROCESO" | "ACREDITADA" | "BLOQUEADA"
 
+/** Ciclo de vida de un servicio. */
+export type EstadoServicio = "ACTIVO" | "SUSPENDIDO" | "TERMINADO"
+
 export const ESTADO_NUM: Record<number, EstadoDoc> = {
   1: "ENVIADO",
   2: "EN_ANALISIS",
@@ -135,6 +138,17 @@ const ESTILO_AGREGADO: Record<EstadoAgregado, Estilo> = {
   PENDIENTE: { ...ESTILO.FALTA, label: "Pendiente" },
 }
 
+/**
+ * Estado de un servicio. Ojo: acá el verde NO significa "cumple" sino "vigente",
+ * y el neutro no es "esperando" sino "cerrado". Es un vocabulario distinto al de
+ * documentos y por eso tiene su propio mapa en vez de reutilizar el otro.
+ */
+const ESTILO_SERVICIO: Record<EstadoServicio, Estilo> = {
+  ACTIVO: { ...ESTILO.APROBADO, label: "Activo" },
+  SUSPENDIDO: { ...ESTILO.OBSERVADO, label: "Suspendido", glifo: "punto" },
+  TERMINADO: { ...ESTILO.ENVIADO, label: "Terminado" },
+}
+
 function Marca({ estilo }: { estilo: Estilo }) {
   if (estilo.glifo === "alerta") {
     return <AlertTriangle size={11} className="shrink-0" strokeWidth={2.5} />
@@ -212,6 +226,59 @@ export function EstadoAgregadoBadge({
       {e.label}
     </span>
   )
+}
+
+export function EstadoServicioBadge({
+  estado,
+  className,
+}: {
+  estado: EstadoServicio
+  className?: string
+}) {
+  const e = ESTILO_SERVICIO[estado] ?? ESTILO_SERVICIO.TERMINADO
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-micro",
+        e.soft,
+        e.line,
+        e.ink,
+        className
+      )}
+    >
+      <Marca estilo={e} />
+      {e.label}
+    </span>
+  )
+}
+
+/** Etiquetas de documento, para textos que no usan el badge (frases de brecha). */
+export const LABEL_DOC: Record<EstadoDoc, string> = {
+  FALTA: "Falta subir",
+  ENVIADO: "En revisión",
+  EN_ANALISIS: "En análisis",
+  OBSERVADO: "Observado",
+  APROBADO: "Aprobado",
+  VENCIDO: "Vencido",
+  PENDIENTE_AUTORIZACION: "Requiere autorización",
+}
+
+/** Traduce el estado numérico del backend. null = exigido y sin subir. */
+export const estadoDocDe = (n: number | null): EstadoDoc =>
+  n ? ESTADO_NUM[n] ?? "FALTA" : "FALTA"
+
+/** Etiquetas legibles por estado, para textos de filtro y selectores. */
+export const LABEL_SERVICIO: Record<EstadoServicio, string> = {
+  ACTIVO: "Activo",
+  SUSPENDIDO: "Suspendido",
+  TERMINADO: "Terminado",
+}
+
+export const LABEL_AGREGADO: Record<EstadoAgregado, string> = {
+  ACREDITADA: "Acreditada",
+  EN_PROCESO: "En proceso",
+  BLOQUEADA: "Bloqueada",
+  PENDIENTE: "Pendiente",
 }
 
 /**

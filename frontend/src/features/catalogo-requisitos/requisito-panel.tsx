@@ -81,40 +81,40 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+      <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">
+          <p className="text-sm font-semibold text-ink">
             {editando ? "Editar requisito" : contexto === "propio" ? "Nuevo requisito propio" : "Nuevo requisito"}
           </p>
-          <p className="text-xs text-slate-400 mt-0.5">Pilar: {pilar.nombre}</p>
+          <p className="text-xs text-ink-subtle mt-0.5">Pilar: {pilar.nombre}</p>
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+        <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted"><X size={16} /></button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Código</label>
+          <label className="text-sm font-medium text-ink-secondary">Código</label>
           <input
             value={codigo}
             onChange={e => setCodigo(e.target.value)}
             disabled={editando}
             placeholder="CERT_SEGURIDAD"
-            className={cn(inputCls, "font-mono", editando && "bg-slate-50 text-slate-400 cursor-not-allowed")}
+            className={cn(inputCls, "font-mono", editando && "bg-surface-app text-ink-subtle cursor-not-allowed")}
           />
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-ink-subtle">
             {editando ? "El código no se puede cambiar — lo referencian expedientes y reglas." : "Identificador único. Se convierte a mayúsculas automáticamente."}
           </p>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Nombre del requisito</label>
+          <label className="text-sm font-medium text-ink-secondary">Nombre del requisito</label>
           <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Certificado de seguridad" className={inputCls} />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Descripción</label>
+          <label className="text-sm font-medium text-ink-secondary">Descripción</label>
           <textarea
             value={descripcion} onChange={e => setDescripcion(e.target.value)}
             placeholder="Qué debe contener este documento y cuándo aplica..."
@@ -123,7 +123,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Entidad que lo presenta</label>
+          <label className="text-sm font-medium text-ink-secondary">Entidad que lo presenta</label>
           <div className="grid grid-cols-2 gap-2">
             {(["EMPRESA", "TRABAJADOR"] as const).map(e => (
               <button
@@ -132,7 +132,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
                 disabled={editando}
                 className={cn(
                   "py-2 rounded-lg border text-sm font-medium transition-colors",
-                  entidad === e ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 text-slate-600 hover:border-slate-300",
+                  entidad === e ? "border-slate-900 bg-slate-900 text-white" : "border-line text-ink-muted hover:border-line-strong",
                   editando && "opacity-60 cursor-not-allowed"
                 )}
               >
@@ -142,7 +142,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           </div>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Alcance</label>
+          <label className="text-sm font-medium text-ink-secondary">Alcance</label>
           <div className="grid grid-cols-2 gap-2">
             {([
               { v: "ENTIDAD", label: "Se acredita una vez" },
@@ -153,55 +153,55 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
                 onClick={() => setAlcance(o.v)}
                 className={cn(
                   "py-2 rounded-lg border text-xs font-medium transition-colors",
-                  alcance === o.v ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 text-slate-600 hover:border-slate-300"
+                  alcance === o.v ? "border-slate-900 bg-slate-900 text-white" : "border-line text-ink-muted hover:border-line-strong"
                 )}
               >
                 {o.label}
               </button>
             ))}
           </div>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-ink-subtle">
             {alcance === "SERVICIO"
               ? "El contratista lo acredita por cada servicio/faena que lo exija (ej: MIPER)."
               : "El contratista lo acredita una vez y vale para todos sus servicios (ej: F30)."}
           </p>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Archivos por entrega</label>
+          <label className="text-sm font-medium text-ink-secondary">Archivos por entrega</label>
           <input
             type="number" min={1} max={20}
             value={maxArchivos}
             onChange={e => setMaxArchivos(Number(e.target.value))}
             className={cn(inputCls, "w-24")}
           />
-          <p className="text-[10px] text-slate-400">Cuántos archivos admite una entrega (ej: contrato + anexos = 3).</p>
+          <p className="text-[10px] text-ink-subtle">Cuántos archivos admite una entrega (ej: contrato + anexos = 3).</p>
         </div>
 
-        <label className="flex items-start gap-2.5 cursor-pointer rounded-lg border border-slate-200 px-3 py-2.5">
+        <label className="flex items-start gap-2.5 cursor-pointer rounded-lg border border-line px-3 py-2.5">
           <input
             type="checkbox"
             checked={sinVencimiento}
             onChange={e => setSinVencimiento(e.target.checked)}
             className="mt-0.5"
           />
-          <span className="text-sm text-slate-700">
+          <span className="text-sm text-ink-secondary">
             Sin vencimiento
-            <span className="block text-[10px] text-slate-400">
+            <span className="block text-[10px] text-ink-subtle">
               El documento no caduca; no genera alertas de vencimiento (ej: escritura de la sociedad).
             </span>
           </span>
         </label>
 
-        <label className="flex items-start gap-2.5 cursor-pointer rounded-lg border border-slate-200 px-3 py-2.5">
+        <label className="flex items-start gap-2.5 cursor-pointer rounded-lg border border-line px-3 py-2.5">
           <input
             type="checkbox"
             checked={sensible}
             onChange={e => setSensible(e.target.checked)}
             className="mt-0.5"
           />
-          <span className="text-sm text-slate-700">
+          <span className="text-sm text-ink-secondary">
             Contenido sensible
-            <span className="block text-[10px] text-slate-400">
+            <span className="block text-[10px] text-ink-subtle">
               No se comparte con un mandante nuevo sin autorización del contratista (ej: carpeta tributaria).
             </span>
           </span>
@@ -217,14 +217,14 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
         {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
       </div>
 
-      <div className="px-6 py-4 border-t border-slate-100 shrink-0">
+      <div className="px-6 py-4 border-t border-line-subtle shrink-0">
         <button
           onClick={handleGuardar}
           disabled={loading || !nombre || (!editando && !codigo)}
           className={cn(
             "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
             loading || !nombre || (!editando && !codigo)
-              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+              ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
               : "bg-slate-900 text-white hover:bg-slate-800"
           )}
         >

@@ -44,70 +44,78 @@ export default function LoginPage() {
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
 
       {/* Panel izquierdo — marca */}
-      <div className="hidden lg:flex flex-col justify-between bg-[#0f172a] p-12">
+      <div className="hidden lg:flex flex-col justify-between bg-surface-inverse p-12">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-            <ShieldCheck size={16} className="text-white" strokeWidth={2.5} />
+          <div className="w-8 h-8 bg-brand-mark rounded-lg flex items-center justify-center">
+            <ShieldCheck size={16} className="text-ink-inverse" strokeWidth={2.5} />
           </div>
-          <span className="text-white font-semibold text-lg">Acredita</span>
+          <span className="text-ink-inverse font-semibold text-lg">Acredita</span>
         </div>
 
-        {/* Tagline central */}
+        {/*
+          Nadie llega acá sin haber sido invitado: no es una superficie de venta,
+          es orientación. Se retiraron las tres cifras que había (90% / 100% /
+          24-7) por dos razones. "24/7 auditoría automática con IA" era falso —el
+          pipeline no existe— y afirmarlo ante el usuario cuyo trabajo es confiar
+          en lo que el sistema declara es un riesgo comercial, no un problema de
+          redacción. Y las otras dos eran porcentajes sin línea base ni fuente,
+          justo el tipo de cifra que un prevencionista está entrenado para
+          desconfiar. Quedan hechos verificables.
+        */}
         <div className="space-y-6">
           <div className="space-y-4">
-            <h1 className="text-4xl font-bold text-white leading-tight">
-              Acreditación de contratistas,{" "}
-              <span className="text-amber-400">sin papeles ni demoras.</span>
+            <h1 className="text-3xl font-semibold text-ink-inverse leading-tight">
+              Saber exactamente quién puede entrar a faena.
             </h1>
-            <p className="text-slate-400 text-lg leading-relaxed">
-              Automatiza la validación documental de tus empresas contratistas con IA. Reduce semanas de gestión a horas.
+            <p className="text-ink-inverse-muted text-body leading-relaxed max-w-md">
+              Acredita la documentación de tus empresas contratistas y deja registro
+              de qué se verificó, con qué documento y cuándo.
             </p>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 pt-4 border-t border-white/10">
+          <ul className="space-y-3 pt-4 border-t border-line-inverse">
             {[
-              { value: "90%", label: "menos tiempo en validación" },
-              { value: "100%", label: "trazabilidad de documentos" },
-              { value: "24/7", label: "auditoría automática con IA" },
-            ].map(s => (
-              <div key={s.label}>
-                <p className="text-2xl font-bold text-amber-400">{s.value}</p>
-                <p className="text-xs text-slate-500 mt-1">{s.label}</p>
-              </div>
+              "Cada aprobación queda con nombre, hora y el documento que la respaldó.",
+              "Un documento se sube una vez y sirve para todos los mandantes que lo exijan.",
+              "Nadie queda bloqueado sin saber exactamente qué falta.",
+            ].map(t => (
+              <li key={t} className="flex items-start gap-2.5 text-meta text-ink-inverse-muted">
+                <span className="w-1 h-1 rounded-full bg-brand-on-dark mt-2 shrink-0" />
+                {t}
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
         {/* Footer */}
-        <p className="text-xs text-slate-600">
+        <p className="text-xs text-ink-muted">
           © 2025 BERISA. Plataforma de acreditación para la industria de la construcción.
         </p>
       </div>
 
       {/* Panel derecho — formulario */}
-      <div className="flex items-center justify-center p-8 bg-[#f8fafc]">
+      <div className="flex items-center justify-center p-8 bg-surface-app">
         <div className="w-full max-w-sm space-y-8">
 
           {/* Logo mobile */}
           <div className="flex items-center gap-2.5 lg:hidden">
-            <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center">
-              <ShieldCheck size={14} className="text-white" strokeWidth={2.5} />
+            <div className="w-7 h-7 bg-brand-mark rounded-lg flex items-center justify-center">
+              <ShieldCheck size={14} className="text-ink-inverse" strokeWidth={2.5} />
             </div>
-            <span className="font-semibold text-slate-900">Acredita</span>
+            <span className="font-semibold text-ink">Acredita</span>
           </div>
 
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Iniciar sesión</h2>
-            <p className="text-sm text-slate-500 mt-1">Ingresa tus credenciales para continuar</p>
+            <h2 className="text-2xl font-bold text-ink">Iniciar sesión</h2>
+            <p className="text-sm text-ink-muted mt-1">Ingresa tus credenciales para continuar</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700" htmlFor="email">
+              <label className="text-sm font-medium text-ink-secondary" htmlFor="email">
                 Correo electrónico
               </label>
               <input
@@ -118,12 +126,12 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                className="w-full px-3.5 py-2.5 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700" htmlFor="password">
+              <label className="text-sm font-medium text-ink-secondary" htmlFor="password">
                 Contraseña
               </label>
               <div className="relative">
@@ -135,12 +143,12 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 pr-10 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                  className="w-full px-3.5 py-2.5 pr-10 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-muted transition-colors"
                 >
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -160,8 +168,8 @@ export default function LoginPage() {
               className={cn(
                 "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all",
                 loading || !email || !password
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                  : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98]"
+                  ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
+                  : "bg-slate-900 text-ink-inverse hover:bg-slate-800 active:scale-[0.98]"
               )}
             >
               {loading ? (
@@ -179,8 +187,8 @@ export default function LoginPage() {
           </form>
 
           {/* Credenciales demo */}
-          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Credenciales de demo</p>
+          <div className="rounded-lg border border-line bg-surface p-4 space-y-3">
+            <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Credenciales de demo</p>
             {[
               { label: "BERISA Admin", email: "admin@berisa.cl", pass: "admin123" },
               { label: "Mandante", email: "mandante@demo.cl", pass: "demo123" },
@@ -190,13 +198,13 @@ export default function LoginPage() {
                 key={c.email}
                 type="button"
                 onClick={() => { setEmail(c.email); setPassword(c.pass) }}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-slate-50 transition-colors group text-left"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-surface-app transition-colors group text-left"
               >
                 <div>
-                  <p className="text-xs font-medium text-slate-700">{c.label}</p>
-                  <p className="text-xs text-slate-400 font-mono">{c.email}</p>
+                  <p className="text-xs font-medium text-ink-secondary">{c.label}</p>
+                  <p className="text-xs text-ink-subtle font-mono">{c.email}</p>
                 </div>
-                <ArrowRight size={12} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+                <ArrowRight size={12} className="text-ink-subtle group-hover:text-ink-muted transition-colors" />
               </button>
             ))}
           </div>

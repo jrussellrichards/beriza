@@ -49,7 +49,7 @@ function mapMandante(a: ApiMandante): Mandante {
 const PLAN_CFG: Record<Plan, { label: string; color: string }> = {
   Enterprise: { label: "Enterprise", color: "bg-amber-50 text-amber-700 border-amber-200" },
   Pro:        { label: "Pro",        color: "bg-blue-50 text-blue-700 border-blue-200" },
-  Starter:    { label: "Starter",    color: "bg-slate-100 text-slate-600 border-slate-200" },
+  Starter:    { label: "Starter",    color: "bg-surface-sunken text-ink-muted border-line" },
 }
 
 function initials(name: string) {
@@ -103,41 +103,41 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+      <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Nuevo mandante</p>
-          <p className="text-xs text-slate-400 mt-0.5">Se enviará invitación al email indicado</p>
+          <p className="text-sm font-semibold text-ink">Nuevo mandante</p>
+          <p className="text-xs text-ink-subtle mt-0.5">Se enviará invitación al email indicado</p>
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+        <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted"><X size={16} /></button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Razón social</label>
+          <label className="text-sm font-medium text-ink-secondary">Razón social</label>
           <input
             value={nombre} onChange={e => setNombre(e.target.value)}
             placeholder="Empresa S.A."
-            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">RUT empresa</label>
+          <label className="text-sm font-medium text-ink-secondary">RUT empresa</label>
           <input
             value={rut} onChange={e => setRut(e.target.value)}
             placeholder="76.123.456-7"
-            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Email administrador</label>
+          <label className="text-sm font-medium text-ink-secondary">Email administrador</label>
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="admin@empresa.cl"
-            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Plan</label>
+          <label className="text-sm font-medium text-ink-secondary">Plan</label>
           <div className="grid grid-cols-3 gap-2">
             {(["Starter", "Pro", "Enterprise"] as Plan[]).map(p => (
               <button
@@ -145,7 +145,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
                 onClick={() => setPlan(p)}
                 className={cn(
                   "py-2 rounded-lg border text-sm font-medium transition-colors",
-                  plan === p ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 text-slate-600 hover:border-slate-300"
+                  plan === p ? "border-slate-900 bg-slate-900 text-white" : "border-line text-ink-muted hover:border-line-strong"
                 )}
               >
                 {p}
@@ -169,14 +169,14 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
               El mandante se creó, pero el email no pudo enviarse. Entrégale este enlace
               de activación por otro medio:
             </p>
-            <code className="block text-[10px] bg-white border border-amber-200 rounded px-2 py-1.5 break-all text-slate-700">
+            <code className="block text-[10px] bg-surface border border-amber-200 rounded px-2 py-1.5 break-all text-ink-secondary">
               {linkRespaldo}
             </code>
           </div>
         )}
       </div>
 
-      <div className="px-6 py-4 border-t border-slate-100 shrink-0">
+      <div className="px-6 py-4 border-t border-line-subtle shrink-0">
         <button
           onClick={handleGuardar}
           disabled={!nombre || !rut || !email || enviando}
@@ -185,7 +185,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
             guardado
               ? "bg-emerald-500 text-white"
               : !nombre || !rut || !email
-                ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
                 : "bg-slate-900 text-white hover:bg-slate-800"
           )}
         >
@@ -204,17 +204,17 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between gap-3">
+      <div className="px-6 py-5 border-b border-line-subtle flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-surface-sunken text-ink-muted text-xs font-bold flex items-center justify-center shrink-0">
             {initials(m.nombre)}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">{m.nombre}</p>
-            <p className="text-xs text-slate-400 font-mono">{m.rut}</p>
+            <p className="text-sm font-semibold text-ink">{m.nombre}</p>
+            <p className="text-xs text-ink-subtle font-mono">{m.rut}</p>
           </div>
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 shrink-0"><X size={16} /></button>
+        <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted shrink-0"><X size={16} /></button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
@@ -225,7 +225,7 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
           </span>
           <span className={cn(
             "text-[10px] font-medium px-2 py-0.5 rounded border",
-            m.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-400 border-slate-200"
+            m.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-surface-sunken text-ink-subtle border-line"
           )}>
             {m.activo ? "Activo" : "Inactivo"}
           </span>
@@ -240,10 +240,10 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
           ].map(s => {
             const Icon = s.icon
             return (
-              <div key={s.label} className="rounded-lg bg-slate-50 border border-slate-100 p-3 text-center">
-                <Icon size={14} className="text-slate-400 mx-auto mb-1" />
-                <p className="text-xl font-semibold text-slate-900">{s.value}</p>
-                <p className="text-[10px] text-slate-400">{s.label}</p>
+              <div key={s.label} className="rounded-lg bg-surface-app border border-line-subtle p-3 text-center">
+                <Icon size={14} className="text-ink-subtle mx-auto mb-1" />
+                <p className="text-xl font-semibold text-ink">{s.value}</p>
+                <p className="text-[10px] text-ink-subtle">{s.label}</p>
               </div>
             )
           })}
@@ -252,10 +252,10 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
         {/* Barra acreditación */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-xs font-medium text-slate-600">Tasa de acreditación</p>
-            <span className="text-xs font-semibold text-slate-700">{pct}%</span>
+            <p className="text-xs font-medium text-ink-muted">Tasa de acreditación</p>
+            <span className="text-xs font-semibold text-ink-secondary">{pct}%</span>
           </div>
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-surface-sunken rounded-full overflow-hidden">
             <div className={cn("h-full rounded-full", barColor)} style={{ width: `${pct}%` }} />
           </div>
         </div>
@@ -271,10 +271,10 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
             const Icon = f.icon
             return (
               <div key={f.label} className="flex items-center gap-3">
-                <Icon size={13} className="text-slate-400 shrink-0" />
+                <Icon size={13} className="text-ink-subtle shrink-0" />
                 <div>
-                  <p className="text-[10px] text-slate-400">{f.label}</p>
-                  <p className="text-sm text-slate-800">{f.value}</p>
+                  <p className="text-[10px] text-ink-subtle">{f.label}</p>
+                  <p className="text-sm text-ink">{f.value}</p>
                 </div>
               </div>
             )
@@ -284,18 +284,18 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
         {/* Acciones. Las que no tienen endpoint detras van deshabilitadas y con
             el motivo: un boton que parece funcionar y no hace nada es peor que
             un boton apagado, sobre todo en una demo. */}
-        <div className="border-t border-slate-100 pt-4 space-y-2">
+        <div className="border-t border-line-subtle pt-4 space-y-2">
           <button
             onClick={() => window.location.href = "/admin/mandantes"}
-            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-line text-sm text-ink-secondary hover:bg-surface-app transition-colors"
           >
             <span>Ver contratistas del mandante</span>
-            <ChevronRight size={14} className="text-slate-400" />
+            <ChevronRight size={14} className="text-ink-subtle" />
           </button>
           <button
             disabled
             title="El cambio de plan aún no está implementado"
-            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-slate-100 text-sm text-slate-400 cursor-not-allowed"
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-line-subtle text-sm text-ink-subtle cursor-not-allowed"
           >
             <span>Cambiar plan</span>
             <span className="text-[10px]">no disponible</span>
@@ -303,7 +303,7 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
           <button
             disabled
             title="Activar y desactivar mandantes aún no está implementado"
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-100 text-sm font-medium text-slate-400 cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-line-subtle text-sm font-medium text-ink-subtle cursor-not-allowed"
           >
             {m.activo ? <><ToggleLeft size={14} /> Desactivar mandante</> : <><ToggleRight size={14} /> Activar mandante</>}
           </button>
@@ -345,11 +345,11 @@ export default function MandantesPage() {
       <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", panelAbierto ? "mr-96" : "")}>
 
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
+        <div className="px-8 py-6 border-b border-line bg-surface shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Mandantes</h1>
-              <p className="text-sm text-slate-500 mt-0.5">Empresas registradas en la plataforma</p>
+              <h1 className="text-xl font-semibold text-ink">Mandantes</h1>
+              <p className="text-sm text-ink-muted mt-0.5">Empresas registradas en la plataforma</p>
             </div>
             <button
               onClick={abrirCrear}
@@ -366,13 +366,13 @@ export default function MandantesPage() {
           {/* KPI mini */}
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: "Total", value: MANDANTES.length, color: "text-slate-900" },
+              { label: "Total", value: MANDANTES.length, color: "text-ink" },
               { label: "Activos", value: MANDANTES.filter(m => m.activo).length, color: "text-emerald-600" },
               { label: "Enterprise", value: MANDANTES.filter(m => m.plan === "Enterprise").length, color: "text-amber-600" },
               { label: "Pro", value: MANDANTES.filter(m => m.plan === "Pro").length, color: "text-blue-600" },
             ].map(k => (
-              <div key={k.label} className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{k.label}</p>
+              <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
+                <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
                 <p className={cn("text-3xl font-semibold mt-1", k.color)}>{k.value}</p>
               </div>
             ))}
@@ -380,28 +380,28 @@ export default function MandantesPage() {
 
           {/* Buscador */}
           <div className="relative max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
             <input
               type="text"
               placeholder="Buscar mandante o RUT..."
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
             />
           </div>
 
           {/* Tabla */}
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-line rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Empresa</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">RUT</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Plan</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contratistas</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acreditación</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Alta</th>
+                <tr className="border-b border-line-subtle bg-surface-app/60">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Empresa</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">RUT</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Plan</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Contratistas</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Acreditación</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Alta</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -414,43 +414,43 @@ export default function MandantesPage() {
                     <tr
                       key={m.id}
                       onClick={() => abrirPanel(m)}
-                      className={cn("cursor-pointer transition-colors", selected ? "bg-slate-50" : "hover:bg-slate-50/70")}
+                      className={cn("cursor-pointer transition-colors", selected ? "bg-surface-app" : "hover:bg-surface-app/70")}
                     >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center shrink-0">
+                          <div className="w-7 h-7 rounded-md bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">
                             {initials(m.nombre)}
                           </div>
-                          <span className="font-medium text-slate-900">{m.nombre}</span>
+                          <span className="font-medium text-ink">{m.nombre}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-slate-400 font-mono text-xs">{m.rut}</td>
+                      <td className="px-4 py-4 text-ink-subtle font-mono text-xs">{m.rut}</td>
                       <td className="px-4 py-4">
                         <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", PLAN_CFG[m.plan].color)}>
                           {m.plan}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-slate-600 text-sm">{m.contratistas}</td>
+                      <td className="px-4 py-4 text-ink-muted text-sm">{m.contratistas}</td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="w-16 h-1.5 bg-surface-sunken rounded-full overflow-hidden">
                             <div className={cn("h-full rounded-full", barColor)} style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="text-xs text-slate-500">{pct}%</span>
+                          <span className="text-xs text-ink-muted">{pct}%</span>
                         </div>
                       </td>
                       <td className="px-4 py-4">
                         <span className={cn(
                           "inline-flex items-center gap-1.5 text-xs font-medium",
-                          m.activo ? "text-emerald-600" : "text-slate-400"
+                          m.activo ? "text-emerald-600" : "text-ink-subtle"
                         )}>
                           <span className={cn("w-1.5 h-1.5 rounded-full", m.activo ? "bg-emerald-500" : "bg-slate-300")} />
                           {m.activo ? "Activo" : "Inactivo"}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-xs text-slate-400">{m.fecha_creacion}</td>
+                      <td className="px-4 py-4 text-xs text-ink-subtle">{m.fecha_creacion}</td>
                       <td className="px-4 py-4">
-                        <ChevronRight size={14} className={cn("text-slate-300 transition-transform", selected && "rotate-90 text-slate-500")} />
+                        <ChevronRight size={14} className={cn("text-ink-subtle transition-transform", selected && "rotate-90 text-ink-muted")} />
                       </td>
                     </tr>
                   )
@@ -458,8 +458,8 @@ export default function MandantesPage() {
               </tbody>
             </table>
 
-            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-              <p className="text-xs text-slate-400">{filtrados.length} mandante{filtrados.length !== 1 ? "s" : ""}</p>
+            <div className="px-5 py-3 border-t border-line-subtle bg-surface-app/50">
+              <p className="text-xs text-ink-subtle">{filtrados.length} mandante{filtrados.length !== 1 ? "s" : ""}</p>
             </div>
           </div>
         </div>
@@ -467,7 +467,7 @@ export default function MandantesPage() {
 
       {/* Panel lateral */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         panelAbierto ? "translate-x-0" : "translate-x-full"
       )}>
         {creando && <NuevoMandantePanel onClose={() => setCreando(false)} onCreado={refetch} />}

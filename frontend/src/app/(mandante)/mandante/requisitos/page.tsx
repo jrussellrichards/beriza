@@ -50,7 +50,7 @@ const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text:
   blue:   { border: "border-blue-200",   bg: "bg-blue-50",   dot: "bg-blue-500",   text: "text-blue-700",   badge: "bg-blue-50 text-blue-700 border-blue-200" },
   amber:  { border: "border-amber-200",  bg: "bg-amber-50",  dot: "bg-amber-500",  text: "text-amber-700",  badge: "bg-amber-50 text-amber-700 border-amber-200" },
   purple: { border: "border-purple-200", bg: "bg-purple-50", dot: "bg-purple-500", text: "text-purple-700", badge: "bg-purple-50 text-purple-700 border-purple-200" },
-  slate:  { border: "border-slate-200",  bg: "bg-slate-50",  dot: "bg-slate-500",  text: "text-slate-700",  badge: "bg-slate-100 text-slate-600 border-slate-200" },
+  slate:  { border: "border-line",  bg: "bg-surface-app",  dot: "bg-surface-app0",  text: "text-ink-secondary",  badge: "bg-surface-sunken text-ink-muted border-line" },
 }
 
 // ── Crear perfil ──────────────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
               onChange={(e) => setDescripcion(e.target.value)}
             />
           </div>
-          <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+          <p className="text-xs text-ink-muted bg-surface-app border border-line-subtle rounded-md px-3 py-2">
             El perfil parte sin requisitos exigidos — actívalos después de crearlo.
             Cada servicio que crees podrá usar este perfil.
           </p>
@@ -141,7 +141,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       )}
     >
       <span className={cn(
-        "pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+        "pointer-events-none inline-block h-4 w-4 rounded-full bg-surface shadow-sm transition-transform",
         checked ? "translate-x-4" : "translate-x-0"
       )} />
     </button>
@@ -161,7 +161,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
   return (
     <div className={cn(
       "rounded-lg border p-4 transition-colors group",
-      req.es_obligatorio ? "bg-white border-slate-200" : "bg-slate-50/60 border-slate-100",
+      req.es_obligatorio ? "bg-surface border-line" : "bg-surface-app/60 border-line-subtle",
       dirty && "border-amber-300"
     )}>
       <div className="flex items-start gap-3">
@@ -174,23 +174,23 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <p className={cn("text-sm font-semibold", req.es_obligatorio ? "text-slate-900" : "text-slate-400")}>
+            <p className={cn("text-sm font-semibold", req.es_obligatorio ? "text-ink" : "text-ink-subtle")}>
               {req.nombre}
             </p>
             <span className={cn(
               "text-[10px] font-mono px-1.5 py-0.5 rounded border",
-              req.es_obligatorio ? c.badge : "bg-slate-100 text-slate-400 border-slate-200"
+              req.es_obligatorio ? c.badge : "bg-surface-sunken text-ink-subtle border-line"
             )}>
               {req.codigo}
             </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-slate-100 text-slate-500 border-slate-200">
+            <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-surface-sunken text-ink-muted border-line">
               {req.entidad === "EMPRESA" ? "Empresa" : "Trabajador"}
             </span>
             <span className={cn(
               "text-[10px] px-1.5 py-0.5 rounded border font-medium",
               req.alcance === "SERVICIO"
                 ? "bg-indigo-50 text-indigo-600 border-indigo-200"
-                : "bg-slate-100 text-slate-500 border-slate-200"
+                : "bg-surface-sunken text-ink-muted border-line"
             )}>
               {req.alcance === "SERVICIO" ? "Por cada servicio" : "Se acredita una vez"}
             </span>
@@ -209,24 +209,24 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
           {req.es_obligatorio && (
             <div className="flex items-center gap-4 flex-wrap mt-2">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 whitespace-nowrap">Vigencia máx. (días)</label>
+                <label className="text-xs text-ink-muted whitespace-nowrap">Vigencia máx. (días)</label>
                 <input
                   type="number"
                   min={1}
                   value={req.vigencia_max_dias}
                   onChange={(e) => onChange(req.id, { vigencia_max_dias: Number(e.target.value) })}
-                  className="w-20 text-xs border border-slate-200 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  className="w-20 text-xs border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                 />
               </div>
               {req.codigo.startsWith("F30") && (
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-500 whitespace-nowrap">Deuda máx. ($)</label>
+                  <label className="text-xs text-ink-muted whitespace-nowrap">Deuda máx. ($)</label>
                   <input
                     type="number"
                     min={0}
                     value={req.umbral_deuda_max ?? 0}
                     onChange={(e) => onChange(req.id, { umbral_deuda_max: Number(e.target.value) })}
-                    className="w-28 text-xs border border-slate-200 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                    className="w-28 text-xs border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                   />
                 </div>
               )}
@@ -240,14 +240,14 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
               <button
                 onClick={() => onEdit(req)}
                 title="Editar requisito propio"
-                className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                className="p-1 rounded-md hover:bg-surface-sunken text-ink-subtle hover:text-ink-muted transition-colors"
               >
                 <Edit2 size={11} />
               </button>
               <button
                 onClick={() => onDelete(req)}
                 title="Eliminar requisito propio"
-                className="p-1 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                className="p-1 rounded-md hover:bg-red-50 text-ink-subtle hover:text-red-500 transition-colors"
               >
                 <Trash2 size={11} />
               </button>
@@ -255,7 +255,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
           )}
           {req.es_obligatorio
             ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
-            : <Circle size={15} className="text-slate-300 shrink-0" />
+            : <Circle size={15} className="text-ink-subtle shrink-0" />
           }
         </div>
       </div>
@@ -283,12 +283,12 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
       >
         <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
         <p className={cn("text-sm font-bold flex-1", c.text)}>{pilar.nombre}</p>
-        <span className="text-xs text-slate-500">{obligatorios}/{pilar.requisitos.length} exigidos</span>
-        {open ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
+        <span className="text-xs text-ink-muted">{obligatorios}/{pilar.requisitos.length} exigidos</span>
+        {open ? <ChevronDown size={15} className="text-ink-subtle" /> : <ChevronRight size={15} className="text-ink-subtle" />}
       </button>
 
       {open && (
-        <div className="bg-white">
+        <div className="bg-surface">
           <div className="p-4 space-y-2">
             {pilar.requisitos.map(req => (
               <RequisitoRow
@@ -302,10 +302,10 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
               />
             ))}
           </div>
-          <div className="px-5 py-3 border-t border-slate-100">
+          <div className="px-5 py-3 border-t border-line-subtle">
             <button
               onClick={onCrearPropio}
-              className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+              className="flex items-center gap-2 text-xs font-medium text-ink-muted hover:text-ink transition-colors"
             >
               <Plus size={13} />
               Crear requisito propio en {pilar.nombre}
@@ -409,17 +409,17 @@ export default function PerfilesPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
+      <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Perfiles de exigencias</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <h1 className="text-lg sm:text-xl font-semibold text-ink">Perfiles de exigencias</h1>
+            <p className="text-sm text-ink-muted mt-0.5">
               Define qué documentos exiges por tipo de servicio — cada servicio usa un perfil
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
-              <Lock size={12} className="text-slate-400" />
+            <div className="flex items-center gap-1.5 text-xs text-ink-muted bg-surface-app border border-line px-3 py-2 rounded-lg">
+              <Lock size={12} className="text-ink-subtle" />
               Catálogo global de BERISA + tus requisitos propios
             </div>
             <button
@@ -430,7 +430,7 @@ export default function PerfilesPage() {
                 guardado
                   ? "bg-emerald-500 text-white"
                   : dirties.size === 0
-                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    ? "bg-surface-sunken text-ink-subtle cursor-not-allowed"
                     : "bg-slate-900 text-white hover:bg-slate-800"
               )}
             >
@@ -442,7 +442,7 @@ export default function PerfilesPage() {
 
         {/* Selector de perfil */}
         <div className="mt-4 flex items-center gap-2 flex-wrap">
-          <Layers size={14} className="text-slate-400" />
+          <Layers size={14} className="text-ink-subtle" />
           {perfiles.map((p) => (
             <button
               key={p.id}
@@ -451,7 +451,7 @@ export default function PerfilesPage() {
                 "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
                 p.id === perfilId
                   ? "bg-slate-900 text-white border-slate-900"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+                  : "bg-surface text-ink-muted border-line hover:border-slate-400"
               )}
             >
               {p.nombre}
@@ -459,7 +459,7 @@ export default function PerfilesPage() {
           ))}
           <button
             onClick={() => setDialogPerfil(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-slate-300 text-slate-500 hover:border-slate-500 hover:text-slate-700 transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-line-strong text-ink-muted hover:border-slate-500 hover:text-ink-secondary transition-colors"
           >
             <Plus size={12} /> Nuevo perfil
           </button>
@@ -500,8 +500,8 @@ export default function PerfilesPage() {
           />
         ))}
         {pilares.length === 0 && (
-          <div className="py-14 text-center bg-white rounded-xl border border-slate-200">
-            <p className="text-sm text-slate-400">Cargando configuración del perfil...</p>
+          <div className="py-14 text-center bg-surface rounded-xl border border-line">
+            <p className="text-sm text-ink-subtle">Cargando configuración del perfil...</p>
           </div>
         )}
       </div>
@@ -519,7 +519,7 @@ export default function PerfilesPage() {
 
       {/* Panel lateral — crear/editar requisito propio */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         panel ? "translate-x-0" : "translate-x-full"
       )}>
         {panel && (

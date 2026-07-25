@@ -3,27 +3,12 @@
 import { useCallback, useEffect, useState } from "react"
 import { Briefcase, ChevronRight, Plus, UserMinus, X } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
+import { EstadoServicioBadge, LABEL_SERVICIO } from "@/shared/ui/estado-badge"
 import { api } from "@/shared/lib/api"
 import { getSession } from "@/shared/lib/auth"
 import { AvancePanel } from "@/entities/servicio/avance-panel"
 import type { EstadoServicio, Servicio } from "@/entities/servicio/types"
 import { TIPO_LABEL } from "@/entities/contratista/resumen"
-
-const ESTADO_CFG: Record<EstadoServicio, { label: string; dot: string; text: string; bg: string; border: string }> = {
-  ACTIVO:     { label: "Activo",     dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  SUSPENDIDO: { label: "Suspendido", dot: "bg-amber-500",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-  TERMINADO:  { label: "Terminado",  dot: "bg-slate-400",   text: "text-slate-600",   bg: "bg-slate-100",  border: "border-slate-200" },
-}
-
-function EstadoBadge({ estado }: { estado: EstadoServicio }) {
-  const c = ESTADO_CFG[estado] ?? ESTADO_CFG.TERMINADO
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", c.bg, c.border, c.text)}>
-      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
-      {c.label}
-    </span>
-  )
-}
 
 interface TrabajadorItem {
   id: string
@@ -98,7 +83,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           <select
             value={seleccion}
             onChange={(e) => setSeleccion(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="flex-1 px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-slate-900/10"
           >
             <option value="" disabled>Agregar trabajador a la faena...</option>
             {disponibles.map((t) => (
@@ -114,7 +99,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           </button>
         </div>
       ) : (
-        <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+        <p className="text-xs text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
           Solo se puede modificar la dotación de servicios activos.
         </p>
       )}
@@ -123,17 +108,17 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
 
       <div className="space-y-1.5">
         {asignados.map((t) => (
-          <div key={t.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
+          <div key={t.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-app border border-line-subtle">
             <div>
-              <p className="text-sm font-medium text-slate-800">{t.nombre_completo}</p>
-              <p className="text-xs text-slate-400 font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
+              <p className="text-sm font-medium text-ink">{t.nombre_completo}</p>
+              <p className="text-xs text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
             </div>
             {puedeEditar && (
               <button
                 onClick={() => desasignar(t.id)}
                 disabled={cargando}
                 title="Desasignar de la faena"
-                className="text-slate-300 hover:text-red-500 transition-colors disabled:opacity-40"
+                className="text-ink-subtle hover:text-red-500 transition-colors disabled:opacity-40"
               >
                 <UserMinus size={14} />
               </button>
@@ -141,7 +126,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           </div>
         ))}
         {asignados.length === 0 && (
-          <p className="text-xs text-slate-400 italic px-1">Sin trabajadores asignados a esta faena</p>
+          <p className="text-xs text-ink-subtle italic px-1">Sin trabajadores asignados a esta faena</p>
         )}
       </div>
     </div>
@@ -157,19 +142,19 @@ function DetailPanel({ s, onClose, onCambio }: { s: Servicio; onClose: () => voi
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-5 pt-5 pb-0 border-b border-slate-100">
+      <div className="px-5 pt-5 pb-0 border-b border-line-subtle">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <p className="text-sm font-semibold text-slate-900 leading-tight">{s.nombre}</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-sm font-semibold text-ink leading-tight">{s.nombre}</p>
+            <p className="text-xs text-ink-subtle">
               {s.codigo_referencia ? `${s.codigo_referencia} · ` : ""}Perfil: {s.perfil_nombre}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 shrink-0">
+          <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted shrink-0">
             <X size={16} />
           </button>
         </div>
-        <EstadoBadge estado={s.estado} />
+        <EstadoServicioBadge estado={s.estado} />
 
         <div className="flex gap-0 mt-4 -mb-px">
           {([["avance", "Avance"], ["dotacion", "Dotación"]] as const).map(([id, label]) => (
@@ -178,7 +163,7 @@ function DetailPanel({ s, onClose, onCambio }: { s: Servicio; onClose: () => voi
               onClick={() => setTab(id)}
               className={cn(
                 "px-3 py-2 text-xs font-medium border-b-2 transition-colors",
-                tab === id ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+                tab === id ? "border-slate-900 text-ink" : "border-transparent text-ink-subtle hover:text-ink-muted"
               )}
             >
               {label}
@@ -215,23 +200,23 @@ export default function ServiciosContratistaPage() {
     <div className="flex min-h-screen">
       <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", seleccionado ? "lg:mr-96" : "")}>
 
-        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
-          <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Mis servicios</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
+          <h1 className="text-lg sm:text-xl font-semibold text-ink">Mis servicios</h1>
+          <p className="text-sm text-ink-muted mt-0.5">
             Lo que cada cliente te contrató, su avance y la dotación asignada
           </p>
         </div>
 
         <div className="flex-1 px-6 sm:px-8 py-6 overflow-x-auto">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-line rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Servicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Perfil</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Dotación</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Inicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                <tr className="border-b border-line-subtle bg-surface-app/60">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Servicio</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider hidden md:table-cell">Perfil</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Dotación</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Inicio</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -242,30 +227,30 @@ export default function ServiciosContratistaPage() {
                     <tr
                       key={s.id}
                       onClick={() => setSeleccionado(selected ? null : s)}
-                      className={cn("cursor-pointer transition-colors", selected ? "bg-slate-50" : "hover:bg-slate-50/70")}
+                      className={cn("cursor-pointer transition-colors", selected ? "bg-surface-app" : "hover:bg-surface-app/70")}
                     >
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+                          <div className="w-7 h-7 rounded-md bg-surface-sunken text-ink-muted flex items-center justify-center shrink-0">
                             <Briefcase size={13} />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium text-slate-900 truncate max-w-[240px]">{s.nombre}</p>
-                            <p className="text-[10px] text-slate-500">
+                            <p className="font-medium text-ink truncate max-w-[240px]">{s.nombre}</p>
+                            <p className="text-[10px] text-ink-muted">
                               {TIPO_LABEL[s.tipo] ?? s.tipo} · {s.mandante_razon_social}
                             </p>
                             {s.codigo_referencia && (
-                              <p className="text-[10px] text-slate-400 font-mono">{s.codigo_referencia}</p>
+                              <p className="text-[10px] text-ink-subtle font-mono">{s.codigo_referencia}</p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-500 hidden md:table-cell">{s.perfil_nombre}</td>
-                      <td className="px-4 py-3.5 text-xs text-slate-500">{s.trabajadores_asignados}</td>
-                      <td className="px-4 py-3.5 text-xs text-slate-400">{s.fecha_inicio}</td>
-                      <td className="px-4 py-3.5"><EstadoBadge estado={s.estado} /></td>
+                      <td className="px-4 py-3.5 text-xs text-ink-muted hidden md:table-cell">{s.perfil_nombre}</td>
+                      <td className="px-4 py-3.5 text-xs text-ink-muted">{s.trabajadores_asignados}</td>
+                      <td className="px-4 py-3.5 text-xs text-ink-subtle">{s.fecha_inicio}</td>
+                      <td className="px-4 py-3.5"><EstadoServicioBadge estado={s.estado} /></td>
                       <td className="px-4 py-3.5">
-                        <ChevronRight size={14} className={cn("text-slate-300 transition-transform", selected && "rotate-90 text-slate-500")} />
+                        <ChevronRight size={14} className={cn("text-ink-subtle transition-transform", selected && "rotate-90 text-ink-muted")} />
                       </td>
                     </tr>
                   )
@@ -275,7 +260,7 @@ export default function ServiciosContratistaPage() {
 
             {servicios.length === 0 && (
               <div className="py-14 text-center">
-                <p className="text-sm text-slate-400">Aún no tienes servicios contratados</p>
+                <p className="text-sm text-ink-subtle">Aún no tienes servicios contratados</p>
               </div>
             )}
           </div>
@@ -284,7 +269,7 @@ export default function ServiciosContratistaPage() {
 
       {/* Panel lateral */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         seleccionado ? "translate-x-0" : "translate-x-full"
       )}>
         {seleccionado && (

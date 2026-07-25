@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/shared/lib/utils"
-import { ESTADO_CFG, ESTADO_NUM, type EstadoDoc } from "@/entities/documento/exigencia"
+import { estadoDocDe, estiloDeEstado, LABEL_DOC } from "@/shared/ui/estado-badge"
 import type { EstadoPorMandante } from "@/entities/contratista/resumen"
 
 /**
@@ -26,8 +26,8 @@ export function BadgesMandante({ mandantes, onSelect, onAutorizar }: {
   return (
     <div className="flex flex-wrap gap-1.5">
       {mandantes.map(m => {
-        const estado: EstadoDoc = m.estado ? ESTADO_NUM[m.estado] ?? "FALTA" : "FALTA"
-        const c = ESTADO_CFG[estado]
+        const estado = estadoDocDe(m.estado)
+        const c = estiloDeEstado(estado)
         const clickable = onSelect !== undefined && m.documento_id !== null
         const pideAutorizacion = m.estado === 6 && onAutorizar !== undefined
 
@@ -39,7 +39,7 @@ export function BadgesMandante({ mandantes, onSelect, onAutorizar }: {
               key={m.mandante_id}
               className={cn(
                 "inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md text-[11px] font-medium border",
-                c.bg, c.border, c.text
+                c.soft, c.line, c.ink
               )}
             >
               <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
@@ -64,14 +64,14 @@ export function BadgesMandante({ mandantes, onSelect, onAutorizar }: {
             title={m.mensaje_brecha ?? undefined}
             className={cn(
               "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors",
-              c.bg, c.border, c.text,
+              c.soft, c.line, c.ink,
               clickable ? "cursor-pointer hover:brightness-95" : "cursor-default"
             )}
           >
             <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
             <span className="font-semibold">{m.mandante_razon_social}</span>
             <span className="opacity-70">·</span>
-            <span>{c.label.toLowerCase()}</span>
+            <span>{LABEL_DOC[estado].toLowerCase()}</span>
             {m.numero_version !== null && versionesDistintas && (
               <span className="opacity-60 tabular-nums">v{m.numero_version}</span>
             )}

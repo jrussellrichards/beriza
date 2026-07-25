@@ -6,6 +6,9 @@ import {
   FileText, History, Plus, Search, ShieldCheck, Users, X,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
+import {
+  EstadoAgregadoBadge, EstadoBadge, estadoDocDe, LABEL_AGREGADO, LABEL_DOC,
+} from "@/shared/ui/estado-badge"
 import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
 import { InvitarContratistaDialog } from "@/features/invitar-contratista/invitar-contratista-dialog"
@@ -67,22 +70,7 @@ type PanelTab = "estado" | "documentos" | "trabajadores" | "servicios"
 
 // ── Config visual ─────────────────────────────────────────────────────────────
 
-const ESTADO_CFG: Record<EstadoGlobal, { label: string; dot: string; text: string; bg: string; border: string }> = {
-  ACREDITADA: { label: "Acreditada", dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  EN_PROCESO: { label: "En Proceso", dot: "bg-amber-500",  text: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200" },
-  BLOQUEADA:  { label: "Bloqueada",  dot: "bg-red-500",    text: "text-red-700",    bg: "bg-red-50",    border: "border-red-200" },
-  PENDIENTE:  { label: "Pendiente",  dot: "bg-slate-400",  text: "text-slate-600",  bg: "bg-slate-50",  border: "border-slate-200" },
-}
-
 // Estados de documento del backend: null=Falta | 1=En revisión | 2=En análisis | 3=Observado | 4=Aprobado
-const DOC_CFG: Record<string, { label: string; dot: string; text: string; bg: string; border: string }> = {
-  "4":    { label: "Aprobado",    dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  "3":    { label: "Observado",   dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
-  "2":    { label: "En análisis", dot: "bg-blue-500",    text: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
-  "1":    { label: "En revisión", dot: "bg-amber-500",   text: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-  "null": { label: "Falta",       dot: "bg-slate-300",   text: "text-slate-500",   bg: "bg-slate-50",   border: "border-slate-200" },
-}
-
 const PILAR_COLOR: Record<string, string> = {
   blue: "bg-blue-50 text-blue-700 border-blue-200",
   amber: "bg-amber-50 text-amber-700 border-amber-200",
@@ -91,26 +79,6 @@ const PILAR_COLOR: Record<string, string> = {
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
-}
-
-function EstadoBadge({ estado }: { estado: EstadoGlobal }) {
-  const c = ESTADO_CFG[estado] ?? ESTADO_CFG.PENDIENTE
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", c.bg, c.border, c.text)}>
-      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
-      {c.label}
-    </span>
-  )
-}
-
-function DocEstadoBadge({ estado }: { estado: number | null }) {
-  const c = DOC_CFG[String(estado)] ?? DOC_CFG["null"]
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0", c.bg, c.border, c.text)}>
-      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", c.dot)} />
-      {c.label}
-    </span>
-  )
 }
 
 // ── Dialog de excepción (sobre un documento observado) ────────────────────────
@@ -192,24 +160,24 @@ function DocRow({ doc, onExcepcion, onVerArchivos }: {
   onVerArchivos: (d: DocDetalle) => void
 }) {
   return (
-    <div className="px-3 py-2 rounded-lg bg-white border border-slate-100">
+    <div className="px-3 py-2 rounded-lg bg-surface border border-line-subtle">
       <div className="flex items-center gap-2.5">
-        <FileText size={13} className="text-slate-400 shrink-0" />
+        <FileText size={13} className="text-ink-subtle shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-slate-800 truncate">
+          <p className="text-xs font-medium text-ink truncate">
             {doc.requisito_nombre}
             {doc.servicio_nombre && <span className="text-indigo-500 font-normal"> — {doc.servicio_nombre}</span>}
           </p>
           {doc.fecha_vigencia_hasta && (
-            <p className="text-[10px] text-slate-400">Vence: {doc.fecha_vigencia_hasta}</p>
+            <p className="text-[10px] text-ink-subtle">Vence: {doc.fecha_vigencia_hasta}</p>
           )}
         </div>
-        <DocEstadoBadge estado={doc.estado} />
+        <EstadoBadge estado={estadoDocDe(doc.estado)} />
         {doc.documento_id && (
           <button
             onClick={() => onVerArchivos(doc)}
             title="Ver archivos subidos"
-            className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+            className="p-1 rounded-md hover:bg-surface-sunken text-ink-subtle hover:text-ink-muted transition-colors shrink-0"
           >
             <History size={13} />
           </button>
@@ -243,10 +211,10 @@ function ServiciosTab({ contratistaId }: { contratistaId: string }) {
       .catch(() => setServicios([]))
   }, [contratistaId])
 
-  if (servicios === null) return <p className="text-xs text-slate-400">Cargando servicios...</p>
+  if (servicios === null) return <p className="text-xs text-ink-subtle">Cargando servicios...</p>
   if (servicios.length === 0) {
     return (
-      <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+      <p className="text-xs text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
         Sin servicios contratados. Crea uno desde la página Servicios para que existan exigencias.
       </p>
     )
@@ -254,12 +222,12 @@ function ServiciosTab({ contratistaId }: { contratistaId: string }) {
   return (
     <div className="space-y-1.5">
       {servicios.map((s) => (
-        <div key={s.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
+        <div key={s.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-app border border-line-subtle">
           <div className="flex items-center gap-2.5 min-w-0">
-            <Briefcase size={13} className="text-slate-400 shrink-0" />
+            <Briefcase size={13} className="text-ink-subtle shrink-0" />
             <div className="min-w-0">
-              <p className="text-xs font-medium text-slate-800 truncate">{s.nombre}</p>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-xs font-medium text-ink truncate">{s.nombre}</p>
+              <p className="text-[10px] text-ink-subtle">
                 {s.codigo_referencia ? `${s.codigo_referencia} · ` : ""}Perfil: {s.perfil_nombre} · {s.trabajadores_asignados} trabajador{s.trabajadores_asignados !== 1 ? "es" : ""}
               </p>
             </div>
@@ -268,7 +236,7 @@ function ServiciosTab({ contratistaId }: { contratistaId: string }) {
             "text-[10px] font-medium px-2 py-0.5 rounded-full border",
             s.estado === "ACTIVO" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
               : s.estado === "SUSPENDIDO" ? "bg-amber-50 text-amber-700 border-amber-200"
-              : "bg-slate-100 text-slate-600 border-slate-200"
+              : "bg-surface-sunken text-ink-muted border-line"
           )}>
             {s.estado === "ACTIVO" ? "Activo" : s.estado === "SUSPENDIDO" ? "Suspendido" : "Terminado"}
           </span>
@@ -304,22 +272,22 @@ function DetailPanel({ c, onClose, onCambio }: {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-5 pt-5 pb-0 border-b border-slate-100">
+      <div className="px-5 pt-5 pb-0 border-b border-line-subtle">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">
               {initials(c.razon_social)}
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900 leading-tight">{c.razon_social}</p>
-              <p className="text-xs text-slate-400 font-mono">{c.rut}</p>
+              <p className="text-sm font-semibold text-ink leading-tight">{c.razon_social}</p>
+              <p className="text-xs text-ink-subtle font-mono">{c.rut}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 shrink-0">
+          <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted shrink-0">
             <X size={16} />
           </button>
         </div>
-        <EstadoBadge estado={c.estado_acreditacion} />
+        <EstadoAgregadoBadge estado={c.estado_acreditacion} />
 
         <div className="flex gap-0 mt-4 -mb-px overflow-x-auto">
           {tabs.map(t => (
@@ -329,15 +297,15 @@ function DetailPanel({ c, onClose, onCambio }: {
               className={cn(
                 "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
                 tab === t.id
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
+                  ? "border-slate-900 text-ink"
+                  : "border-transparent text-ink-subtle hover:text-ink-muted"
               )}
             >
               {t.label}
               {t.count !== undefined && (
                 <span className={cn(
                   "px-1.5 py-0.5 rounded text-[10px] font-medium",
-                  tab === t.id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"
+                  tab === t.id ? "bg-slate-900 text-white" : "bg-surface-sunken text-ink-muted"
                 )}>
                   {t.count}
                 </span>
@@ -356,11 +324,11 @@ function DetailPanel({ c, onClose, onCambio }: {
                 .filter(d => d.estado !== 4)
                 .map(d => d.estado === 3 && d.mensaje_brecha
                   ? d.mensaje_brecha
-                  : `${d.requisito_nombre}${d.servicio_nombre ? ` (${d.servicio_nombre})` : ""}: ${(DOC_CFG[String(d.estado)] ?? DOC_CFG["null"]).label.toLowerCase()}`)
+                  : `${d.requisito_nombre}${d.servicio_nombre ? ` (${d.servicio_nombre})` : ""}: ${LABEL_DOC[estadoDocDe(d.estado)].toLowerCase()}`)
               return (
-                <div key={pilar.codigo} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                <div key={pilar.codigo} className="rounded-lg border border-line-subtle bg-surface-app p-3">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium text-slate-800">{pilar.nombre}</p>
+                    <p className="text-sm font-medium text-ink">{pilar.nombre}</p>
                     {pilar.cumple
                       ? <span className="flex items-center gap-1 text-xs font-medium text-emerald-600"><CheckCircle2 size={12} /> OK</span>
                       : <span className="flex items-center gap-1 text-xs font-medium text-red-600"><AlertCircle size={12} /> {brechas.length} brecha{brechas.length !== 1 ? "s" : ""}</span>
@@ -369,7 +337,7 @@ function DetailPanel({ c, onClose, onCambio }: {
                   {brechas.length > 0 && (
                     <ul className="mt-2 space-y-1">
                       {brechas.map((b, i) => (
-                        <li key={i} className="flex items-start gap-2 text-xs text-slate-500">
+                        <li key={i} className="flex items-start gap-2 text-xs text-ink-muted">
                           <AlertCircle size={11} className="text-red-400 mt-0.5 shrink-0" />
                           {b}
                         </li>
@@ -380,7 +348,7 @@ function DetailPanel({ c, onClose, onCambio }: {
               )
             })}
             {c.pilares.length === 0 && (
-              <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+              <p className="text-xs text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
                 Sin servicios activos — no hay requisitos exigibles para esta empresa todavía.
               </p>
             )}
@@ -394,10 +362,10 @@ function DetailPanel({ c, onClose, onCambio }: {
               return (
                 <div key={pilar.codigo}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[pilar.color] ?? "bg-slate-100 text-slate-600 border-slate-200")}>
+                    <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[pilar.color] ?? "bg-surface-sunken text-ink-muted border-line")}>
                       {pilar.nombre}
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-ink-subtle">
                       {pilar.documentos.length + docsT.length} doc{pilar.documentos.length + docsT.length !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -406,11 +374,11 @@ function DetailPanel({ c, onClose, onCambio }: {
                       <DocRow key={`${doc.requisito_id}-${i}`} doc={doc} onExcepcion={setExcepcionDoc} onVerArchivos={setHistorialDoc} />
                     ))}
                     {docsT.length > 0 && (
-                      <div className="mt-1 ml-2 border-l-2 border-slate-100 pl-3 space-y-1.5">
-                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1.5">Por trabajador</p>
+                      <div className="mt-1 ml-2 border-l-2 border-line-subtle pl-3 space-y-1.5">
+                        <p className="text-[10px] text-ink-subtle font-medium uppercase tracking-wide mb-1.5">Por trabajador</p>
                         {docsT.map((doc, i) => (
                           <div key={`${doc.requisito_id}-${doc.trabajador}-${i}`}>
-                            <p className="text-[10px] text-slate-400 mb-0.5">{doc.trabajador}</p>
+                            <p className="text-[10px] text-ink-subtle mb-0.5">{doc.trabajador}</p>
                             <DocRow doc={doc} onExcepcion={setExcepcionDoc} onVerArchivos={setHistorialDoc} />
                           </div>
                         ))}
@@ -425,14 +393,14 @@ function DetailPanel({ c, onClose, onCambio }: {
 
         {tab === "trabajadores" && (
           <div className="space-y-2">
-            <p className="text-xs text-slate-400 mb-3">
+            <p className="text-xs text-ink-subtle mb-3">
               {trabajadoresOk}/{c.trabajadores.length} trabajadores evaluados cumplen todos los requisitos
             </p>
             {c.trabajadores.map(t => (
-              <div key={t.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100">
+              <div key={t.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-app border border-line-subtle">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">{t.nombre}</p>
-                  <p className="text-xs text-slate-400 font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
+                  <p className="text-sm font-medium text-ink">{t.nombre}</p>
+                  <p className="text-xs text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
                 </div>
                 {t.cumple
                   ? <CheckCircle2 size={14} className="text-emerald-500" />
@@ -441,7 +409,7 @@ function DetailPanel({ c, onClose, onCambio }: {
               </div>
             ))}
             {c.trabajadores.length === 0 && (
-              <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
+              <p className="text-xs text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
                 Sin trabajadores asignados a servicios activos.
               </p>
             )}
@@ -532,11 +500,11 @@ export default function ContratistasPage() {
       <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", seleccionado ? "lg:mr-96" : "")}>
 
         {/* Header */}
-        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200 bg-white">
+        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Contratistas</h1>
-              <p className="text-sm text-slate-500 mt-0.5">Gestiona y monitorea el estado de acreditación</p>
+              <h1 className="text-lg sm:text-xl font-semibold text-ink">Contratistas</h1>
+              <p className="text-sm text-ink-muted mt-0.5">Gestiona y monitorea el estado de acreditación</p>
             </div>
             <button
               onClick={() => setDialogInvitar(true)}
@@ -559,13 +527,13 @@ export default function ContratistasPage() {
           {/* KPI */}
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: "Total", value: contratistas.length, color: "text-slate-900" },
+              { label: "Total", value: contratistas.length, color: "text-ink" },
               { label: "Acreditadas", value: kpi.acreditadas, color: "text-emerald-600" },
               { label: "En Proceso", value: kpi.enProceso, color: "text-amber-600" },
               { label: "Bloqueadas", value: kpi.bloqueadas, color: "text-red-600" },
             ].map(k => (
-              <div key={k.label} className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{k.label}</p>
+              <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
+                <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
                 <p className={cn("text-3xl font-semibold mt-1", k.color)}>{k.value}</p>
               </div>
             ))}
@@ -574,44 +542,44 @@ export default function ContratistasPage() {
           {/* Filtros */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-xs">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
               <input
                 type="text"
                 placeholder="Buscar empresa o RUT..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
               />
             </div>
-            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
+            <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-1">
               {(["TODOS", "ACREDITADA", "EN_PROCESO", "BLOQUEADA", "PENDIENTE"] as const).map(e => (
                 <button
                   key={e}
                   onClick={() => setFiltro(e)}
                   className={cn(
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                    filtro === e ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"
+                    filtro === e ? "bg-slate-900 text-white" : "text-ink-muted hover:text-ink"
                   )}
                 >
-                  {e === "TODOS" ? "Todos" : ESTADO_CFG[e].label + (e === "EN_PROCESO" ? "" : "s")}
+                  {e === "TODOS" ? "Todos" : LABEL_AGREGADO[e]}
                 </button>
               ))}
             </div>
-            <p className="text-xs text-slate-400 ml-auto">{filtrados.length} de {contratistas.length}</p>
+            <p className="text-xs text-ink-subtle ml-auto">{filtrados.length} de {contratistas.length}</p>
           </div>
 
           {/* Tabla */}
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-line rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Empresa</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">RUT</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acreditación</th>
+                <tr className="border-b border-line-subtle bg-surface-app/60">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Empresa</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">RUT</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Acreditación</th>
                   {pilarColumnas.map(p => (
-                    <th key={p.codigo} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{p.nombre}</th>
+                    <th key={p.codigo} className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">{p.nombre}</th>
                   ))}
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">
                     <Users size={12} className="inline" />
                   </th>
                   <th className="px-4 py-3" />
@@ -625,24 +593,24 @@ export default function ContratistasPage() {
                     <tr
                       key={c.id}
                       onClick={() => setSeleccionadoId(selected ? null : c.id)}
-                      className={cn("cursor-pointer transition-colors", selected ? "bg-slate-50" : "hover:bg-slate-50/70")}
+                      className={cn("cursor-pointer transition-colors", selected ? "bg-surface-app" : "hover:bg-surface-app/70")}
                     >
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center shrink-0">
+                          <div className="w-7 h-7 rounded-md bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">
                             {initials(c.razon_social)}
                           </div>
-                          <span className="font-medium text-slate-900 truncate max-w-[180px]">{c.razon_social}</span>
+                          <span className="font-medium text-ink truncate max-w-[180px]">{c.razon_social}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">{c.rut}</td>
-                      <td className="px-4 py-3.5"><EstadoBadge estado={c.estado_acreditacion} /></td>
+                      <td className="px-4 py-3.5 text-ink-muted font-mono text-xs">{c.rut}</td>
+                      <td className="px-4 py-3.5"><EstadoAgregadoBadge estado={c.estado_acreditacion} /></td>
                       {pilarColumnas.map(col => {
                         const p = c.pilares.find(x => x.codigo === col.codigo)
                         return (
                           <td key={col.codigo} className="px-4 py-3.5">
                             {p === undefined
-                              ? <span className="text-xs text-slate-300">—</span>
+                              ? <span className="text-xs text-ink-subtle">—</span>
                               : (
                                 <span className={cn("inline-flex items-center gap-1 text-xs font-medium", p.cumple ? "text-emerald-700" : "text-red-600")}>
                                   <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.cumple ? "bg-emerald-500" : "bg-red-500")} />
@@ -658,7 +626,7 @@ export default function ContratistasPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <ChevronRight size={14} className={cn("text-slate-300 transition-transform", selected && "rotate-90 text-slate-500")} />
+                        <ChevronRight size={14} className={cn("text-ink-subtle transition-transform", selected && "rotate-90 text-ink-muted")} />
                       </td>
                     </tr>
                   )
@@ -667,13 +635,13 @@ export default function ContratistasPage() {
             </table>
 
             {loading && filtrados.length === 0 && (
-              <div className="py-14 text-center"><p className="text-sm text-slate-400">Cargando contratistas...</p></div>
+              <div className="py-14 text-center"><p className="text-sm text-ink-subtle">Cargando contratistas...</p></div>
             )}
             {error && !loading && (
               <div className="py-14 text-center"><p className="text-sm text-red-500">No se pudieron cargar los contratistas: {error}</p></div>
             )}
             {!loading && !error && filtrados.length === 0 && (
-              <div className="py-14 text-center"><p className="text-sm text-slate-400">No se encontraron contratistas</p></div>
+              <div className="py-14 text-center"><p className="text-sm text-ink-subtle">No se encontraron contratistas</p></div>
             )}
           </div>
         </div>
@@ -681,7 +649,7 @@ export default function ContratistasPage() {
 
       {/* Panel lateral */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         seleccionado ? "translate-x-0" : "translate-x-full"
       )}>
         {seleccionado && mandanteId && (

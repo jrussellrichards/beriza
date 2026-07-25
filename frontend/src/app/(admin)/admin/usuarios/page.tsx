@@ -44,33 +44,33 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+      <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Nuevo usuario</p>
-          <p className="text-xs text-slate-400 mt-0.5">Se enviará invitación por email</p>
+          <p className="text-sm font-semibold text-ink">Nuevo usuario</p>
+          <p className="text-xs text-ink-subtle mt-0.5">Se enviará invitación por email</p>
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+        <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted"><X size={16} /></button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Nombre completo</label>
+          <label className="text-sm font-medium text-ink-secondary">Nombre completo</label>
           <input
             value={nombre} onChange={e => setNombre(e.target.value)}
             placeholder="María González"
-            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Email</label>
+          <label className="text-sm font-medium text-ink-secondary">Email</label>
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="mgonzalez@empresa.cl"
-            className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Rol</label>
+          <label className="text-sm font-medium text-ink-secondary">Rol</label>
           <div className="space-y-2">
             {(Object.entries(ROL_CFG) as [Rol, typeof ROL_CFG[Rol]][]).map(([key, cfg]) => (
               <button
@@ -78,13 +78,13 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setRol(key)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors",
-                  rol === key ? "border-slate-900 bg-slate-50" : "border-slate-200 hover:border-slate-300"
+                  rol === key ? "border-slate-900 bg-surface-app" : "border-line hover:border-line-strong"
                 )}
               >
                 <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded border shrink-0", cfg.color)}>
                   {cfg.label}
                 </span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-ink-muted">
                   {key === "berisa_admin" ? "Acceso total a la plataforma" :
                     key === "mandante_admin" ? "Gestiona contratistas de su mandante" :
                       key === "prevencionista" ? "Visualiza y sube documentos" :
@@ -96,14 +96,14 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <div className="px-6 py-4 border-t border-slate-100 shrink-0">
+      <div className="px-6 py-4 border-t border-line-subtle shrink-0">
         <button
           onClick={handleGuardar}
           disabled={!nombre || !email}
           className={cn(
             "w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2",
             guardado ? "bg-emerald-500 text-white"
-              : !nombre || !email ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+              : !nombre || !email ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
                 : "bg-slate-900 text-white hover:bg-slate-800"
           )}
         >
@@ -135,11 +135,11 @@ export default function UsuariosPage() {
       <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", creando ? "mr-96" : "")}>
 
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-200 bg-white shrink-0">
+        <div className="px-8 py-6 border-b border-line bg-surface shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Usuarios</h1>
-              <p className="text-sm text-slate-500 mt-0.5">Todos los usuarios registrados en la plataforma</p>
+              <h1 className="text-xl font-semibold text-ink">Usuarios</h1>
+              <p className="text-sm text-ink-muted mt-0.5">Todos los usuarios registrados en la plataforma</p>
             </div>
             <button
               onClick={() => setCreando(true)}
@@ -156,13 +156,13 @@ export default function UsuariosPage() {
           {/* KPI mini */}
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: "Total usuarios", value: USUARIOS.length, color: "text-slate-900" },
+              { label: "Total usuarios", value: USUARIOS.length, color: "text-ink" },
               { label: "Activos", value: USUARIOS.filter(u => u.activo).length, color: "text-emerald-600" },
               { label: "Mandante admin", value: USUARIOS.filter(u => u.rol === "mandante_admin").length, color: "text-amber-600" },
               { label: "Contratistas", value: USUARIOS.filter(u => u.rol === "contratista_admin").length, color: "text-purple-600" },
             ].map(k => (
-              <div key={k.label} className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{k.label}</p>
+              <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
+                <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
                 <p className={cn("text-3xl font-semibold mt-1", k.color)}>{k.value}</p>
               </div>
             ))}
@@ -171,21 +171,21 @@ export default function UsuariosPage() {
           {/* Filtros */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-xs">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
               <input
                 type="text" placeholder="Buscar por nombre o email..."
                 value={busqueda} onChange={e => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               />
             </div>
-            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
+            <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-1">
               {ROLES_FILTRO.map(r => (
                 <button
                   key={r}
                   onClick={() => setFiltroRol(r)}
                   className={cn(
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                    filtroRol === r ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"
+                    filtroRol === r ? "bg-slate-900 text-white" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   {r === "TODOS" ? "Todos" : ROL_CFG[r].label}
@@ -195,32 +195,32 @@ export default function UsuariosPage() {
           </div>
 
           {/* Tabla */}
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-line rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Usuario</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Rol</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Mandante</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Último acceso</th>
+                <tr className="border-b border-line-subtle bg-surface-app/60">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Usuario</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Rol</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Mandante</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Último acceso</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtrados.map(u => (
-                  <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr key={u.id} className="hover:bg-surface-app/70 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2.5">
                         <div className={cn(
                           "w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0",
-                          u.activo ? "bg-slate-100 text-slate-600" : "bg-slate-50 text-slate-300"
+                          u.activo ? "bg-surface-sunken text-ink-muted" : "bg-surface-app text-ink-subtle"
                         )}>
                           {initials(u.nombre)}
                         </div>
                         <div>
-                          <p className={cn("font-medium", u.activo ? "text-slate-900" : "text-slate-400")}>{u.nombre}</p>
-                          <p className="text-xs text-slate-400">{u.email}</p>
+                          <p className={cn("font-medium", u.activo ? "text-ink" : "text-ink-subtle")}>{u.nombre}</p>
+                          <p className="text-xs text-ink-subtle">{u.email}</p>
                         </div>
                       </div>
                     </td>
@@ -229,23 +229,23 @@ export default function UsuariosPage() {
                         {ROL_CFG[u.rol].label}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-slate-500">{u.mandante ?? "—"}</td>
+                    <td className="px-4 py-4 text-sm text-ink-muted">{u.mandante ?? "—"}</td>
                     <td className="px-4 py-4">
-                      <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium", u.activo ? "text-emerald-600" : "text-slate-400")}>
+                      <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium", u.activo ? "text-emerald-600" : "text-ink-subtle")}>
                         <span className={cn("w-1.5 h-1.5 rounded-full", u.activo ? "bg-emerald-500" : "bg-slate-300")} />
                         {u.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-xs text-slate-400">{u.ultimo_acceso}</td>
+                    <td className="px-4 py-4 text-xs text-ink-subtle">{u.ultimo_acceso}</td>
                     <td className="px-4 py-4">
-                      <button disabled title="La edición de usuarios aún no está implementada" className="text-xs text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors">Editar</button>
+                      <button disabled title="La edición de usuarios aún no está implementada" className="text-xs text-ink-subtle hover:text-ink-secondary px-2 py-1 rounded hover:bg-surface-sunken transition-colors">Editar</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-              <p className="text-xs text-slate-400">{filtrados.length} usuario{filtrados.length !== 1 ? "s" : ""}</p>
+            <div className="px-5 py-3 border-t border-line-subtle bg-surface-app/50">
+              <p className="text-xs text-ink-subtle">{filtrados.length} usuario{filtrados.length !== 1 ? "s" : ""}</p>
             </div>
           </div>
         </div>
@@ -253,7 +253,7 @@ export default function UsuariosPage() {
 
       {/* Panel nuevo usuario */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         creando ? "translate-x-0" : "translate-x-full"
       )}>
         {creando && <NuevoUsuarioPanel onClose={() => setCreando(false)} />}

@@ -2,7 +2,7 @@ import { SidebarContratista } from "@/features/contratista/sidebar"
 
 export default function ContratistaLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-surface-app">
       <SidebarContratista />
       {/* En teléfono el contenido esquiva la cabecera y la barra inferior fijas.
           Cada página maneja su propio padding horizontal. */}
