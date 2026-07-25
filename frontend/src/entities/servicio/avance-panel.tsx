@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { AlertCircle, CheckCircle2, FileText, History, Loader2 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
+import { Ratio } from "@/shared/ui/ratio"
 import { estadoDocDe, estiloDeEstado, LABEL_DOC } from "@/shared/ui/estado-badge"
 import { api } from "@/shared/lib/api"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
@@ -95,7 +96,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
           <div
             className={cn(
               "h-full rounded-full transition-all",
-              r.porcentaje_avance === 100 ? "bg-ok-soft0" : r.observados > 0 ? "bg-bloqueo-ink" : "bg-accion-line"
+              r.porcentaje_avance === 100 ? "bg-ok-ink" : r.observados > 0 ? "bg-bloqueo-ink" : "bg-accion-line"
             )}
             style={{ width: `${r.porcentaje_avance}%` }}
           />
@@ -128,9 +129,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
               <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[p.codigo] ?? "bg-surface-sunken text-ink-muted border-line")}>
                 {p.nombre}
               </span>
-              <span className={cn("text-[10px] font-medium", p.cumple ? "text-ok-ink" : "text-ink-subtle")}>
-                {p.aprobados}/{p.total}
-              </span>
+              <Ratio n={p.aprobados} total={p.total} />
               {p.cumple && <CheckCircle2 size={11} className="text-ok-ink" />}
             </div>
             <div className="space-y-1.5">

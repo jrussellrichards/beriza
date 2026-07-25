@@ -29,8 +29,8 @@ const PLAN_CFG: Record<string, string> = {
 }
 
 const TIPO_CFG = {
-  ok:   { dot: "bg-ok-soft0" },
-  warn: { dot: "bg-bloqueo-soft0" },
+  ok:   { dot: "bg-ok-ink" },
+  warn: { dot: "bg-bloqueo-ink" },
   info: { dot: "bg-brand" },
 }
 
@@ -109,7 +109,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="divide-y divide-slate-100">
               {mandantes.map(m => {
-                const color = m.pct_acreditacion >= 75 ? "bg-ok-soft0" : m.pct_acreditacion >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
+                const color = m.pct_acreditacion >= 75 ? "bg-ok-ink" : m.pct_acreditacion >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
                 return (
                   <div key={m.id} className="px-5 py-4 flex items-center gap-4 hover:bg-surface-app/60 transition-colors cursor-pointer">
                     <div className="w-8 h-8 rounded-lg bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">

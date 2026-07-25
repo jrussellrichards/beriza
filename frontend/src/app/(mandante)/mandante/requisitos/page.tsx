@@ -47,10 +47,10 @@ interface ConfigPerfil {
 }
 
 const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text: string; badge: string }> = {
-  blue:   { border: "border-brand-line",   bg: "bg-brand-soft",   dot: "bg-brand-soft0",   text: "text-brand-hover",   badge: "bg-brand-soft text-brand-hover border-brand-line" },
-  amber:  { border: "border-accion-line",  bg: "bg-accion-soft",  dot: "bg-accion-soft0",  text: "text-accion-ink",  badge: "bg-accion-soft text-accion-ink border-accion-line" },
-  purple: { border: "border-excepcion-line", bg: "bg-excepcion-soft", dot: "bg-excepcion-soft0", text: "text-excepcion-ink", badge: "bg-excepcion-soft text-excepcion-ink border-excepcion-line" },
-  slate:  { border: "border-line",  bg: "bg-surface-app",  dot: "bg-surface-app0",  text: "text-ink-secondary",  badge: "bg-surface-sunken text-ink-muted border-line" },
+  blue:   { border: "border-brand-line",   bg: "bg-brand-soft",   dot: "bg-brand",   text: "text-brand-hover",   badge: "bg-brand-soft text-brand-hover border-brand-line" },
+  amber:  { border: "border-accion-line",  bg: "bg-accion-soft",  dot: "bg-accion-ink",  text: "text-accion-ink",  badge: "bg-accion-soft text-accion-ink border-accion-line" },
+  purple: { border: "border-excepcion-line", bg: "bg-excepcion-soft", dot: "bg-excepcion-ink", text: "text-excepcion-ink", badge: "bg-excepcion-soft text-excepcion-ink border-excepcion-line" },
+  slate:  { border: "border-line",  bg: "bg-surface-app",  dot: "bg-ink-muted",  text: "text-ink-secondary",  badge: "bg-surface-sunken text-ink-muted border-line" },
 }
 
 // ── Crear perfil ──────────────────────────────────────────────────────────────
@@ -428,7 +428,7 @@ export default function PerfilesPage() {
               className={cn(
                 "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
                 guardado
-                  ? "bg-ok-soft0 text-white"
+                  ? "bg-ok-ink text-white"
                   : dirties.size === 0
                     ? "bg-surface-sunken text-ink-subtle cursor-not-allowed"
                     : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"

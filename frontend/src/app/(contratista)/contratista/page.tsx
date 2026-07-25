@@ -17,7 +17,7 @@ function ServicioRow({ s, motivo }: { s: ServicioContratista; motivo: string | n
     <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-surface-app rounded-lg px-4 py-2.5">
       <span className={cn(
         "w-1.5 h-1.5 rounded-full shrink-0 hidden sm:block",
-        motivo ? "bg-bloqueo-soft0" : "bg-ok-soft0"
+        motivo ? "bg-bloqueo-ink" : "bg-ok-ink"
       )} />
       <div className="flex-1 min-w-0">
         <span className="text-sm text-ink">{s.nombre}</span>

@@ -11,7 +11,8 @@ import { HistorialDialog } from "@/entities/documento/historial-dialog"
 import { BadgesMandante } from "@/entities/documento/badges-mandante"
 import { ResolverSolicitudDialog } from "@/features/subir-documento/resolver-solicitud-dialog"
 import { PILAR_COLOR, PILAR_DEFAULT } from "@/entities/documento/exigencia"
-import type { DocumentoContratista, EstadoPorMandante } from "@/entities/contratista/resumen"
+import { documentoAlDia, type DocumentoContratista, type EstadoPorMandante } from "@/entities/contratista/resumen"
+import { Ratio } from "@/shared/ui/ratio"
 import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
 
@@ -98,7 +99,10 @@ function Grupo({ titulo, color, docs, children }: {
       >
         <span className={cn("w-2 h-2 rounded-full shrink-0", c.dot)} />
         <p className={cn("text-xs font-semibold flex-1 uppercase tracking-wider", c.text)}>{titulo}</p>
-        <span className="text-[10px] text-ink-muted">{docs.length}</span>
+        {/* Antes acá iba `docs.length`, que responde "¿cuántos tengo?". La
+            pregunta real del contratista es "¿estoy en regla?", y solo la razón
+            la contesta. */}
+        <Ratio n={docs.filter(d => documentoAlDia(d)).length} total={docs.length} etiqueta="al día" />
         {open ? <ChevronDown size={13} className="text-ink-subtle" /> : <ChevronRight size={13} className="text-ink-subtle" />}
       </button>
       {open && <div className="space-y-2 mt-2">{docs.map(children)}</div>}

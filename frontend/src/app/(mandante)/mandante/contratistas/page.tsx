@@ -613,7 +613,7 @@ export default function ContratistasPage() {
                               ? <span className="text-xs text-ink-subtle">—</span>
                               : (
                                 <span className={cn("inline-flex items-center gap-1 text-xs font-medium", p.cumple ? "text-ok-ink" : "text-bloqueo-ink")}>
-                                  <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.cumple ? "bg-ok-soft0" : "bg-bloqueo-soft0")} />
+                                  <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.cumple ? "bg-ok-ink" : "bg-bloqueo-ink")} />
                                   {p.cumple ? "OK" : "Brechas"}
                                 </span>
                               )}
