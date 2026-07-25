@@ -2,9 +2,10 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Building2, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import { Building2, Eye, EyeOff } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
+import { MarcaAcredita } from "@/shared/ui/logo"
 
 interface TokenResponse {
   access_token: string
@@ -229,11 +230,8 @@ export default function ActivarPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-app px-4">
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-3 justify-center mb-8">
-          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-            <ShieldCheck size={16} className="text-white" strokeWidth={2.5} />
-          </div>
-          <span className="font-semibold text-lg text-ink">Acredita</span>
+        <div className="flex justify-center mb-8">
+          <MarcaAcredita />
         </div>
 
         <div className="bg-surface rounded-xl border border-line p-8">

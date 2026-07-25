@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ShieldCheck, Eye, EyeOff, ArrowRight } from "lucide-react"
+import { Eye, EyeOff, ArrowRight } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
+import { MarcaAcredita } from "@/shared/ui/logo"
 
 interface TokenResponse {
   access_token: string
@@ -45,13 +46,7 @@ export default function LoginPage() {
 
       {/* Panel izquierdo — marca */}
       <div className="hidden lg:flex flex-col justify-between bg-surface-inverse p-12">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-mark rounded-lg flex items-center justify-center">
-            <ShieldCheck size={16} className="text-ink-inverse" strokeWidth={2.5} />
-          </div>
-          <span className="text-ink-inverse font-semibold text-lg">Acredita</span>
-        </div>
+        <MarcaAcredita contexto="oscuro" />
 
         {/*
           Nadie llega acá sin haber sido invitado: no es una superficie de venta,
@@ -98,12 +93,9 @@ export default function LoginPage() {
       <div className="flex items-center justify-center p-8 bg-surface-app">
         <div className="w-full max-w-sm space-y-8">
 
-          {/* Logo mobile */}
-          <div className="flex items-center gap-2.5 lg:hidden">
-            <div className="w-7 h-7 bg-brand-mark rounded-lg flex items-center justify-center">
-              <ShieldCheck size={14} className="text-ink-inverse" strokeWidth={2.5} />
-            </div>
-            <span className="font-semibold text-ink">Acredita</span>
+          {/* En escritorio la marca vive en el panel oscuro de la izquierda */}
+          <div className="lg:hidden">
+            <MarcaAcredita />
           </div>
 
           {/* Header */}

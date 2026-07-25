@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { cn } from "@/shared/lib/utils"
+import { LogoAcredita, MarcaAcredita } from "@/shared/ui/logo"
 import { api } from "@/shared/lib/api"
 import {
   LayoutDashboard,
@@ -14,7 +15,6 @@ import {
   Settings,
   Users,
   LogOut,
-  ShieldCheck,
 } from "lucide-react"
 
 /**
@@ -60,15 +60,7 @@ export function SidebarMandante() {
       {/* Escritorio */}
       <aside className="hidden md:flex w-56 min-h-screen bg-surface-inverse flex-col shrink-0">
         <div className="px-4 py-5 border-b border-line-inverse">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-brand-mark rounded-lg flex items-center justify-center shrink-0">
-              <ShieldCheck size={14} className="text-white" strokeWidth={2.5} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white leading-none">Acredita</p>
-              <p className="text-[10px] text-ink-muted mt-0.5">Portal Mandante</p>
-            </div>
-          </div>
+          <MarcaAcredita contexto="oscuro" subtitulo="Portal Mandante" />
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">
@@ -111,10 +103,8 @@ export function SidebarMandante() {
       {/* Teléfono: cabecera + barra inferior con las cuatro secciones de uso diario */}
       <header className="md:hidden fixed top-0 inset-x-0 z-30 bg-surface-inverse px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-brand-mark rounded-md flex items-center justify-center">
-            <ShieldCheck size={12} className="text-white" strokeWidth={2.5} />
-          </div>
-          <p className="text-sm font-semibold text-white">Acredita</p>
+          <LogoAcredita size={20} className="text-brand-on-dark" />
+          <p className="text-section text-ink-inverse">Acredita</p>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/mandante/requisitos" className="text-ink-inverse-muted p-1" aria-label="Perfiles">

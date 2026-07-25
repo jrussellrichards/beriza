@@ -4,8 +4,9 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { cn } from "@/shared/lib/utils"
+import { LogoAcredita, MarcaAcredita } from "@/shared/ui/logo"
 import { api } from "@/shared/lib/api"
-import { Briefcase, FileText, Users, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react"
+import { Briefcase, FileText, Users, LayoutDashboard, LogOut } from "lucide-react"
 
 const nav = [
   { href: "/contratista", label: "Inicio", icon: LayoutDashboard },
@@ -43,15 +44,7 @@ export function SidebarContratista() {
       {/* Escritorio */}
       <aside className="hidden md:flex w-56 min-h-screen bg-surface-inverse flex-col shrink-0">
         <div className="px-4 py-5 border-b border-line-inverse">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-brand-mark rounded-lg flex items-center justify-center shrink-0">
-              <ShieldCheck size={14} className="text-white" strokeWidth={2.5} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white leading-none">Acredita</p>
-              <p className="text-[10px] text-ink-muted mt-0.5">Portal Contratista</p>
-            </div>
-          </div>
+          <MarcaAcredita contexto="oscuro" subtitulo="Portal Contratista" />
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">
@@ -94,10 +87,8 @@ export function SidebarContratista() {
       {/* Teléfono: cabecera + barra inferior */}
       <header className="md:hidden fixed top-0 inset-x-0 z-30 bg-surface-inverse px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-brand-mark rounded-md flex items-center justify-center">
-            <ShieldCheck size={12} className="text-white" strokeWidth={2.5} />
-          </div>
-          <p className="text-sm font-semibold text-white">Acredita</p>
+          <LogoAcredita size={20} className="text-brand-on-dark" />
+          <p className="text-section text-ink-inverse">Acredita</p>
         </div>
         <button
           onClick={() => { localStorage.clear(); window.location.href = "/login" }}

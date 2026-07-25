@@ -3,9 +3,10 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/shared/lib/utils"
+import { LogoAcredita, MarcaAcredita } from "@/shared/ui/logo"
 import {
   LayoutDashboard, Building2, BookOpen,
-  Users, LogOut, ShieldCheck
+  Users, LogOut
 } from "lucide-react"
 
 const nav = [
@@ -21,15 +22,7 @@ export function SidebarAdmin() {
   return (
     <aside className="w-56 min-h-screen bg-surface-inverse flex flex-col shrink-0">
       <div className="px-4 py-5 border-b border-line-inverse">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-brand-mark rounded-lg flex items-center justify-center shrink-0">
-            <ShieldCheck size={14} className="text-white" strokeWidth={2.5} />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white leading-none">Acredita</p>
-            <p className="text-[10px] text-ink-muted mt-0.5">Panel BERISA</p>
-          </div>
-        </div>
+        <MarcaAcredita contexto="oscuro" subtitulo="Panel BERISA" />
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5">
