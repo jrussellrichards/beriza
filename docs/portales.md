@@ -103,3 +103,39 @@ rubro: una obra se construye y termina, una faena es un sitio de trabajo
 continuo, un servicio es una prestación que puede no tener sitio fijo. Se
 descartó un rótulo por mandante porque un mismo cliente tiene faenas mineras *y*
 contrata servicios de transporte.
+
+## Roles y permisos
+
+Estado actual — hay dos niveles, gruesos pero reales:
+
+| Rol | Puede |
+|---|---|
+| `berisa_admin` | todo, transversal a mandantes. Invita mandantes (`POST /mandantes/invitar`) |
+| `mandante_admin` | configura perfiles, invita contratistas, **aprueba** documentos y otorga excepciones |
+| `prevencionista` | **ve** la cola de revisión, no aprueba |
+| `contratista_admin` | gestiona su empresa, trabajadores y documentos |
+
+### Decisión pendiente: granularidad de los permisos de aprobación
+
+Falta que un mandante invite usuarios a su organización con atribuciones sobre
+**qué** puede aprobar cada uno. La granularidad propuesta es **por pilar**, no
+por documento:
+
+- Un prevencionista revisa HSE (examen médico, MIPER, RIOHS); no tiene por qué
+  aprobar una carpeta tributaria. Finanzas revisa Compliance; RRHH, Legal.
+  Los pilares ya modelan cómo se organiza un mandante por departamento.
+- **Por documento sería ingobernable:** 15 requisitos × 30 contratistas son
+  cientos de casillas que nadie mantiene. Por pilar son 3-4 decisiones por
+  persona.
+
+Forma: tabla `UsuarioPilarPermiso(usuario_id, pilar_id)` y chequeo en
+`revisar_documento` / `aprobar_por_excepcion`.
+
+**Ver queda abierto dentro del mandante.** Ocultar documentos entre colegas de la
+misma organización genera confusión y no protege a nadie — el mandante como
+entidad ya tiene derecho a verlos. Lo que se restringe es *aprobar*, que es donde
+hay responsabilidad.
+
+**Segundo eje descartado por ahora:** permisos por faena ("prevencionista de Obra
+Norte"). Es real en minería grande pero duplica la complejidad; esperar a que un
+cliente lo pida.
