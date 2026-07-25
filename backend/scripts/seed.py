@@ -763,10 +763,6 @@ def main():
     print("--- Listo ---\n")
 
 
-if __name__ == "__main__":
-    main()
-
-
 # ── Showcase para demo comercial ──────────────────────────────────────────────
 
 # Nombres reales del rubro por mandante. Se reparten entre sus contratistas para
@@ -881,3 +877,7 @@ def _showcase_estados_documentos(session: Session):
             a.entrega.fecha_vigencia_hasta = HOY + timedelta(days=5)
     session.commit()
     print("  OK Estados de demo repartidos: 4 por revisar, 2 observados, 3 por vencer.")
+
+
+if __name__ == "__main__":
+    main()
