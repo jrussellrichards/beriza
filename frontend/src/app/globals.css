@@ -1,26 +1,183 @@
 @import "tailwindcss";
 
+/*
+  Sistema de diseño de Acredita — única fuente de verdad.
+
+  Regla que gobierna la asignación de color: el matiz responde
+  "¿quién debe actuar, y con qué urgencia?", no "¿esto es bueno o malo?".
+
+    neutro   → esperando, nadie tiene que hacer nada
+    azul     → interacción, y "el sistema está trabajando"
+    ámbar    → falta algo tuyo, todavía NO bloquea
+    rojo     → incumplimiento vigente, bloquea hoy
+    verde    → cumple
+    violeta  → decisión discrecional del mandante
+
+  Así el contratista lee de un golpe: ámbar y rojo son su pila de trabajo,
+  violeta es "no depende de mí", neutro es "ya lo hice".
+
+  Los valores van en hex literal y no referenciando la paleta de Tailwind: v4
+  define sus colores en OKLCH y puede ajustarlos en un minor, lo que haría que
+  dos superficies que deben ser idénticas dejen de serlo.
+*/
+
+/* El escalón de `micro` es responsive y @theme no acepta media queries, así que
+   el valor vive en una variable. 12px en teléfono es el piso legible real. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --acr-micro-size: 0.75rem;
+  --acr-micro-lh: 1rem;
 }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@media (min-width: 48rem) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --acr-micro-size: 0.6875rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --text-micro: var(--acr-micro-size);
+  --text-micro--line-height: var(--acr-micro-lh);
+  --text-micro--font-weight: 500;
+  --text-micro--letter-spacing: 0.01em;
+}
+
+@theme {
+  /* ── Superficies ───────────────────────────────────────────────────────── */
+  --color-surface: #ffffff;
+  --color-surface-app: #f8fafc;
+  --color-surface-sunken: #f1f5f9;
+  --color-surface-inverse: #0f172a;
+  --color-surface-inverse-hover: #1e293b;
+
+  /* ── Texto. El comentario declara el contraste sobre blanco ───────────── */
+  --color-ink: #0f172a; /* 17.85:1 */
+  --color-ink-secondary: #334155; /* 10.35:1 */
+  --color-ink-muted: #475569; /*  7.58:1 */
+  --color-ink-subtle: #64748b; /*  4.76:1 — PISO. Nada más claro lleva texto. */
+  --color-ink-inverse: #f8fafc;
+  --color-ink-inverse-muted: #94a3b8; /* solo sobre surface-inverse (6.96:1) */
+
+  /* ── Bordes. No portan significado: el estado lo lleva el punto ────────── */
+  --color-line: #e2e8f0;
+  --color-line-subtle: #f1f5f9;
+  --color-line-strong: #cbd5e1;
+  --color-line-inverse: #1e293b;
+
+  /* ── Marca e interacción ───────────────────────────────────────────────── */
+  /* Azul acero desaturado: se lee como infraestructura, no como plantilla.
+     Es el único matiz libre en un vocabulario rojo/ámbar/verde. */
+  --color-brand: #245b93; /* blanco encima: 7.02:1 */
+  --color-brand-hover: #1b4877; /* links sobre blanco: 9.38:1 */
+  --color-brand-soft: #eff5fb;
+  --color-brand-line: #bbd3ec;
+  --color-brand-on-dark: #93c0ee; /* sobre sidebar: 9.36:1 */
+
+  /* Cobre. Mineral y chileno. PROHIBIDO dentro de la app: es adyacente al ámbar
+     y competiría con "advertencia". Vive solo donde no hay estados — logo,
+     login y certificado PDF. */
+  --color-brand-mark: #a6552c; /* 5.31:1 sobre blanco */
+
+  /* ── Estados: soft = fondo, line = borde, ink = punto Y texto ──────────── */
+  /* Se usan tonos -700 a propósito: aguantan AA sobre blanco y sobre su propio
+     fondo suave, y son más legibles bajo sol directo que los -500. */
+  --color-espera-soft: #f1f5f9;
+  --color-espera-line: #e2e8f0;
+  --color-espera-ink: #475569;
+
+  --color-proceso-soft: #eff5fb;
+  --color-proceso-line: #bbd3ec;
+  --color-proceso-ink: #1b4877;
+
+  --color-accion-soft: #fffbeb;
+  --color-accion-line: #fde68a;
+  --color-accion-ink: #b45309;
+
+  --color-bloqueo-soft: #fef2f2;
+  --color-bloqueo-line: #fecaca;
+  --color-bloqueo-ink: #b91c1c;
+
+  --color-ok-soft: #ecfdf5;
+  --color-ok-line: #a7f3d0;
+  --color-ok-ink: #047857;
+
+  --color-excepcion-soft: #f5f3ff;
+  --color-excepcion-line: #ddd6fe;
+  --color-excepcion-ink: #6d28d9;
+
+  --color-vacio-line: #cbd5e1;
+  --color-vacio-ink: #64748b;
+
+  /* ── Escala tipográfica. Cada token trae line-height, peso y tracking ──── */
+  --text-meta: 0.75rem; /* 12/18 — metadatos, headers de columna */
+  --text-meta--line-height: 1.125rem;
+  --text-meta--font-weight: 400;
+
+  --text-body: 0.875rem; /* 14/20 — default de la app */
+  --text-body--line-height: 1.25rem;
+  --text-body--font-weight: 400;
+
+  --text-section: 0.875rem; /* 14/20 semibold — la sección se marca con PESO */
+  --text-section--line-height: 1.25rem;
+  --text-section--font-weight: 600;
+  --text-section--letter-spacing: -0.005em;
+
+  --text-input: 1rem; /* 16/24 — bajo 16px iOS hace zoom al enfocar */
+  --text-input--line-height: 1.5rem;
+  --text-input--font-weight: 400;
+
+  --text-title: 1.25rem; /* 20/28 */
+  --text-title--line-height: 1.75rem;
+  --text-title--font-weight: 600;
+  --text-title--letter-spacing: -0.015em;
+
+  --text-metric: 1.5rem; /* 24/28 — KPI, siempre con tabular-nums */
+  --text-metric--line-height: 1.75rem;
+  --text-metric--font-weight: 600;
+  --text-metric--letter-spacing: -0.02em;
+
+  /* ── Movimiento. Corto y solo en cambio de estado ──────────────────────── */
+  --ease-salida: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  body {
+    background: var(--color-surface-app);
+    color: var(--color-ink-secondary);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.25rem;
+    font-optical-sizing: auto;
+  }
+
+  /* 16px en campos para que iOS no haga zoom al enfocar; desde md el usuario
+     está en escritorio y manda la densidad. */
+  input,
+  select,
+  textarea {
+    font-size: var(--text-input);
+  }
+  @media (min-width: 48rem) {
+    input,
+    select,
+    textarea {
+      font-size: var(--text-body);
+    }
+  }
+
+  /* Cero con barra en contextos de máquina: desambigua 0 de O en códigos. */
+  code,
+  kbd,
+  samp,
+  .font-mono {
+    font-variant-numeric: slashed-zero;
+  }
+
+  /* Foco visible siempre: es requisito de accesibilidad, y el mandante que
+     revisa 40 documentos seguidos navega con teclado. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
 }
