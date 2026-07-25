@@ -32,7 +32,10 @@ class InvitacionInfoResponse(BaseModel):
     razon_social: str
     rut: str
     giro: str | None = None
+    # Quién invita. Vacío cuando BERISA invita a un mandante: no hay un tercero
+    # por encima, y el frontend usa esto para cambiar el copy.
     mandante_razon_social: str
+    rol: str = "contratista_admin"
 
 
 class CrearUsuarioRequest(BaseModel):
@@ -75,6 +78,16 @@ class MandanteResponse(BaseModel):
     activo: bool
 
     model_config = {"from_attributes": True}
+
+
+class InvitarMandanteRequest(BaseModel):
+    """BERISA invita a un mandante nuevo. El slug se deriva de la razón social
+    si no se indica; el mandante completa el resto al activar su cuenta."""
+    email: EmailStr
+    razon_social: str
+    rut: str
+    slug: str | None = None
+    plan: str = "Pro"
 
 
 class InvitarContratistaRequest(BaseModel):

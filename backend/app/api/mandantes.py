@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.schemas import (
+    InvitarMandanteRequest,
     ActualizarMandanteRequest,
     ConfigurarRequisitoPerfilRequest,
     CrearMandanteRequest,
@@ -96,6 +97,86 @@ def obtener_mandante(
     if not mandante:
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
     return mandante
+
+
+@router.post("/invitar", status_code=status.HTTP_201_CREATED)
+def invitar_mandante(
+    body: InvitarMandanteRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin"])),
+):
+    """
+    BERISA crea un mandante y su usuario mandante_admin inactivo, y le envía el
+    email de activación. Mismo flujo con el que un mandante invita a un
+    contratista: el invitado define su password y completa sus datos al activar.
+
+    Solo berisa_admin: el catálogo de mandantes es del operador de la plataforma.
+    """
+    if db.query(Usuario).filter_by(email=body.email).first():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ya existe un usuario con el email {body.email}. "
+                   "Si el mandante ya fue invitado, pídale que active su cuenta desde el email recibido.",
+        )
+    if db.query(Mandante).filter_by(rut=body.rut).first():
+        raise HTTPException(status_code=400, detail=f"Ya existe un mandante con el RUT {body.rut}.")
+
+    slug = (body.slug or _slug_de(body.razon_social)).strip().lower()
+    if db.query(Mandante).filter_by(slug=slug).first():
+        raise HTTPException(
+            status_code=400,
+            detail=f"El identificador '{slug}' ya está en uso. Indica un slug distinto.",
+        )
+
+    mandante = Mandante(
+        razon_social=body.razon_social, rut=body.rut, slug=slug,
+        plan=body.plan, email_contacto=body.email, activo=True,
+    )
+    db.add(mandante)
+    db.flush()
+
+    nuevo_usuario = Usuario(
+        email=body.email, nombre=body.razon_social, password_hash="",
+        rol="mandante_admin", activo=False, mandante_id=mandante.id,
+    )
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+
+    link_activacion = f"{settings.FRONTEND_URL}/activar?token={nuevo_usuario.id}"
+    try:
+        get_email_cliente().enviar(Email(
+            destinatario=body.email,
+            asunto="Invitación a Acredita",
+            cuerpo_html=f"""
+            <h2>Bienvenido a Acredita</h2>
+            <p>BERISA creó la cuenta de <strong>{body.razon_social}</strong> en Acredita,
+            la plataforma con la que vas a acreditar a tus empresas contratistas.</p>
+            <p>Para activarla y definir tu contraseña:</p>
+            <a href="{link_activacion}">Activar cuenta</a>
+            <p>Este enlace es personal e intransferible.</p>
+            """,
+        ))
+    except Exception:
+        logger.exception("No se pudo enviar el email de invitación a %s", body.email)
+        # El link se devuelve solo al admin que hizo la invitacion, en su propia
+        # respuesta autenticada. Nunca se loguea. Es un respaldo mientras el
+        # dominio de envio no este verificado en Resend.
+        return {
+            "mensaje": f"Mandante creado, pero el email de invitación a {body.email} no pudo enviarse.",
+            "link_activacion": link_activacion,
+            "mandante_id": str(mandante.id),
+        }
+
+    return {"mensaje": f"Invitación enviada a {body.email}", "mandante_id": str(mandante.id)}
+
+
+def _slug_de(razon_social: str) -> str:
+    """Identificador url-safe derivado de la razón social."""
+    import re
+    import unicodedata
+    sin_tildes = unicodedata.normalize("NFKD", razon_social).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", sin_tildes.lower()).strip("-")[:50]
 
 
 @router.post("/{mandante_id}/invitar-contratista", status_code=status.HTTP_201_CREATED)

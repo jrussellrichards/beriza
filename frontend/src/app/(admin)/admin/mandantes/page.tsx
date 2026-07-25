@@ -7,6 +7,7 @@ import {
   Mail, Calendar, ToggleLeft, ToggleRight
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
+import { api } from "@/shared/lib/api"
 import { useApiData } from "@/shared/lib/use-api-data"
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -57,17 +58,47 @@ function initials(name: string) {
 
 // ── Formulario nuevo mandante ─────────────────────────────────────────────────
 
-function NuevoMandantePanel({ onClose }: { onClose: () => void }) {
+/**
+ * Invita a un mandante: crea la empresa y su usuario mandante_admin inactivo, y
+ * le envía el email de activación. Mismo flujo con el que un mandante invita a
+ * un contratista — el invitado define su contraseña al activar, BERISA nunca la
+ * conoce.
+ */
+function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCreado: () => void }) {
   const [nombre, setNombre] = useState("")
   const [rut, setRut] = useState("")
   const [email, setEmail] = useState("")
   const [plan, setPlan] = useState<Plan>("Pro")
   const [guardado, setGuardado] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [linkRespaldo, setLinkRespaldo] = useState<string | null>(null)
 
-  function handleGuardar() {
+  async function handleGuardar() {
     if (!nombre || !rut || !email) return
-    setGuardado(true)
-    setTimeout(() => { setGuardado(false); onClose() }, 1500)
+    setEnviando(true)
+    setError(null)
+    setLinkRespaldo(null)
+    try {
+      const r = await api.post<{ mensaje: string; link_activacion?: string }>(
+        "/api/v1/mandantes/invitar",
+        { razon_social: nombre, rut, email, plan },
+      )
+      onCreado()
+      if (r.link_activacion) {
+        // El email no salió (dominio sin verificar en Resend): se muestra el
+        // link para que BERISA lo entregue por otro medio, en vez de dejar al
+        // mandante sin forma de entrar.
+        setLinkRespaldo(r.link_activacion)
+        return
+      }
+      setGuardado(true)
+      setTimeout(() => { setGuardado(false); onClose() }, 1500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo invitar al mandante")
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -124,14 +155,31 @@ function NuevoMandantePanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-700">
-          Al crear el mandante, se envía un email con credenciales temporales y acceso al catálogo de pilares para configurar sus requisitos.
+          Se le envía un email para que active su cuenta y defina su propia contraseña.
+          Al entrar podrá configurar qué requisitos exige e invitar a sus contratistas.
         </div>
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+        )}
+
+        {linkRespaldo && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
+            <p className="text-xs text-amber-800">
+              El mandante se creó, pero el email no pudo enviarse. Entrégale este enlace
+              de activación por otro medio:
+            </p>
+            <code className="block text-[10px] bg-white border border-amber-200 rounded px-2 py-1.5 break-all text-slate-700">
+              {linkRespaldo}
+            </code>
+          </div>
+        )}
       </div>
 
       <div className="px-6 py-4 border-t border-slate-100 shrink-0">
         <button
           onClick={handleGuardar}
-          disabled={!nombre || !rut || !email}
+          disabled={!nombre || !rut || !email || enviando}
           className={cn(
             "w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2",
             guardado
@@ -264,7 +312,7 @@ export default function MandantesPage() {
   const [seleccionado, setSeleccionado] = useState<Mandante | null>(null)
   const [creando, setCreando] = useState(false)
 
-  const { data: apiMandantes } = useApiData<ApiMandante[]>("/api/v1/admin/mandantes", [])
+  const { data: apiMandantes, refetch } = useApiData<ApiMandante[]>("/api/v1/admin/mandantes", [])
   const MANDANTES = apiMandantes.map(mapMandante)
 
   const filtrados = MANDANTES.filter(m =>
@@ -414,7 +462,7 @@ export default function MandantesPage() {
         "fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-20 transition-transform duration-300",
         panelAbierto ? "translate-x-0" : "translate-x-full"
       )}>
-        {creando && <NuevoMandantePanel onClose={() => setCreando(false)} />}
+        {creando && <NuevoMandantePanel onClose={() => setCreando(false)} onCreado={refetch} />}
         {seleccionado && <DetalleMandante m={seleccionado} onClose={() => setSeleccionado(null)} />}
       </div>
     </div>

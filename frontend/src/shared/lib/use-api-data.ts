@@ -12,10 +12,13 @@ import { api } from "./api"
 export function useApiData<T>(
   endpoint: string | null,
   initial: T,
-): { data: T; loading: boolean; error: string | null } {
+): { data: T; loading: boolean; error: string | null; refetch: () => void } {
   const [data, setData] = useState<T>(initial)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Se incrementa para volver a pedir los datos tras una accion que los cambia
+  // (crear, invitar, aprobar) sin recargar la pagina completa.
+  const [recarga, setRecarga] = useState(0)
 
   useEffect(() => {
     if (!endpoint) {
@@ -46,7 +49,7 @@ export function useApiData<T>(
     }
     // endpoint changes intentionally reset the fetch
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endpoint])
+  }, [endpoint, recarga])
 
-  return { data, loading, error }
+  return { data, loading, error, refetch: () => setRecarga((n) => n + 1) }
 }

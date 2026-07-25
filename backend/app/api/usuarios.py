@@ -19,6 +19,7 @@ from app.core.security import hash_password, verify_password
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_usuario_actual, require_rol
 from app.models.contratista import ContratistaMandante, EmpresaContratista
+from app.models.mandante import Mandante
 from app.models.usuario import Usuario
 
 router = APIRouter()
@@ -84,24 +85,44 @@ def obtener_invitacion(token: str, db: Session = Depends(get_db)):
     if not usuario or usuario.activo:
         raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
 
-    empresa = db.query(EmpresaContratista).filter_by(id=usuario.contratista_id).first()
-    if not empresa:
-        raise HTTPException(status_code=404, detail="Invitación no encontrada")
+    # La invitación puede ser de un contratista (lo invita un mandante) o de un
+    # mandante (lo invita BERISA). El flujo es el mismo; cambia de qué tabla
+    # salen los datos a prellenar y quién aparece como invitante.
+    if usuario.contratista_id:
+        empresa = db.query(EmpresaContratista).filter_by(id=usuario.contratista_id).first()
+        if not empresa:
+            raise HTTPException(status_code=404, detail="Invitación no encontrada")
+        relacion = (
+            db.query(ContratistaMandante)
+            .filter_by(contratista_id=empresa.id)
+            .order_by(ContratistaMandante.created_at.desc())
+            .first()
+        )
+        return InvitacionInfoResponse(
+            email=usuario.email,
+            razon_social=empresa.razon_social,
+            rut=empresa.rut,
+            giro=empresa.giro,
+            mandante_razon_social=relacion.mandante.razon_social if relacion else "",
+            rol=usuario.rol,
+        )
 
-    relacion = (
-        db.query(ContratistaMandante)
-        .filter_by(contratista_id=empresa.id)
-        .order_by(ContratistaMandante.created_at.desc())
-        .first()
-    )
+    if usuario.mandante_id:
+        mandante = db.get(Mandante, usuario.mandante_id)
+        if not mandante:
+            raise HTTPException(status_code=404, detail="Invitación no encontrada")
+        return InvitacionInfoResponse(
+            email=usuario.email,
+            razon_social=mandante.razon_social,
+            rut=mandante.rut,
+            giro=None,
+            # Vacío a propósito: a un mandante lo invita BERISA, no hay un
+            # tercero por encima que mostrar.
+            mandante_razon_social="",
+            rol=usuario.rol,
+        )
 
-    return InvitacionInfoResponse(
-        email=usuario.email,
-        razon_social=empresa.razon_social,
-        rut=empresa.rut,
-        giro=empresa.giro,
-        mandante_razon_social=relacion.mandante.razon_social if relacion else "",
-    )
+    raise HTTPException(status_code=404, detail="Invitación no encontrada")
 
 
 @router.post("/activar", response_model=TokenResponse)
@@ -119,6 +140,22 @@ def activar_cuenta(body: ActivarCuentaRequest, db: Session = Depends(get_db)):
     usuario = db.get(Usuario, usuario_id)
     if not usuario or usuario.activo:
         raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
+
+    mandante = db.get(Mandante, usuario.mandante_id) if usuario.mandante_id else None
+    if mandante:
+        if body.rut != mandante.rut:
+            conflicto = db.query(Mandante).filter(
+                Mandante.rut == body.rut, Mandante.id != mandante.id
+            ).first()
+            if conflicto:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El RUT {body.rut} ya está registrado por otro mandante "
+                           f"({conflicto.razon_social}). Verifica el RUT ingresado.",
+                )
+        mandante.razon_social = body.razon_social
+        mandante.rut = body.rut
+        # Mandante no tiene giro; el campo del formulario se ignora.
 
     empresa = db.query(EmpresaContratista).filter_by(id=usuario.contratista_id).first()
     if empresa:
