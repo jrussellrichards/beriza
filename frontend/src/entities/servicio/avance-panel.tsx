@@ -10,9 +10,9 @@ import type { AvanceServicio, RequisitoAvance } from "./types"
 
 // Estados de documento del backend: 1=Enviado | 2=En Análisis | 3=Observado | 4=Aprobado
 const PILAR_COLOR: Record<string, string> = {
-  LEGAL: "bg-blue-50 text-blue-700 border-blue-200",
-  HSE: "bg-amber-50 text-amber-700 border-amber-200",
-  COMPLIANCE: "bg-purple-50 text-purple-700 border-purple-200",
+  LEGAL: "bg-brand-soft text-brand-hover border-brand-line",
+  HSE: "bg-accion-soft text-accion-ink border-accion-line",
+  COMPLIANCE: "bg-excepcion-soft text-excepcion-ink border-excepcion-line",
 }
 
 function EstadoDocBadge({ estado }: { estado: number | null }) {
@@ -38,7 +38,7 @@ function RequisitoRow({ r, onVerArchivos }: { r: RequisitoAvance; onVerArchivos:
           <p className="text-[10px] text-ink-subtle">Vence: {r.fecha_vigencia_hasta}</p>
         )}
         {r.estado === 3 && r.mensaje_brecha && (
-          <p className="text-[10px] text-red-600 mt-0.5 flex items-start gap-1">
+          <p className="text-[10px] text-bloqueo-ink mt-0.5 flex items-start gap-1">
             <AlertCircle size={10} className="mt-px shrink-0" />
             {r.mensaje_brecha}
           </p>
@@ -72,7 +72,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
   }, [servicioId])
 
   if (error) {
-    return <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>
+    return <p className="text-xs text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
   }
   if (!avance) {
     return (
@@ -95,7 +95,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
           <div
             className={cn(
               "h-full rounded-full transition-all",
-              r.porcentaje_avance === 100 ? "bg-emerald-500" : r.observados > 0 ? "bg-red-400" : "bg-amber-400"
+              r.porcentaje_avance === 100 ? "bg-ok-soft0" : r.observados > 0 ? "bg-bloqueo-ink" : "bg-accion-line"
             )}
             style={{ width: `${r.porcentaje_avance}%` }}
           />
@@ -108,9 +108,9 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
       {/* Resumen por estado */}
       <div className="grid grid-cols-4 gap-2">
         {[
-          { label: "Aprobados", value: r.aprobados, color: "text-emerald-600" },
-          { label: "Observados", value: r.observados, color: "text-red-600" },
-          { label: "En curso", value: r.en_analisis + r.enviados, color: "text-blue-600" },
+          { label: "Aprobados", value: r.aprobados, color: "text-ok-ink" },
+          { label: "Observados", value: r.observados, color: "text-bloqueo-ink" },
+          { label: "En curso", value: r.en_analisis + r.enviados, color: "text-brand-hover" },
           { label: "Faltan", value: r.faltantes, color: "text-ink-muted" },
         ].map((k) => (
           <div key={k.label} className="rounded-lg border border-line-subtle bg-surface-app px-2 py-2 text-center">
@@ -128,10 +128,10 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
               <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[p.codigo] ?? "bg-surface-sunken text-ink-muted border-line")}>
                 {p.nombre}
               </span>
-              <span className={cn("text-[10px] font-medium", p.cumple ? "text-emerald-600" : "text-ink-subtle")}>
+              <span className={cn("text-[10px] font-medium", p.cumple ? "text-ok-ink" : "text-ink-subtle")}>
                 {p.aprobados}/{p.total}
               </span>
-              {p.cumple && <CheckCircle2 size={11} className="text-emerald-500" />}
+              {p.cumple && <CheckCircle2 size={11} className="text-ok-ink" />}
             </div>
             <div className="space-y-1.5">
               {p.requisitos.map((req, i) => (
@@ -162,7 +162,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
                   <p className="text-xs font-medium text-ink">{t.nombre}</p>
                   <p className="text-[10px] text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
                 </div>
-                <span className={cn("text-xs font-medium", t.cumple ? "text-emerald-600" : "text-red-600")}>
+                <span className={cn("text-xs font-medium", t.cumple ? "text-ok-ink" : "text-bloqueo-ink")}>
                   {t.aprobados}/{t.total}
                 </span>
               </div>

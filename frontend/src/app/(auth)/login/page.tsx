@@ -118,7 +118,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                className="w-full px-3.5 py-2.5 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong transition-colors"
               />
             </div>
 
@@ -135,7 +135,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 pr-10 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors"
+                  className="w-full px-3.5 py-2.5 pr-10 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong transition-colors"
                 />
                 <button
                   type="button"
@@ -148,8 +148,8 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 px-3.5 py-2.5 rounded-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+              <div className="flex items-center gap-2 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3.5 py-2.5 rounded-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-bloqueo-soft0 shrink-0" />
                 {error}
               </div>
             )}
@@ -160,8 +160,8 @@ export default function LoginPage() {
               className={cn(
                 "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all",
                 loading || !email || !password
-                  ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
-                  : "bg-slate-900 text-ink-inverse hover:bg-slate-800 active:scale-[0.98]"
+                  ? "bg-line text-ink-subtle cursor-not-allowed"
+                  : "bg-surface-inverse text-ink-inverse hover:bg-surface-inverse-hover active:scale-[0.98]"
               )}
             >
               {loading ? (

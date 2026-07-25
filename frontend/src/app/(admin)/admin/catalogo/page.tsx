@@ -26,9 +26,9 @@ interface Pilar {
 }
 
 const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text: string }> = {
-  blue:    { border: "border-blue-200",    bg: "bg-blue-50",    dot: "bg-blue-500",    text: "text-blue-700" },
-  amber:   { border: "border-amber-200",   bg: "bg-amber-50",   dot: "bg-amber-500",   text: "text-amber-700" },
-  purple:  { border: "border-purple-200",  bg: "bg-purple-50",  dot: "bg-purple-500",  text: "text-purple-700" },
+  blue:    { border: "border-brand-line",    bg: "bg-brand-soft",    dot: "bg-brand-soft0",    text: "text-brand-hover" },
+  amber:   { border: "border-accion-line",   bg: "bg-accion-soft",   dot: "bg-accion-soft0",   text: "text-accion-ink" },
+  purple:  { border: "border-excepcion-line",  bg: "bg-excepcion-soft",  dot: "bg-excepcion-soft0",  text: "text-excepcion-ink" },
   slate:   { border: "border-line",   bg: "bg-surface-app",   dot: "bg-surface-app0",   text: "text-ink-secondary" },
 }
 
@@ -78,14 +78,14 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
                       "text-[10px] px-1.5 py-0.5 rounded border font-medium",
                       req.entidad_tipo === "EMPRESA"
                         ? "bg-surface-sunken text-ink-muted border-line"
-                        : "bg-indigo-50 text-indigo-600 border-indigo-200"
+                        : "bg-brand-soft text-brand-hover border-brand-line"
                     )}>
                       {req.entidad_tipo === "EMPRESA" ? "Empresa" : "Trabajador"}
                     </span>
                     <span className={cn(
                       "text-[10px] px-1.5 py-0.5 rounded border font-medium",
                       req.alcance === "SERVICIO"
-                        ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                        ? "bg-brand-soft text-brand-hover border-brand-line"
                         : "bg-surface-sunken text-ink-muted border-line"
                     )}>
                       {req.alcance === "SERVICIO" ? "Por servicio" : "Una vez"}
@@ -109,7 +109,7 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
                   <button
                     onClick={() => onDelete(req)}
                     title="Eliminar del catálogo"
-                    className="p-1.5 rounded-md hover:bg-red-50 text-ink-subtle hover:text-red-500 transition-colors"
+                    className="p-1.5 rounded-md hover:bg-bloqueo-soft text-ink-subtle hover:text-bloqueo-ink transition-colors"
                   >
                     <Trash2 size={12} />
                   </button>
@@ -177,7 +177,7 @@ export default function CatalogoPage() {
             </div>
           </div>
           {error && (
-            <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</p>
+            <p className="mt-3 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{error}</p>
           )}
         </div>
 

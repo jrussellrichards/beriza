@@ -84,7 +84,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
   }
 
   const selectClass =
-    "w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+    "w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -150,7 +150,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
                   className={cn(
                     "px-2 py-2 rounded-lg border text-xs transition-colors text-left",
                     tipo === o.v
-                      ? "border-slate-900 bg-slate-900 text-white"
+                      ? "border-ink bg-surface-inverse text-white"
                       : "border-line text-ink-muted hover:border-line-strong"
                   )}
                 >
@@ -197,7 +197,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
             </div>
           </div>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>
+            <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>

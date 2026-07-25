@@ -41,12 +41,12 @@ interface Historial {
 }
 
 const ESTADO_LABEL: Record<string, { label: string; cls: string }> = {
-  "1": { label: "En revisión", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-  "2": { label: "En análisis", cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  "3": { label: "Observado", cls: "bg-red-50 text-red-700 border-red-200" },
-  "4": { label: "Aprobado", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  "5": { label: "Vencido", cls: "bg-orange-50 text-orange-700 border-orange-200" },
-  "6": { label: "Requiere autorización", cls: "bg-violet-50 text-violet-700 border-violet-200" },
+  "1": { label: "En revisión", cls: "bg-accion-soft text-accion-ink border-accion-line" },
+  "2": { label: "En análisis", cls: "bg-brand-soft text-brand-hover border-brand-line" },
+  "3": { label: "Observado", cls: "bg-bloqueo-soft text-bloqueo-ink border-bloqueo-line" },
+  "4": { label: "Aprobado", cls: "bg-ok-soft text-ok-ink border-ok-line" },
+  "5": { label: "Vencido", cls: "bg-accion-soft text-accion-ink border-accion-line" },
+  "6": { label: "Requiere autorización", cls: "bg-excepcion-soft text-excepcion-ink border-excepcion-line" },
 }
 
 const EVENTO_LABEL: Record<string, string> = {
@@ -107,7 +107,7 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
           <DialogDescription>{titulo}</DialogDescription>
         </DialogHeader>
 
-        {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+        {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
         {!historial && !error && (
           <div className="flex justify-center py-8 text-ink-subtle"><Loader2 size={18} className="animate-spin" /></div>
         )}
@@ -142,7 +142,7 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
                       ? `Estado ${v.estado}`
                       : sinCompartir ? "Aún no compartida" : "Versión anterior",
                     cls: sinCompartir
-                      ? "bg-violet-50 text-violet-700 border-violet-200"
+                      ? "bg-excepcion-soft text-excepcion-ink border-excepcion-line"
                       : "bg-surface-app text-ink-muted border-line",
                   }
                   return (
@@ -151,7 +151,7 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
                         <p className="text-xs font-semibold text-ink">
                           Versión {v.numero_version}
                           {v.aprobado_por_excepcion && (
-                            <span className="ml-2 text-[10px] font-medium text-purple-600 border border-purple-200 bg-purple-50 rounded px-1.5 py-0.5">
+                            <span className="ml-2 text-[10px] font-medium text-excepcion-ink border border-excepcion-line bg-excepcion-soft rounded px-1.5 py-0.5">
                               Excepción
                             </span>
                           )}
@@ -165,7 +165,7 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
                         {v.fecha_vigencia_hasta ? ` · vigente hasta ${v.fecha_vigencia_hasta}` : ""}
                       </p>
                       {v.mensaje_brecha && (
-                        <p className="text-[11px] text-red-600 mt-1">{v.mensaje_brecha}</p>
+                        <p className="text-[11px] text-bloqueo-ink mt-1">{v.mensaje_brecha}</p>
                       )}
                       <div className="flex flex-wrap gap-1.5 mt-1.5">
                         {v.archivos.map((a) => (

@@ -47,9 +47,9 @@ interface ConfigPerfil {
 }
 
 const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text: string; badge: string }> = {
-  blue:   { border: "border-blue-200",   bg: "bg-blue-50",   dot: "bg-blue-500",   text: "text-blue-700",   badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  amber:  { border: "border-amber-200",  bg: "bg-amber-50",  dot: "bg-amber-500",  text: "text-amber-700",  badge: "bg-amber-50 text-amber-700 border-amber-200" },
-  purple: { border: "border-purple-200", bg: "bg-purple-50", dot: "bg-purple-500", text: "text-purple-700", badge: "bg-purple-50 text-purple-700 border-purple-200" },
+  blue:   { border: "border-brand-line",   bg: "bg-brand-soft",   dot: "bg-brand-soft0",   text: "text-brand-hover",   badge: "bg-brand-soft text-brand-hover border-brand-line" },
+  amber:  { border: "border-accion-line",  bg: "bg-accion-soft",  dot: "bg-accion-soft0",  text: "text-accion-ink",  badge: "bg-accion-soft text-accion-ink border-accion-line" },
+  purple: { border: "border-excepcion-line", bg: "bg-excepcion-soft", dot: "bg-excepcion-soft0", text: "text-excepcion-ink", badge: "bg-excepcion-soft text-excepcion-ink border-excepcion-line" },
   slate:  { border: "border-line",  bg: "bg-surface-app",  dot: "bg-surface-app0",  text: "text-ink-secondary",  badge: "bg-surface-sunken text-ink-muted border-line" },
 }
 
@@ -113,7 +113,7 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
             El perfil parte sin requisitos exigidos — actívalos después de crearlo.
             Cada servicio que crees podrá usar este perfil.
           </p>
-          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
@@ -137,7 +137,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       onClick={() => onChange(!checked)}
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-        checked ? "bg-slate-900" : "bg-slate-200"
+        checked ? "bg-surface-inverse" : "bg-line"
       )}
     >
       <span className={cn(
@@ -162,7 +162,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
     <div className={cn(
       "rounded-lg border p-4 transition-colors group",
       req.es_obligatorio ? "bg-surface border-line" : "bg-surface-app/60 border-line-subtle",
-      dirty && "border-amber-300"
+      dirty && "border-accion-line"
     )}>
       <div className="flex items-start gap-3">
         <div className="mt-0.5">
@@ -189,18 +189,18 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
             <span className={cn(
               "text-[10px] px-1.5 py-0.5 rounded border font-medium",
               req.alcance === "SERVICIO"
-                ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                ? "bg-brand-soft text-brand-hover border-brand-line"
                 : "bg-surface-sunken text-ink-muted border-line"
             )}>
               {req.alcance === "SERVICIO" ? "Por cada servicio" : "Se acredita una vez"}
             </span>
             {req.es_propio && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-violet-50 text-violet-600 border-violet-200 flex items-center gap-1">
+              <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-excepcion-soft text-excepcion-ink border-excepcion-line flex items-center gap-1">
                 <Star size={9} /> Propio
               </span>
             )}
             {dirty && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-amber-50 text-amber-700 border-amber-200">
+              <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-accion-soft text-accion-ink border-accion-line">
                 Sin guardar
               </span>
             )}
@@ -247,14 +247,14 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
               <button
                 onClick={() => onDelete(req)}
                 title="Eliminar requisito propio"
-                className="p-1 rounded-md hover:bg-red-50 text-ink-subtle hover:text-red-500 transition-colors"
+                className="p-1 rounded-md hover:bg-bloqueo-soft text-ink-subtle hover:text-bloqueo-ink transition-colors"
               >
                 <Trash2 size={11} />
               </button>
             </div>
           )}
           {req.es_obligatorio
-            ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+            ? <CheckCircle2 size={15} className="text-ok-ink shrink-0" />
             : <Circle size={15} className="text-ink-subtle shrink-0" />
           }
         </div>
@@ -428,10 +428,10 @@ export default function PerfilesPage() {
               className={cn(
                 "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
                 guardado
-                  ? "bg-emerald-500 text-white"
+                  ? "bg-ok-soft0 text-white"
                   : dirties.size === 0
                     ? "bg-surface-sunken text-ink-subtle cursor-not-allowed"
-                    : "bg-slate-900 text-white hover:bg-slate-800"
+                    : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
               )}
             >
               <Save size={14} />
@@ -450,8 +450,8 @@ export default function PerfilesPage() {
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
                 p.id === perfilId
-                  ? "bg-slate-900 text-white border-slate-900"
-                  : "bg-surface text-ink-muted border-line hover:border-slate-400"
+                  ? "bg-surface-inverse text-white border-ink"
+                  : "bg-surface text-ink-muted border-line hover:border-line-strong"
               )}
             >
               {p.nombre}
@@ -459,16 +459,16 @@ export default function PerfilesPage() {
           ))}
           <button
             onClick={() => setDialogPerfil(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-line-strong text-ink-muted hover:border-slate-500 hover:text-ink-secondary transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-line-strong text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors"
           >
             <Plus size={12} /> Nuevo perfil
           </button>
         </div>
 
         {perfilActivo && (
-          <div className="mt-3 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-            <Briefcase size={14} className="text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-blue-700">
+          <div className="mt-3 flex items-start gap-2 bg-brand-soft border border-brand-line rounded-lg px-4 py-3">
+            <Briefcase size={14} className="text-brand mt-0.5 shrink-0" />
+            <p className="text-xs text-brand-hover">
               Perfil <strong>{perfilActivo.nombre}</strong>: {totalExigidos} requisito{totalExigidos !== 1 ? "s" : ""} exigido{totalExigidos !== 1 ? "s" : ""}.
               {perfilActivo.descripcion ? ` ${perfilActivo.descripcion}.` : ""} Se aplica a los servicios que usen este perfil.
             </p>
@@ -476,7 +476,7 @@ export default function PerfilesPage() {
         )}
 
         {error && (
-          <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</p>
+          <p className="mt-3 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{error}</p>
         )}
       </div>
 

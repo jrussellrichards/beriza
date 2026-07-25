@@ -81,7 +81,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
 
   return (
     <div className="flex flex-col h-full">
@@ -132,7 +132,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
                 disabled={editando}
                 className={cn(
                   "py-2 rounded-lg border text-sm font-medium transition-colors",
-                  entidad === e ? "border-slate-900 bg-slate-900 text-white" : "border-line text-ink-muted hover:border-line-strong",
+                  entidad === e ? "border-ink bg-surface-inverse text-white" : "border-line text-ink-muted hover:border-line-strong",
                   editando && "opacity-60 cursor-not-allowed"
                 )}
               >
@@ -153,7 +153,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
                 onClick={() => setAlcance(o.v)}
                 className={cn(
                   "py-2 rounded-lg border text-xs font-medium transition-colors",
-                  alcance === o.v ? "border-slate-900 bg-slate-900 text-white" : "border-line text-ink-muted hover:border-line-strong"
+                  alcance === o.v ? "border-ink bg-surface-inverse text-white" : "border-line text-ink-muted hover:border-line-strong"
                 )}
               >
                 {o.label}
@@ -207,14 +207,14 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           </span>
         </label>
 
-        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-700 flex items-start gap-2">
+        <div className="rounded-lg bg-accion-soft border border-accion-line px-3 py-2.5 text-xs text-accion-ink flex items-start gap-2">
           <Lock size={11} className="mt-0.5 shrink-0" />
           {contexto === "propio"
             ? "Este requisito queda visible solo para tu organización — otros mandantes no lo verán."
             : "Este requisito queda en el catálogo global. Cada mandante decide en sus perfiles si lo exige y con qué parámetros."}
         </div>
 
-        {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+        {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
       </div>
 
       <div className="px-6 py-4 border-t border-line-subtle shrink-0">
@@ -224,8 +224,8 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           className={cn(
             "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
             loading || !nombre || (!editando && !codigo)
-              ? "bg-slate-200 text-ink-subtle cursor-not-allowed"
-              : "bg-slate-900 text-white hover:bg-slate-800"
+              ? "bg-line text-ink-subtle cursor-not-allowed"
+              : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
           )}
         >
           {loading ? "Guardando..." : editando ? "Guardar cambios" : contexto === "propio" ? "Crear requisito propio" : "Agregar al catálogo"}

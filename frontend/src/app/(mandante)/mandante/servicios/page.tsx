@@ -73,7 +73,7 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
               <button
                 onClick={() => cambiarEstado("SUSPENDIDO")}
                 disabled={cambiando}
-                className="flex items-center gap-1.5 text-xs font-medium text-amber-700 border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs font-medium text-accion-ink border border-accion-line bg-accion-soft hover:bg-accion-soft px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
               >
                 <Pause size={11} /> Suspender
               </button>
@@ -81,7 +81,7 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
               <button
                 onClick={() => cambiarEstado("ACTIVO")}
                 disabled={cambiando}
-                className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs font-medium text-ok-ink border border-ok-line bg-ok-soft hover:bg-ok-soft px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
               >
                 <Play size={11} /> Reactivar
               </button>
@@ -95,7 +95,7 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
             </button>
           </div>
         )}
-        {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+        {error && <p className="text-xs text-bloqueo-ink mt-2">{error}</p>}
       </div>
 
       {/* Avance */}
@@ -156,7 +156,7 @@ export default function ServiciosPage() {
             </div>
             <button
               onClick={() => setDialogAbierto(true)}
-              className="flex items-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
             >
               <Plus size={15} />
               Nuevo servicio
@@ -170,8 +170,8 @@ export default function ServiciosPage() {
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: "Total", value: servicios.length, color: "text-ink" },
-              { label: "Activos", value: kpi.activos, color: "text-emerald-600" },
-              { label: "Suspendidos", value: kpi.suspendidos, color: "text-amber-600" },
+              { label: "Activos", value: kpi.activos, color: "text-ok-ink" },
+              { label: "Suspendidos", value: kpi.suspendidos, color: "text-accion-ink" },
               { label: "Terminados", value: kpi.terminados, color: "text-ink-muted" },
             ].map((k) => (
               <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
@@ -190,7 +190,7 @@ export default function ServiciosPage() {
                 placeholder="Buscar servicio, empresa o N° contrato..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
               />
             </div>
             <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-1">
@@ -200,7 +200,7 @@ export default function ServiciosPage() {
                   onClick={() => setFiltro(e)}
                   className={cn(
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                    filtro === e ? "bg-slate-900 text-white" : "text-ink-muted hover:text-ink"
+                    filtro === e ? "bg-surface-inverse text-white" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   {e === "TODOS" ? "Todos" : LABEL_SERVICIO[e] + "s"}

@@ -10,8 +10,8 @@ import { UsuarioPermisosDialog, type UsuarioEquipo } from "@/features/mandante/u
 const ROL_DEFAULT = { label: "Usuario", color: "bg-surface-app text-ink-muted border-line" }
 
 const ROL_CFG: Record<string, { label: string; color: string }> = {
-  mandante_admin: { label: "Aprueba todo", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  prevencionista: { label: "Revisor", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  mandante_admin: { label: "Aprueba todo", color: "bg-accion-soft text-accion-ink border-accion-line" },
+  prevencionista: { label: "Revisor", color: "bg-brand-soft text-brand-hover border-brand-line" },
 }
 
 function iniciales(nombre: string) {
@@ -57,7 +57,7 @@ export default function EquipoPage() {
         </div>
         <button
           onClick={() => setDialogo({ usuario: null })}
-          className="inline-flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center justify-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
         >
           <UserPlus size={14} />
           Invitar usuario
@@ -66,7 +66,7 @@ export default function EquipoPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg mb-4">{error}</p>
+          <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg mb-4">{error}</p>
         )}
 
         {loading ? (
@@ -95,7 +95,7 @@ export default function EquipoPage() {
                   <p className="text-xs text-ink-subtle font-mono">{u.email}</p>
                   <p className={cn(
                     "text-[11px] mt-0.5",
-                    u.pilares !== null && u.pilares.length === 0 ? "text-amber-700" : "text-ink-muted"
+                    u.pilares !== null && u.pilares.length === 0 ? "text-accion-ink" : "text-ink-muted"
                   )}>
                     {u.pilares === null
                       ? "Aprueba todos los pilares"

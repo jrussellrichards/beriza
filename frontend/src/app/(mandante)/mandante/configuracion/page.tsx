@@ -34,8 +34,8 @@ const SECCIONES: ConfigSeccion[] = [
 const ROL_DEFAULT = { label: "Usuario", color: "bg-surface-app text-ink-muted border-line" }
 
 const ROL_CFG: Record<string, { label: string; color: string }> = {
-  mandante_admin: { label: "Admin", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  prevencionista: { label: "Prevencionista", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  mandante_admin: { label: "Admin", color: "bg-accion-soft text-accion-ink border-accion-line" },
+  prevencionista: { label: "Prevencionista", color: "bg-brand-soft text-brand-hover border-brand-line" },
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -44,7 +44,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       onClick={() => onChange(!checked)}
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-        checked ? "bg-slate-900" : "bg-slate-200"
+        checked ? "bg-surface-inverse" : "bg-line"
       )}
     >
       <span className={cn(
@@ -136,7 +136,7 @@ export default function ConfiguracionPage() {
             disabled={guardando}
             className={cn(
               "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
-              saved ? "bg-emerald-500 text-white" : "bg-slate-900 text-white hover:bg-slate-800",
+              saved ? "bg-ok-soft0 text-white" : "bg-surface-inverse text-white hover:bg-surface-inverse-hover",
               guardando && "opacity-60 cursor-not-allowed"
             )}
           >
@@ -145,7 +145,7 @@ export default function ConfiguracionPage() {
           </button>
         </div>
         {errorGuardado && (
-          <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{errorGuardado}</p>
+          <p className="mt-3 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{errorGuardado}</p>
         )}
       </div>
 
@@ -193,7 +193,7 @@ export default function ConfiguracionPage() {
                     <input
                       value={razonSocial}
                       onChange={e => setRazonSocial(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
                     />
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function ConfiguracionPage() {
                   <input
                     value={rut}
                     onChange={e => setRut(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                    className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
                   />
                 </div>
 
@@ -215,7 +215,7 @@ export default function ConfiguracionPage() {
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
                     />
                   </div>
                 </div>
@@ -227,7 +227,7 @@ export default function ConfiguracionPage() {
                     <input
                       value={sitioWeb}
                       onChange={e => setSitioWeb(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
                     />
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export default function ConfiguracionPage() {
                 <h2 className="text-base font-semibold text-ink mb-1">Notificaciones por email</h2>
                 <p className="text-sm text-ink-subtle">Controla qué alertas recibes en tu correo</p>
               </div>
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+              <p className="text-xs text-accion-ink bg-accion-soft border border-accion-line rounded-lg px-4 py-2.5">
                 Estas preferencias aún no se guardan — la configuración de notificaciones está en desarrollo.
               </p>
 
@@ -286,7 +286,7 @@ export default function ConfiguracionPage() {
                 <h2 className="text-base font-semibold text-ink mb-1">Seguridad de la cuenta</h2>
                 <p className="text-sm text-ink-subtle">Configuración de autenticación y sesiones</p>
               </div>
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+              <p className="text-xs text-accion-ink bg-accion-soft border border-accion-line rounded-lg px-4 py-2.5">
                 Estas preferencias aún no se guardan — la configuración de seguridad está en desarrollo.
               </p>
 
@@ -313,10 +313,10 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                <p className="text-sm font-semibold text-red-800 mb-1">Zona de peligro</p>
-                <p className="text-xs text-red-600 mb-3">Estas acciones son irreversibles. Procede con cuidado.</p>
-                <button disabled title="Eliminar la cuenta requiere contactar a BERISA" className="text-xs font-medium text-red-700 border border-red-300 bg-surface hover:bg-red-50 px-3 py-2 rounded-md transition-colors">Eliminar cuenta del mandante</button>
+              <div className="rounded-lg border border-bloqueo-line bg-bloqueo-soft p-4">
+                <p className="text-sm font-semibold text-bloqueo-ink mb-1">Zona de peligro</p>
+                <p className="text-xs text-bloqueo-ink mb-3">Estas acciones son irreversibles. Procede con cuidado.</p>
+                <button disabled title="Eliminar la cuenta requiere contactar a BERISA" className="text-xs font-medium text-bloqueo-ink border border-bloqueo-line bg-surface hover:bg-bloqueo-soft px-3 py-2 rounded-md transition-colors">Eliminar cuenta del mandante</button>
               </div>
             </div>
           )}

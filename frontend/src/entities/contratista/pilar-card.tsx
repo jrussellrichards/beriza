@@ -13,21 +13,21 @@ interface Props {
 
 export function PilarCard({ pilar, onSubirDocumento }: Props) {
   return (
-    <Card className={pilar.cumple ? "border-green-200" : "border-red-200"}>
+    <Card className={pilar.cumple ? "border-ok-line" : "border-bloqueo-line"}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-ink-secondary">
             {pilar.pilar_nombre}
           </CardTitle>
           {pilar.cumple ? (
-            <CheckCircle size={18} className="text-green-500" />
+            <CheckCircle size={18} className="text-ok-ink" />
           ) : (
-            <XCircle size={18} className="text-red-500" />
+            <XCircle size={18} className="text-bloqueo-ink" />
           )}
         </div>
         <Badge
           variant={pilar.cumple ? "default" : "destructive"}
-          className={pilar.cumple ? "bg-green-100 text-green-800 hover:bg-green-100 w-fit" : "w-fit"}
+          className={pilar.cumple ? "bg-ok-soft text-ok-ink hover:bg-ok-soft w-fit" : "w-fit"}
         >
           {pilar.cumple ? "Cumple" : "No cumple"}
         </Badge>
@@ -37,7 +37,7 @@ export function PilarCard({ pilar, onSubirDocumento }: Props) {
           <ul className="space-y-1.5">
             {pilar.brechas.map((brecha, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-ink-muted">
-                <AlertCircle size={13} className="text-amber-500 mt-0.5 shrink-0" />
+                <AlertCircle size={13} className="text-accion-ink mt-0.5 shrink-0" />
                 {brecha}
               </li>
             ))}

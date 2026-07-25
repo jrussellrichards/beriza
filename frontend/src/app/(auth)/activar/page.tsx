@@ -95,7 +95,7 @@ function ActivarForm() {
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
 
   if (!token) {
     return (
@@ -209,7 +209,7 @@ function ActivarForm() {
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+        <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-3 py-2">{error}</p>
       )}
 
       <button
@@ -217,7 +217,7 @@ function ActivarForm() {
         disabled={loading}
         className={cn(
           "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
-          loading ? "bg-slate-200 text-ink-subtle cursor-not-allowed" : "bg-slate-900 text-white hover:bg-slate-800"
+          loading ? "bg-line text-ink-subtle cursor-not-allowed" : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
         )}
       >
         {loading ? "Activando..." : "Activar cuenta y comenzar"}

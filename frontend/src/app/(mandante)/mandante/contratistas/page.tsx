@@ -72,9 +72,9 @@ type PanelTab = "estado" | "documentos" | "trabajadores" | "servicios"
 
 // Estados de documento del backend: null=Falta | 1=En revisión | 2=En análisis | 3=Observado | 4=Aprobado
 const PILAR_COLOR: Record<string, string> = {
-  blue: "bg-blue-50 text-blue-700 border-blue-200",
-  amber: "bg-amber-50 text-amber-700 border-amber-200",
-  purple: "bg-purple-50 text-purple-700 border-purple-200",
+  blue: "bg-brand-soft text-brand-hover border-brand-line",
+  amber: "bg-accion-soft text-accion-ink border-accion-line",
+  purple: "bg-excepcion-soft text-excepcion-ink border-excepcion-line",
 }
 
 function initials(name: string) {
@@ -122,7 +122,7 @@ function ExcepcionDialog({ doc, onClose, onDone }: {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {doc.mensaje_brecha && (
-            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            <p className="text-xs text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-md px-3 py-2">
               Observación actual: {doc.mensaje_brecha}
             </p>
           )}
@@ -137,12 +137,12 @@ function ExcepcionDialog({ doc, onClose, onDone }: {
               required
             />
           </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !justificacion.trim()} className="bg-purple-600 hover:bg-purple-700">
+            <Button type="submit" disabled={loading || !justificacion.trim()} className="bg-excepcion-ink hover:bg-excepcion-ink">
               {loading ? "Aprobando..." : "Aprobar excepción"}
             </Button>
           </DialogFooter>
@@ -166,7 +166,7 @@ function DocRow({ doc, onExcepcion, onVerArchivos }: {
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-ink truncate">
             {doc.requisito_nombre}
-            {doc.servicio_nombre && <span className="text-indigo-500 font-normal"> — {doc.servicio_nombre}</span>}
+            {doc.servicio_nombre && <span className="text-brand font-normal"> — {doc.servicio_nombre}</span>}
           </p>
           {doc.fecha_vigencia_hasta && (
             <p className="text-[10px] text-ink-subtle">Vence: {doc.fecha_vigencia_hasta}</p>
@@ -186,14 +186,14 @@ function DocRow({ doc, onExcepcion, onVerArchivos }: {
           <button
             onClick={() => onExcepcion(doc)}
             title="Aprobar por excepción justificada"
-            className="text-[10px] font-medium text-purple-700 border border-purple-200 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-md transition-colors shrink-0"
+            className="text-[10px] font-medium text-excepcion-ink border border-excepcion-line bg-excepcion-soft hover:bg-excepcion-soft px-2 py-1 rounded-md transition-colors shrink-0"
           >
             Excepción
           </button>
         )}
       </div>
       {doc.estado === 3 && doc.mensaje_brecha && (
-        <p className="text-[10px] text-red-600 mt-1 ml-6 flex items-start gap-1">
+        <p className="text-[10px] text-bloqueo-ink mt-1 ml-6 flex items-start gap-1">
           <AlertCircle size={10} className="mt-px shrink-0" />
           {doc.mensaje_brecha}
         </p>
@@ -234,8 +234,8 @@ function ServiciosTab({ contratistaId }: { contratistaId: string }) {
           </div>
           <span className={cn(
             "text-[10px] font-medium px-2 py-0.5 rounded-full border",
-            s.estado === "ACTIVO" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : s.estado === "SUSPENDIDO" ? "bg-amber-50 text-amber-700 border-amber-200"
+            s.estado === "ACTIVO" ? "bg-ok-soft text-ok-ink border-ok-line"
+              : s.estado === "SUSPENDIDO" ? "bg-accion-soft text-accion-ink border-accion-line"
               : "bg-surface-sunken text-ink-muted border-line"
           )}>
             {s.estado === "ACTIVO" ? "Activo" : s.estado === "SUSPENDIDO" ? "Suspendido" : "Terminado"}
@@ -297,7 +297,7 @@ function DetailPanel({ c, onClose, onCambio }: {
               className={cn(
                 "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
                 tab === t.id
-                  ? "border-slate-900 text-ink"
+                  ? "border-ink text-ink"
                   : "border-transparent text-ink-subtle hover:text-ink-muted"
               )}
             >
@@ -305,7 +305,7 @@ function DetailPanel({ c, onClose, onCambio }: {
               {t.count !== undefined && (
                 <span className={cn(
                   "px-1.5 py-0.5 rounded text-[10px] font-medium",
-                  tab === t.id ? "bg-slate-900 text-white" : "bg-surface-sunken text-ink-muted"
+                  tab === t.id ? "bg-surface-inverse text-white" : "bg-surface-sunken text-ink-muted"
                 )}>
                   {t.count}
                 </span>
@@ -330,15 +330,15 @@ function DetailPanel({ c, onClose, onCambio }: {
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-medium text-ink">{pilar.nombre}</p>
                     {pilar.cumple
-                      ? <span className="flex items-center gap-1 text-xs font-medium text-emerald-600"><CheckCircle2 size={12} /> OK</span>
-                      : <span className="flex items-center gap-1 text-xs font-medium text-red-600"><AlertCircle size={12} /> {brechas.length} brecha{brechas.length !== 1 ? "s" : ""}</span>
+                      ? <span className="flex items-center gap-1 text-xs font-medium text-ok-ink"><CheckCircle2 size={12} /> OK</span>
+                      : <span className="flex items-center gap-1 text-xs font-medium text-bloqueo-ink"><AlertCircle size={12} /> {brechas.length} brecha{brechas.length !== 1 ? "s" : ""}</span>
                     }
                   </div>
                   {brechas.length > 0 && (
                     <ul className="mt-2 space-y-1">
                       {brechas.map((b, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-ink-muted">
-                          <AlertCircle size={11} className="text-red-400 mt-0.5 shrink-0" />
+                          <AlertCircle size={11} className="text-bloqueo-ink mt-0.5 shrink-0" />
                           {b}
                         </li>
                       ))}
@@ -403,8 +403,8 @@ function DetailPanel({ c, onClose, onCambio }: {
                   <p className="text-xs text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
                 </div>
                 {t.cumple
-                  ? <CheckCircle2 size={14} className="text-emerald-500" />
-                  : <AlertCircle size={14} className="text-red-400" />
+                  ? <CheckCircle2 size={14} className="text-ok-ink" />
+                  : <AlertCircle size={14} className="text-bloqueo-ink" />
                 }
               </div>
             ))}
@@ -508,16 +508,16 @@ export default function ContratistasPage() {
             </div>
             <button
               onClick={() => setDialogInvitar(true)}
-              className="flex items-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
             >
               <Plus size={15} />
               Invitar contratista
             </button>
           </div>
           {invitado && (
-            <div className="mt-3 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5">
-              <ShieldCheck size={14} className="text-emerald-600" />
-              <p className="text-xs text-emerald-700">Invitación enviada — la empresa aparecerá al activar su cuenta.</p>
+            <div className="mt-3 flex items-center gap-2 bg-ok-soft border border-ok-line rounded-lg px-4 py-2.5">
+              <ShieldCheck size={14} className="text-ok-ink" />
+              <p className="text-xs text-ok-ink">Invitación enviada — la empresa aparecerá al activar su cuenta.</p>
             </div>
           )}
         </div>
@@ -528,9 +528,9 @@ export default function ContratistasPage() {
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: "Total", value: contratistas.length, color: "text-ink" },
-              { label: "Acreditadas", value: kpi.acreditadas, color: "text-emerald-600" },
-              { label: "En Proceso", value: kpi.enProceso, color: "text-amber-600" },
-              { label: "Bloqueadas", value: kpi.bloqueadas, color: "text-red-600" },
+              { label: "Acreditadas", value: kpi.acreditadas, color: "text-ok-ink" },
+              { label: "En Proceso", value: kpi.enProceso, color: "text-accion-ink" },
+              { label: "Bloqueadas", value: kpi.bloqueadas, color: "text-bloqueo-ink" },
             ].map(k => (
               <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
                 <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
@@ -548,7 +548,7 @@ export default function ContratistasPage() {
                 placeholder="Buscar empresa o RUT..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
               />
             </div>
             <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-1">
@@ -558,7 +558,7 @@ export default function ContratistasPage() {
                   onClick={() => setFiltro(e)}
                   className={cn(
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-                    filtro === e ? "bg-slate-900 text-white" : "text-ink-muted hover:text-ink"
+                    filtro === e ? "bg-surface-inverse text-white" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   {e === "TODOS" ? "Todos" : LABEL_AGREGADO[e]}
@@ -612,8 +612,8 @@ export default function ContratistasPage() {
                             {p === undefined
                               ? <span className="text-xs text-ink-subtle">—</span>
                               : (
-                                <span className={cn("inline-flex items-center gap-1 text-xs font-medium", p.cumple ? "text-emerald-700" : "text-red-600")}>
-                                  <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.cumple ? "bg-emerald-500" : "bg-red-500")} />
+                                <span className={cn("inline-flex items-center gap-1 text-xs font-medium", p.cumple ? "text-ok-ink" : "text-bloqueo-ink")}>
+                                  <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.cumple ? "bg-ok-soft0" : "bg-bloqueo-soft0")} />
                                   {p.cumple ? "OK" : "Brechas"}
                                 </span>
                               )}
@@ -621,7 +621,7 @@ export default function ContratistasPage() {
                         )
                       })}
                       <td className="px-4 py-3.5">
-                        <span className={cn("text-xs font-medium", c.trabajadores.length > 0 && tOk === c.trabajadores.length ? "text-emerald-600" : "text-amber-600")}>
+                        <span className={cn("text-xs font-medium", c.trabajadores.length > 0 && tOk === c.trabajadores.length ? "text-ok-ink" : "text-accion-ink")}>
                           {tOk}/{c.trabajadores.length}
                         </span>
                       </td>
@@ -638,7 +638,7 @@ export default function ContratistasPage() {
               <div className="py-14 text-center"><p className="text-sm text-ink-subtle">Cargando contratistas...</p></div>
             )}
             {error && !loading && (
-              <div className="py-14 text-center"><p className="text-sm text-red-500">No se pudieron cargar los contratistas: {error}</p></div>
+              <div className="py-14 text-center"><p className="text-sm text-bloqueo-ink">No se pudieron cargar los contratistas: {error}</p></div>
             )}
             {!loading && !error && filtrados.length === 0 && (
               <div className="py-14 text-center"><p className="text-sm text-ink-subtle">No se encontraron contratistas</p></div>
