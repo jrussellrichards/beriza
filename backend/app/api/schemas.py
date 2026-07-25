@@ -22,13 +22,27 @@ class TokenResponse(BaseModel):
 class ActivarCuentaRequest(BaseModel):
     token: str
     password: str
-    razon_social: str
-    rut: str
+    # Los datos de la organización solo viajan cuando la invitación es de tipo
+    # ORGANIZACION. Un miembro del equipo NO los manda —y si los mandara, el
+    # backend los ignora— porque no le corresponde editar el RUT de su empresa.
+    razon_social: str | None = None
+    rut: str | None = None
     giro: str | None = None
+    # Un miembro del equipo puede corregir su propio nombre al activar.
+    nombre: str | None = None
 
 
 class InvitacionInfoResponse(BaseModel):
     email: str
+    nombre: str
+    # ORGANIZACION: el invitado ES la empresa que se está dando de alta y debe
+    # confirmar sus datos (BERISA invita a un mandante, un mandante invita a un
+    # contratista).
+    # EQUIPO: el invitado se suma a una organización que YA existe. Sus datos ya
+    # están definidos y no le corresponde editarlos.
+    tipo: str
+    # Nombre de la organización a la que se suma o que representa.
+    organizacion: str
     razon_social: str
     rut: str
     giro: str | None = None
