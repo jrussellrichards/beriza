@@ -20,6 +20,7 @@ interface InvitacionInfo {
   rut: string
   giro: string | null
   mandante_razon_social: string
+  rol: string
 }
 
 function ActivarForm() {
@@ -78,7 +79,14 @@ function ActivarForm() {
       })
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("rol", data.rol)
-      router.push("/contratista")
+      // El destino sale del ROL, no de un literal: antes siempre mandaba a
+      // /contratista, asi que un mandante recien activado caia en el portal
+      // equivocado.
+      router.push(
+        data.rol === "mandante_admin" ? "/mandante"
+        : data.rol === "berisa_admin" ? "/admin"
+        : "/contratista",
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al activar la cuenta")
     } finally {
@@ -115,10 +123,16 @@ function ActivarForm() {
     )
   }
 
+  const esMandante = invitacion.rol === "mandante_admin"
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* A un contratista lo invita un mandante; a un mandante lo invita BERISA
+          y no hay un tercero que nombrar. */}
       <p className="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-        Invitación de <span className="font-medium text-slate-700">{invitacion.mandante_razon_social}</span> para{" "}
+        {invitacion.mandante_razon_social
+          ? <>Invitación de <span className="font-medium text-slate-700">{invitacion.mandante_razon_social}</span> para{" "}</>
+          : <>Invitación de <span className="font-medium text-slate-700">BERISA</span> para{" "}</>}
         <span className="font-medium text-slate-700">{invitacion.email}</span>. Confirma o corrige los datos de tu empresa.
       </p>
 
@@ -136,7 +150,7 @@ function ActivarForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={cn("gap-3", esMandante ? "" : "grid grid-cols-2")}>
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-700">RUT empresa</label>
           <input
@@ -147,15 +161,18 @@ function ActivarForm() {
             className={inputCls}
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Giro (opcional)</label>
-          <input
-            value={giro}
-            onChange={e => setGiro(e.target.value)}
-            placeholder="Construcción"
-            className={inputCls}
-          />
-        </div>
+        {/* El giro es un dato del contratista; el modelo Mandante no lo tiene. */}
+        {!esMandante && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700">Giro (opcional)</label>
+            <input
+              value={giro}
+              onChange={e => setGiro(e.target.value)}
+              placeholder="Construcción"
+              className={inputCls}
+            />
+          </div>
+        )}
       </div>
 
       <div className="space-y-1.5">
