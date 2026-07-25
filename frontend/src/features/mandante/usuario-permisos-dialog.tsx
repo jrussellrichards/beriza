@@ -20,14 +20,38 @@ export interface UsuarioEquipo {
   /** null = aprueba todos los pilares. Lista vacía = ninguno. */
   pilares: string[] | null
   pilar_ids: string[]
+  /** Aprueba todo SIN administrar la cuenta. Distinto de rol=mandante_admin. */
+  aprueba_todo: boolean
+  /** Etiqueta libre ("Jefe de Terreno"). No participa de la autorización. */
+  cargo: string | null
+}
+
+/** Alcance de aprobación, la primera de las dos preguntas. */
+type Alcance = "NINGUNO" | "ALGUNOS" | "TODOS"
+
+function alcanceDe(u: UsuarioEquipo | null): Alcance {
+  if (!u) return "ALGUNOS"
+  if (u.aprueba_todo || u.pilares === null) return "TODOS"
+  return u.pilar_ids.length > 0 ? "ALGUNOS" : "NINGUNO"
 }
 
 /**
- * Invita a alguien del equipo del mandante, o cambia qué pilares puede aprobar.
+ * Invita a alguien del equipo del mandante, o cambia su alcance de aprobación.
  *
- * La granularidad es el pilar y no el documento porque así se organiza un
- * mandante: el prevencionista aprueba HSE, finanzas aprueba Compliance. Por
- * documento serían cientos de casillas que nadie mantendría.
+ * Son DOS preguntas independientes y antes eran una sola:
+ *
+ *   1. ¿Qué puede aprobar?   nada / algunos pilares / todos
+ *   2. ¿Administra la cuenta? sí / no
+ *
+ * Antes el selector decía "qué puede aprobar: todo / algunos pilares", pero
+ * elegir "todo" asignaba rol mandante_admin, que además invita gente, configura
+ * los perfiles de exigencias y crea servicios. Quien quería un revisor senior
+ * entregaba la administración sin enterarse, y el caso "aprueba todo pero no
+ * administra" era imposible de expresar.
+ *
+ * La granularidad del alcance es el pilar y no el documento porque así se
+ * organiza un mandante: el prevencionista aprueba HSE, finanzas aprueba
+ * Compliance. Por documento serían cientos de casillas que nadie mantendría.
  *
  * Solo se restringe APROBAR: ver queda abierto dentro de la organización.
  */
@@ -42,9 +66,9 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
   const [pilares, setPilares] = useState<PilarCatalogo[]>([])
   const [email, setEmail] = useState("")
   const [nombre, setNombre] = useState("")
-  const [rol, setRol] = useState<"prevencionista" | "mandante_admin">(
-    (usuario?.rol as "prevencionista" | "mandante_admin") ?? "prevencionista"
-  )
+  const [cargo, setCargo] = useState(usuario?.cargo ?? "")
+  const [administra, setAdministra] = useState(usuario?.rol === "mandante_admin")
+  const [alcance, setAlcance] = useState<Alcance>(alcanceDe(usuario))
   const [elegidos, setElegidos] = useState<string[]>(usuario?.pilar_ids ?? [])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,7 +80,9 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
       .catch(() => setPilares([]))
   }, [])
 
-  const apruebaTodo = rol === "mandante_admin"
+  // Quien administra aprueba todo por su rol: la pregunta de alcance deja de
+  // tener sentido y se muestra resuelta en vez de editable.
+  const alcanceEfectivo: Alcance = administra ? "TODOS" : alcance
 
   function alternar(id: string) {
     setElegidos(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -66,10 +92,12 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
     setGuardando(true)
     setError(null)
     setLinkRespaldo(null)
+    const pilarIds = alcanceEfectivo === "ALGUNOS" ? elegidos : []
     try {
       if (editando) {
         await api.put(`/api/v1/mandantes/${mandanteId}/usuarios/${usuario.id}/permisos`, {
-          pilar_ids: elegidos,
+          pilar_ids: pilarIds,
+          aprueba_todo: alcanceEfectivo === "TODOS",
         })
         onGuardado()
         onClose()
@@ -77,7 +105,14 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
       }
       const r = await api.post<{ mensaje: string; link_activacion?: string }>(
         `/api/v1/mandantes/${mandanteId}/invitar-usuario`,
-        { email, nombre, rol, pilar_ids: apruebaTodo ? [] : elegidos },
+        {
+          email,
+          nombre,
+          cargo: cargo.trim() || null,
+          rol: administra ? "mandante_admin" : "prevencionista",
+          aprueba_todo: alcanceEfectivo === "TODOS",
+          pilar_ids: pilarIds,
+        },
       )
       onGuardado()
       if (r.link_activacion) {
@@ -95,13 +130,19 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
   const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
   const puedeGuardar = editando ? true : Boolean(email && nombre)
 
+  const OPCIONES_ALCANCE: { v: Alcance; label: string; ayuda: string }[] = [
+    { v: "NINGUNO", label: "Nada", ayuda: "Solo mira. No puede aprobar ni rechazar." },
+    { v: "ALGUNOS", label: "Algunos pilares", ayuda: "Aprueba únicamente los pilares que marques." },
+    { v: "TODOS", label: "Todos los pilares", ayuda: "Aprueba cualquier documento, incluidos los pilares que actives después." },
+  ]
+
   return (
     <div className="fixed inset-0 bg-surface-inverse/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-surface rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-ink">
-              {editando ? "Permisos de aprobación" : "Invitar a tu equipo"}
+              {editando ? "Alcance de aprobación" : "Invitar a tu equipo"}
             </p>
             <p className="text-xs text-ink-subtle mt-0.5">
               {editando ? usuario.nombre : "Se le enviará un email para activar su cuenta"}
@@ -110,7 +151,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
           <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted"><X size={16} /></button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-5">
           {!editando && (
             <>
               <div className="space-y-1.5">
@@ -123,37 +164,54 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                        placeholder="patricia@empresa.cl" className={inputCls} />
               </div>
+              {/* Texto libre a propósito: es lo que la gente quiere cuando pide
+                  "crear un rol nuevo", y como etiqueta no toca los permisos. */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink-secondary">Qué puede aprobar</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { v: "prevencionista" as const, label: "Solo algunos pilares" },
-                    { v: "mandante_admin" as const, label: "Todo" },
-                  ]).map(o => (
-                    <button
-                      key={o.v}
-                      onClick={() => setRol(o.v)}
-                      className={cn(
-                        "py-2 rounded-lg border text-xs font-medium transition-colors",
-                        rol === o.v ? "border-ink bg-surface-inverse text-white"
-                                    : "border-line text-ink-muted hover:border-line-strong"
-                      )}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-                {apruebaTodo && (
-                  <p className="text-[10px] text-accion-ink bg-accion-soft border border-accion-line rounded px-2 py-1.5">
-                    También podrá configurar los perfiles de exigencias, invitar contratistas
-                    y otorgar excepciones.
-                  </p>
-                )}
+                <label className="text-sm font-medium text-ink-secondary">
+                  Cargo <span className="font-normal text-ink-subtle">(opcional)</span>
+                </label>
+                <input value={cargo} onChange={e => setCargo(e.target.value)}
+                       maxLength={80} placeholder="Jefe de Terreno" className={inputCls} />
+                <p className="text-[10px] text-ink-subtle">
+                  Solo para identificarlo en la lista del equipo. No cambia lo que puede hacer.
+                </p>
               </div>
             </>
           )}
 
-          {!apruebaTodo && (
+          {/* Pregunta 1: alcance */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-ink-secondary">Qué puede aprobar</label>
+            <div className="space-y-1.5">
+              {OPCIONES_ALCANCE.map(o => {
+                const activo = alcanceEfectivo === o.v
+                return (
+                  <button
+                    key={o.v}
+                    onClick={() => setAlcance(o.v)}
+                    disabled={administra}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-lg border transition-colors",
+                      activo ? "border-ink bg-surface-app" : "border-line hover:border-line-strong",
+                      administra && "opacity-60 cursor-not-allowed",
+                    )}
+                  >
+                    <span className={cn("text-sm font-medium", activo ? "text-ink" : "text-ink-muted")}>
+                      {o.label}
+                    </span>
+                    <span className="block text-[10px] text-ink-subtle mt-0.5">{o.ayuda}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {administra && (
+              <p className="text-[10px] text-ink-subtle">
+                Quien administra la cuenta aprueba todo por definición.
+              </p>
+            )}
+          </div>
+
+          {alcanceEfectivo === "ALGUNOS" && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-ink-secondary flex items-center gap-1.5">
                 <ShieldCheck size={13} className="text-ink-subtle" />
@@ -178,7 +236,43 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
               </p>
               {elegidos.length === 0 && (
                 <p className="text-[10px] text-accion-ink">
-                  Sin ningún pilar asignado no podrá aprobar nada, solo revisar.
+                  Sin ningún pilar marcado no podrá aprobar nada, solo revisar.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Pregunta 2: administración. Solo al invitar — cambiar el rol de
+              alguien que ya existe se hace desde su ficha, no acá. */}
+          {!editando && (
+            <div className="space-y-1.5 pt-1 border-t border-line-subtle">
+              <label className="text-sm font-medium text-ink-secondary">Administra la cuenta</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { v: false, label: "No" },
+                  { v: true, label: "Sí" },
+                ].map(o => (
+                  <button
+                    key={String(o.v)}
+                    onClick={() => setAdministra(o.v)}
+                    className={cn(
+                      "py-2 rounded-lg border text-xs font-medium transition-colors",
+                      administra === o.v ? "border-ink bg-surface-inverse text-white"
+                                         : "border-line text-ink-muted hover:border-line-strong"
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              {administra ? (
+                <p className="text-[10px] text-accion-ink bg-accion-soft border border-accion-line rounded px-2 py-1.5">
+                  Podrá invitar y quitar personas, configurar los perfiles de exigencias,
+                  invitar contratistas, crear servicios y otorgar excepciones.
+                </p>
+              ) : (
+                <p className="text-[10px] text-ink-subtle">
+                  Revisa y aprueba según el alcance de arriba, sin cambiar la configuración.
                 </p>
               )}
             </div>
@@ -209,7 +303,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
                 : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
             )}
           >
-            {guardando ? "Guardando..." : editando ? "Guardar permisos" : "Enviar invitación"}
+            {guardando ? "Guardando..." : editando ? "Guardar alcance" : "Enviar invitación"}
           </button>
         </div>
       </div>
