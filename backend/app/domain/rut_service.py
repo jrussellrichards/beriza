@@ -12,6 +12,8 @@ cargar una nómina de 80 filas a mano.
 """
 import re
 
+from sqlalchemy.orm import Session
+
 from app.core.exceptions import RutInvalido
 
 # Sin puntos ni guion, en mayúscula. Solo dígitos y una K final opcional.
@@ -78,3 +80,38 @@ def validar(rut: str) -> str:
             f"'{rut}' tiene el dígito verificador incorrecto (debería terminar en {esperado})"
         )
     return formatear(limpio)
+
+
+def normalizar_en_tabla(db: Session, modelo, aplicar: bool) -> list[tuple[str, str, str]]:
+    """
+    Corrige el dígito verificador de los RUT ya guardados en una tabla.
+
+    El NÚMERO no se toca, solo el dígito. Son datos de demostración y cambiar el
+    cuerpo rompería cualquier captura o guion que ya los mencione.
+
+    Vive acá y no en un script porque la llaman DOS: el seed —que debe hacerlo
+    antes de buscar por RUT, o no encontraría lo que ya existe y crearía
+    duplicados— y la limpieza de datos de prueba.
+
+    Devuelve (nombre, actual, corregido) por fila cambiada; con `aplicar=False`
+    solo informa.
+    """
+    cambios: list[tuple[str, str, str]] = []
+    for fila in db.query(modelo).all():
+        actual = (getattr(fila, "rut", None) or "").strip()
+        limpio = clave(actual)
+        # Menos de 8 caracteres no es un RUT con el dígito equivocado sino
+        # basura; corregirlo inventaría una identidad que nadie tecleó.
+        if len(limpio) < 8 or not limpio[:-1].isdigit():
+            continue
+        try:
+            validar(actual)
+            continue
+        except RutInvalido:
+            pass
+        correcto = formatear(limpio[:-1] + _digito_verificador(limpio[:-1]))
+        nombre = getattr(fila, "razon_social", None) or getattr(fila, "nombre_completo", "?")
+        cambios.append((nombre, actual, correcto))
+        if aplicar:
+            fila.rut = correcto
+    return cambios

@@ -1,0 +1,44 @@
+name: limpieza-datos-prueba
+
+# Disparo MANUAL únicamente. Este workflow borra datos de producción de forma
+# irreversible, así que no puede colgar de un push: exige que alguien escriba
+# la confirmación a mano.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Escribe BORRAR para ejecutar. Cualquier otra cosa hace solo un simulacro.'
+        required: true
+        default: 'simulacro'
+
+jobs:
+  limpiar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ejecutar limpieza en el servidor
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          CONFIRMAR: ${{ inputs.confirmar }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: CONFIRMAR
+          script: |
+            set -e
+            cd /root/acredita
+
+            # El simulacro corre SIEMPRE primero: deja en el log exactamente qué
+            # se va a tocar, aunque después se ejecute. Sin eso, si algo sale
+            # mal no queda registro de qué había antes.
+            echo "===== SIMULACRO ====="
+            docker compose -f docker-compose.prod.yml exec -T backend \
+              python scripts/limpiar_datos_prueba.py
+
+            if [ "$CONFIRMAR" = "BORRAR" ]; then
+              echo "===== EJECUTANDO ====="
+              docker compose -f docker-compose.prod.yml exec -T backend \
+                python scripts/limpiar_datos_prueba.py --ejecutar
+            else
+              echo "Solo simulacro (confirmar='$CONFIRMAR'). No se borró nada."
+            fi

@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 import uuid as uuid_lib
 
 from app.core.config import settings
+from app.domain import rut_service
 from app.domain.estados import Alcance, EstadoDocumento, EstadoServicio, TipoEvento
 from app.models import Base, Usuario
 from app.models.mandante import Mandante
@@ -407,7 +408,7 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     # que reemplazó el modelo documental), hay que recrearlos. Con el guard
     # anterior —"si existe la empresa, saltar todo"— la demo quedaba sin un solo
     # documento y el portal se veía vacío para siempre.
-    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
+    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-8").first()
     if condor and session.query(Expediente).filter_by(empresa_id=condor.id).first():
         print("  OK Contratistas Codelco ya existen con documentos, saltando.")
         return
@@ -440,7 +441,7 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     r = reqs  # alias corto
 
     # 1 — Constructora Cóndor SpA — ACREDITADA
-    condor = EmpresaContratista(rut="76.111.222-3", razon_social="Constructora Cóndor SpA",
+    condor = EmpresaContratista(rut="76.111.222-8", razon_social="Constructora Cóndor SpA",
                                 giro="Construcción de obras civiles")
     session.add(condor); session.flush()
     session.add(ContratistaMandante(contratista_id=condor.id, mandante_id=mid, estado_acreditacion="ACREDITADA"))
@@ -449,9 +450,9 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
                         activo=True, contratista_id=condor.id))
 
     # trabajadores condor
-    pedro = Trabajador(empresa_id=condor.id, rut="12.345.678-9", nombre_completo="Pedro González Rojas",
+    pedro = Trabajador(empresa_id=condor.id, rut="12.345.678-5", nombre_completo="Pedro González Rojas",
                        cargo="Jefe de Obra", activo=True)
-    maria = Trabajador(empresa_id=condor.id, rut="9.876.543-2", nombre_completo="María Soto Vargas",
+    maria = Trabajador(empresa_id=condor.id, rut="9.876.543-3", nombre_completo="María Soto Vargas",
                        cargo="Prevencionista", activo=True)
     session.add_all([pedro, maria]); session.flush()
 
@@ -463,12 +464,12 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     _doc_trabajador(session, r["EXAM_MED"], mid, maria.id, 4, 365)
 
     # 2 — Ingeniería Subterránea Ltda — EN_PROCESO
-    subterranea = EmpresaContratista(rut="77.333.444-5", razon_social="Ingeniería Subterránea Ltda",
+    subterranea = EmpresaContratista(rut="77.333.444-7", razon_social="Ingeniería Subterránea Ltda",
                                      giro="Servicios de ingeniería minera")
     session.add(subterranea); session.flush()
     session.add(ContratistaMandante(contratista_id=subterranea.id, mandante_id=mid, estado_acreditacion="EN_PROCESO"))
 
-    luis = Trabajador(empresa_id=subterranea.id, rut="15.234.567-8", nombre_completo="Luis Herrera Castro",
+    luis = Trabajador(empresa_id=subterranea.id, rut="15.234.567-4", nombre_completo="Luis Herrera Castro",
                       cargo="Ingeniero Civil", activo=True)
     session.add(luis); session.flush()
 
@@ -484,14 +485,14 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     _doc_trabajador(session, r["EXAM_MED"], mid, luis.id, 2)       # en análisis
 
     # 3 — Mantenciones del Norte SpA — BLOQUEADA
-    mantenciones = EmpresaContratista(rut="78.555.666-7", razon_social="Mantenciones del Norte SpA",
+    mantenciones = EmpresaContratista(rut="78.555.666-6", razon_social="Mantenciones del Norte SpA",
                                       giro="Mantención industrial")
     session.add(mantenciones); session.flush()
     session.add(ContratistaMandante(contratista_id=mantenciones.id, mandante_id=mid, estado_acreditacion="BLOQUEADA"))
 
-    jorge = Trabajador(empresa_id=mantenciones.id, rut="11.222.333-4", nombre_completo="Jorge Vega Muñoz",
+    jorge = Trabajador(empresa_id=mantenciones.id, rut="11.222.333-9", nombre_completo="Jorge Vega Muñoz",
                        cargo="Técnico Mecánico", activo=True)
-    sandra = Trabajador(empresa_id=mantenciones.id, rut="16.789.012-3", nombre_completo="Sandra López Pérez",
+    sandra = Trabajador(empresa_id=mantenciones.id, rut="16.789.012-1", nombre_completo="Sandra López Pérez",
                         cargo="Operadora", activo=True)
     session.add_all([jorge, sandra]); session.flush()
 
@@ -512,24 +513,24 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     _doc_trabajador(session, r["EXAM_MED"], mid, sandra.id, 4, 180)
 
     # 4 — Transportes Altiplano Ltda — EN_PROCESO (sin docs aún)
-    transp = EmpresaContratista(rut="79.777.888-9", razon_social="Transportes Altiplano Ltda",
+    transp = EmpresaContratista(rut="79.777.888-5", razon_social="Transportes Altiplano Ltda",
                                 giro="Transporte de carga minera")
     session.add(transp); session.flush()
     session.add(ContratistaMandante(contratista_id=transp.id, mandante_id=mid, estado_acreditacion="EN_PROCESO"))
-    t1 = Trabajador(empresa_id=transp.id, rut="13.111.222-3", nombre_completo="Roberto Fuentes Díaz",
+    t1 = Trabajador(empresa_id=transp.id, rut="13.111.222-K", nombre_completo="Roberto Fuentes Díaz",
                     cargo="Conductor", activo=True)
-    t2 = Trabajador(empresa_id=transp.id, rut="14.333.444-5", nombre_completo="Carmen Silva Vega",
+    t2 = Trabajador(empresa_id=transp.id, rut="14.333.444-9", nombre_completo="Carmen Silva Vega",
                     cargo="Supervisora", activo=True)
     session.add_all([t1, t2])
 
     # 5 — Excavaciones Cobre SpA — ACREDITADA
-    excav = EmpresaContratista(rut="80.999.111-2", razon_social="Excavaciones Cobre SpA",
+    excav = EmpresaContratista(rut="80.999.111-3", razon_social="Excavaciones Cobre SpA",
                                giro="Excavación y movimiento de tierras")
     session.add(excav); session.flush()
     session.add(ContratistaMandante(contratista_id=excav.id, mandante_id=mid, estado_acreditacion="ACREDITADA"))
-    e1 = Trabajador(empresa_id=excav.id, rut="17.555.666-7", nombre_completo="Felipe Morales Castro",
+    e1 = Trabajador(empresa_id=excav.id, rut="17.555.666-4", nombre_completo="Felipe Morales Castro",
                     cargo="Operador de Maquinaria", activo=True)
-    e2 = Trabajador(empresa_id=excav.id, rut="18.777.888-9", nombre_completo="Andrea Rojas Pérez",
+    e2 = Trabajador(empresa_id=excav.id, rut="18.777.888-3", nombre_completo="Andrea Rojas Pérez",
                     cargo="Capataz", activo=True)
     session.add_all([e1, e2]); session.flush()
     for codigo in ["F30","F30_1","MIPER","RIOHS","DAS","CARPETA_TRIBUTARIA","VIGENCIA_SOCIEDAD","DJ_CONFLICTO"]:
@@ -540,11 +541,11 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     _doc_trabajador(session, r["EXAM_MED"], mid, e2.id, 4, 300)
 
     # 6 — Servicios Mineros del Pacífico SA — EN_PROCESO
-    pacif = EmpresaContratista(rut="81.222.333-4", razon_social="Servicios Mineros del Pacífico SA",
+    pacif = EmpresaContratista(rut="81.222.333-K", razon_social="Servicios Mineros del Pacífico SA",
                                giro="Servicios especializados minería")
     session.add(pacif); session.flush()
     session.add(ContratistaMandante(contratista_id=pacif.id, mandante_id=mid, estado_acreditacion="EN_PROCESO"))
-    p1 = Trabajador(empresa_id=pacif.id, rut="19.444.555-6", nombre_completo="Diego Contreras Muñoz",
+    p1 = Trabajador(empresa_id=pacif.id, rut="19.444.555-5", nombre_completo="Diego Contreras Muñoz",
                     cargo="Ingeniero de Minas", activo=True)
     session.add(p1); session.flush()
     _doc_empresa(session, r["F30"], mid, pacif.id, 4, 20)
@@ -559,11 +560,11 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     _doc_trabajador(session, r["EXAM_MED"], mid, p1.id, 1)
 
     # 7 — Montajes Industriales Tarapacá Ltda — BLOQUEADA
-    montajes = EmpresaContratista(rut="82.444.555-6", razon_social="Montajes Industriales Tarapacá Ltda",
+    montajes = EmpresaContratista(rut="82.444.555-9", razon_social="Montajes Industriales Tarapacá Ltda",
                                   giro="Montajes electromecánicos")
     session.add(montajes); session.flush()
     session.add(ContratistaMandante(contratista_id=montajes.id, mandante_id=mid, estado_acreditacion="BLOQUEADA"))
-    m1 = Trabajador(empresa_id=montajes.id, rut="20.666.777-8", nombre_completo="Héctor Ramírez Torres",
+    m1 = Trabajador(empresa_id=montajes.id, rut="20.666.777-K", nombre_completo="Héctor Ramírez Torres",
                     cargo="Técnico Electricista", activo=True)
     session.add(m1); session.flush()
     _doc_empresa(session, r["F30"], mid, montajes.id, 3,
@@ -661,7 +662,7 @@ def seed_documentos_condor(session: Session, codelco: Mandante, reqs: dict):
 
     Acá la idempotencia es por documento: se crea solo lo que falta.
     """
-    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
+    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-8").first()
     if not condor:
         return
 
@@ -707,7 +708,7 @@ def seed_segundo_mandante_condor(session: Session):
     """
     from app.domain import reutilizacion_service, servicio_service
 
-    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
+    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-8").first()
     pelambres = session.query(Mandante).filter_by(slug="los-pelambres").first()
     if not condor or not pelambres:
         return
@@ -750,9 +751,32 @@ def seed_segundo_mandante_condor(session: Session):
           f"{pendientes} esperando autorización.")
 
 
+def _normalizar_ruts(session: Session):
+    """
+    Corrige el dígito verificador de los RUT ya guardados, ANTES de cualquier
+    búsqueda.
+
+    Es lo primero del seed y el orden no es casual: el seed identifica a los
+    contratistas por RUT (`filter_by(rut="76.111.222-8")`). Si la base tuviera
+    todavía el dígito viejo, no encontraría a Cóndor y crearía un duplicado con
+    todos sus documentos. Normalizar primero deja la base y las constantes de
+    este archivo hablando el mismo idioma.
+    """
+    cambios = (rut_service.normalizar_en_tabla(session, EmpresaContratista, aplicar=True)
+               + rut_service.normalizar_en_tabla(session, Trabajador, aplicar=True))
+    session.commit()
+    if cambios:
+        for nombre, viejo, nuevo in cambios:
+            print(f"     {nombre[:38]:38} {viejo:16} -> {nuevo}")
+        print(f"  OK {len(cambios)} RUT con dígito verificador corregido.")
+    else:
+        print("  OK Todos los RUT tienen dígito verificador válido.")
+
+
 def main():
     print("\n--- Seed Acredita ---")
     with Session(engine) as session:
+        _normalizar_ruts(session)
         seed_admin(session)
         reqs = seed_pilares(session)
         session.flush()
@@ -938,7 +962,7 @@ def _showcase_faenas_en_regla(session: Session):
     # Condor se deja FUERA a proposito: es el login con el que se demuestra el
     # lado del contratista, y si estuviera 100% verde su Inicio diria "Estas al
     # dia" sin nada que mostrar. Su estado variado es el que hace la demo.
-    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-3").first()
+    condor = session.query(EmpresaContratista).filter_by(rut="76.111.222-8").first()
     condor_id = condor.id if condor else None
 
     completadas = creados = 0
