@@ -38,15 +38,28 @@ from app.models.usuario import Usuario
 
 # ── Objetivos, aprobados uno por uno ─────────────────────────────────────────
 
-# Contratistas creados a mano para probar. Se identifican por RUT porque el
-# nombre se repite entre ellos ("javier nicolas italo" aparece tres veces).
-RUTS_CONTRATISTAS = [
-    "18623018-4", "12818181", "321321",   # javier nicolas italo
-    "7777777-2",                          # don pedrito
-    "123",                                # san jose
-    "12345",                              # italonico
-    "123123123",                          # contratista
+# Contratistas creados a mano para probar. Se identifican por el CUERPO del RUT
+# —el número sin dígito verificador— y no por el RUT completo.
+#
+# La razón es concreta y casi cuesta caro: `rut_service.normalizar_en_tabla`
+# corrige el dígito de los RUT guardados, así que "7777777-2" ya es "7.777.777-6"
+# en producción. Una lista con el valor viejo no lo habría encontrado y el script
+# habría borrado 5 de 7 contratistas EN SILENCIO, informando éxito.
+#
+# El cuerpo es la invariante: la normalización nunca lo toca. El nombre no sirve
+# como clave porque "javier nicolas italo" se repite tres veces.
+CUERPOS_CONTRATISTAS = [
+    "18623018", "1281818", "32132",   # javier nicolas italo
+    "7777777",                        # don pedrito
+    "12",                             # san jose      (RUT "123")
+    "1234",                           # italonico     (RUT "12345")
+    "12312312",                       # contratista   (RUT "123123123")
 ]
+
+
+def _cuerpo(rut: str) -> str:
+    """Número del RUT sin el dígito verificador, sin puntos ni guion."""
+    return rut_service.clave(rut)[:-1]
 
 # Servicios inventados a mano sobre contratistas legítimos: hay que borrarlos
 # aparte porque su empresa se conserva.
@@ -140,8 +153,19 @@ def limpiar(db: Session, ejecutar: bool) -> Borrador:
     b = Borrador(db, ejecutar)
 
     # ── 1. Contratistas de prueba, con todo lo que cuelga de ellos ────────────
-    empresas = db.query(EmpresaContratista).filter(
-        EmpresaContratista.rut.in_(RUTS_CONTRATISTAS)).all()
+    # Se filtra en Python y no en SQL porque la comparación es por cuerpo del
+    # RUT, que la base guarda con puntos y guion en formatos inconsistentes.
+    objetivo = set(CUERPOS_CONTRATISTAS)
+    empresas = [e for e in db.query(EmpresaContratista).all() if _cuerpo(e.rut) in objetivo]
+
+    encontrados = {_cuerpo(e.rut) for e in empresas}
+    faltantes = objetivo - encontrados
+    if faltantes and empresas:
+        # Avisar en vez de callar: si la lista apunta a algo que ya no está, hay
+        # que saberlo antes de dar la limpieza por completa.
+        print(f"\n  AVISO: {len(faltantes)} contratista(s) de la lista no están en la base: "
+              f"{', '.join(sorted(faltantes))}")
+
     if empresas:
         print("\n  Contratistas:")
         for e in empresas:
