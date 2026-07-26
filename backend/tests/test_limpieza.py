@@ -119,7 +119,10 @@ def run():
     perfil = PerfilRequisitos(mandante_id=m.id, nombre="General"); db.add(perfil); db.flush()
 
     # Una empresa BASURA (esta en la lista) y una LEGITIMA (no lo esta).
-    basura = EmpresaContratista(rut="7777777-2", razon_social="don pedrito")
+    # OJO: se guarda con el digito YA CORREGIDO (7.777.777-6), no con el que
+    # figuraba en la lista original (7777777-2). Es el caso real: el seed
+    # normaliza los RUT antes, y una busqueda por RUT completo no la encontraria.
+    basura = EmpresaContratista(rut="7.777.777-6", razon_social="don pedrito")
     legitima = EmpresaContratista(rut="76.111.222-3", razon_social="Constructora Condor SpA")
     db.add_all([basura, legitima]); db.flush()
     _cadena_completa(db, m, perfil, req, basura)
@@ -185,7 +188,7 @@ def run():
     print("PASS: no quedan filas huerfanas — el orden de llaves foraneas es correcto")
 
     # Los archivos de lo borrado se reportan para sacarlos del storage.
-    assert any("7777777-2" in k for k in b.storage_keys), \
+    assert any("7.777.777-6" in k for k in b.storage_keys), \
         f"no reporto el archivo a borrar del storage: {b.storage_keys}"
     assert not any("76.111.222-3" in k for k in b.storage_keys), \
         "iba a borrar del storage un archivo legitimo"
