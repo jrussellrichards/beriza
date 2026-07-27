@@ -80,18 +80,32 @@ def _huerfanos(db) -> list[str]:
         ("acreditaciones", "expediente_id", "expedientes"),
         ("acreditaciones", "entrega_id", "entregas"),
         ("acreditacion_eventos", "acreditacion_id", "acreditaciones"),
-        ("servicios", "contratista_mandante_id", "contratista_mandantes"),
+        ("servicios", "contratista_mandante_id", "contratistas_mandantes"),
         ("servicio_trabajadores", "servicio_id", "servicios"),
         ("servicio_trabajadores", "trabajador_id", "trabajadores"),
         ("trabajadores", "empresa_id", "empresas_contratistas"),
-        ("contratista_mandantes", "contratista_id", "empresas_contratistas"),
+        ("contratistas_mandantes", "contratista_id", "empresas_contratistas"),
+        ("contratistas_mandantes", "mandante_id", "mandantes"),
+        ("centros_trabajo", "mandante_id", "mandantes"),
+        ("centros_trabajo", "encargado_id", "usuarios"),
+        ("servicios", "centro_trabajo_id", "centros_trabajo"),
+        ("usuarios", "mandante_id", "mandantes"),
+        ("usuarios", "contratista_id", "empresas_contratistas"),
         ("expedientes", "empresa_id", "empresas_contratistas"),
         ("expedientes", "requisito_id", "requisitos_documentales"),
     ]
     tablas = set(inspect(db.bind).get_table_names())
+    # Un nombre de tabla mal escrito NO puede saltarse en silencio. Dos de estas
+    # comprobaciones apuntaban a "contratista_mandantes" cuando la tabla real es
+    # "contratistas_mandantes", y el `continue` defensivo las hacia desaparecer:
+    # el test informaba exito sin haberlas ejecutado nunca. Una verificacion que
+    # puede no correrse sin avisar es peor que no tenerla.
+    desconocidas = {t for h, _, p in checks for t in (h, p) if t not in tablas}
+    assert not desconocidas, (
+        f"la lista de comprobaciones nombra tablas que no existen: {sorted(desconocidas)}. "
+        f"Tablas reales: {sorted(tablas)}"
+    )
     for hija, fk, padre in checks:
-        if hija not in tablas or padre not in tablas:
-            continue
         n = db.execute(text(
             f"SELECT COUNT(*) FROM {hija} h WHERE h.{fk} IS NOT NULL "
             f"AND NOT EXISTS (SELECT 1 FROM {padre} p WHERE p.id = h.{fk})"
