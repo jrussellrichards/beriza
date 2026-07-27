@@ -235,6 +235,69 @@ def listar_servicios(
     return query.order_by(Servicio.created_at.desc()).all()
 
 
+def actualizar_servicio(
+    db: Session,
+    servicio_id: uuid.UUID,
+    mandante_id: uuid.UUID,
+    centro_trabajo_id: uuid.UUID | None = None,
+    nombre: str | None = None,
+    codigo_referencia: str | None = None,
+    descripcion: str | None = None,
+    fecha_termino: date | None = None,
+) -> Servicio:
+    """
+    Edita los datos descriptivos de un servicio. Solo se pasan los campos a
+    cambiar; el resto queda como está.
+
+    Existe sobre todo para poder ASIGNARLE UN CENTRO a un servicio que se creó
+    antes de que existieran los centros. Sin esto la ficha mostraba "Sin centro
+    asignado" y no ofrecía forma de arreglarlo: una pantalla que señala un
+    problema sin dar salida.
+
+    NO se puede cambiar el contratista ni el perfil de requisitos, a propósito:
+
+    - Cambiar el contratista no es editar un servicio, es otro servicio.
+    - Cambiar el perfil altera en silencio QUÉ documentos se exigen, y con eso el
+      estado de acreditación de todos los trabajadores asignados. Un contratista
+      que estaba habilitado podría dejar de estarlo sin que nadie tocara un
+      documento. Si algún día hace falta, necesita su propio flujo que muestre el
+      impacto antes de confirmar.
+    """
+    servicio = obtener_servicio(db, servicio_id)
+    if servicio.relacion.mandante_id != mandante_id:
+        raise AsignacionInvalida("El servicio no pertenece a tu organización.")
+
+    if centro_trabajo_id is not None:
+        centro = db.get(CentroTrabajo, centro_trabajo_id)
+        if not centro or centro.mandante_id != mandante_id:
+            raise AsignacionInvalida("El centro de trabajo no existe en tu organización.")
+        if not centro.activo:
+            raise AsignacionInvalida(
+                f"El centro de trabajo «{centro.nombre}» está cerrado. "
+                "Elige uno en operación."
+            )
+        servicio.centro_trabajo_id = centro_trabajo_id
+
+    if nombre is not None:
+        nombre = nombre.strip()
+        if not nombre:
+            raise AsignacionInvalida("El servicio necesita un nombre.")
+        servicio.nombre = nombre
+
+    if codigo_referencia is not None:
+        servicio.codigo_referencia = codigo_referencia.strip() or None
+    if descripcion is not None:
+        servicio.descripcion = descripcion.strip() or None
+    if fecha_termino is not None:
+        if fecha_termino < servicio.fecha_inicio:
+            raise AsignacionInvalida("La fecha de término no puede ser anterior al inicio.")
+        servicio.fecha_termino = fecha_termino
+
+    db.commit()
+    db.refresh(servicio)
+    return servicio
+
+
 def cambiar_estado_servicio(db: Session, servicio_id: uuid.UUID, nuevo_estado: str) -> Servicio:
     """Cambia el estado del servicio. Un servicio TERMINADO no puede reactivarse."""
     servicio = obtener_servicio(db, servicio_id)

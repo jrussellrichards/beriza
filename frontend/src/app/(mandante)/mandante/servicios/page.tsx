@@ -8,6 +8,7 @@ import { api } from "@/shared/lib/api"
 import { AvancePanel } from "@/entities/servicio/avance-panel"
 import type { EstadoServicio, Servicio } from "@/entities/servicio/types"
 import { CrearServicioDialog } from "@/features/crear-servicio/crear-servicio-dialog"
+import { AsignarCentroDialog } from "@/features/crear-servicio/asignar-centro-dialog"
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
@@ -22,6 +23,7 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
 }) {
   const [cambiando, setCambiando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [asignandoCentro, setAsignandoCentro] = useState(false)
 
   async function cambiarEstado(estado: EstadoServicio) {
     setCambiando(true)
@@ -66,13 +68,19 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
           </span>
           {/* Los servicios anteriores a los centros no tienen uno. Se marca en
               ámbar para que se completen, no en rojo: no bloquea nada. */}
-          <span className={cn(
-            "inline-flex items-center gap-1 text-[10px]",
-            s.centro_trabajo_nombre ? "text-ink-subtle" : "text-accion-ink",
-          )}>
+          <button
+            onClick={() => setAsignandoCentro(true)}
+            title={s.centro_trabajo_nombre ? "Cambiar centro de trabajo" : "Asignar centro de trabajo"}
+            className={cn(
+              "inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 border transition-colors",
+              s.centro_trabajo_nombre
+                ? "text-ink-subtle border-line hover:bg-surface-app"
+                : "text-accion-ink border-accion-line bg-accion-soft hover:bg-accion-soft",
+            )}
+          >
             <MapPin size={10} />
-            {s.centro_trabajo_nombre ?? "Sin centro asignado"}
-          </span>
+            {s.centro_trabajo_nombre ?? "Asignar centro"}
+          </button>
         </div>
 
         {/* Acciones de estado */}
@@ -111,6 +119,16 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
       <div className="flex-1 overflow-y-auto px-5 py-4">
         <AvancePanel servicioId={s.id} />
       </div>
+
+      {asignandoCentro && (
+        <AsignarCentroDialog
+          servicioId={s.id}
+          servicioNombre={s.nombre}
+          centroActualId={s.centro_trabajo_id}
+          onClose={() => setAsignandoCentro(false)}
+          onGuardado={() => { setAsignandoCentro(false); onEstadoCambiado() }}
+        />
+      )}
     </div>
   )
 }

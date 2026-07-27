@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
+    ActualizarServicioRequest,
     AsignarTrabajadorServicioRequest,
     AvanceServicioResponse,
     CambiarEstadoServicioRequest,
@@ -152,6 +153,36 @@ def obtener_servicio(
     elif usuario.mandante_id and servicio.relacion.mandante_id != usuario.mandante_id:
         raise HTTPException(status_code=403, detail="El servicio no pertenece a su mandante")
     return servicio
+
+
+@router.patch("/{servicio_id}", response_model=ServicioResponse)
+def actualizar_servicio(
+    servicio_id: uuid.UUID,
+    body: ActualizarServicioRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Edita los datos descriptivos de un servicio, y sobre todo su centro de
+    trabajo: es lo que permite completar los servicios creados antes de que los
+    centros existieran.
+    """
+    mandante_id = _resolver_mandante_id(usuario, None)
+    try:
+        return servicio_service.actualizar_servicio(
+            db, servicio_id, mandante_id,
+            centro_trabajo_id=body.centro_trabajo_id,
+            nombre=body.nombre,
+            codigo_referencia=body.codigo_referencia,
+            descripcion=body.descripcion,
+            fecha_termino=body.fecha_termino,
+        )
+    except ServicioNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        # El servicio de otro mandante responde 403; el resto son datos malos.
+        codigo = 403 if "organización" in str(e) else 400
+        raise HTTPException(status_code=codigo, detail=str(e))
 
 
 @router.patch("/{servicio_id}/estado", response_model=ServicioResponse)

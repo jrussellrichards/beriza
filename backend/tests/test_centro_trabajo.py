@@ -178,6 +178,66 @@ def run():
     assert rt.encargado_id == ana.id, "editar la direccion borro el encargado"
     print("PASS: vaciar el cargo es explicito; editar otro campo no lo pisa")
 
+    # ── 11. Asignar centro a un servicio que ya existia ──────────────────────
+    # Es la razon de ser del endpoint de edicion: los servicios creados antes de
+    # que hubiera centros mostraban "Sin centro asignado" y no habia forma de
+    # arreglarlo. Una pantalla que senala un problema sin dar salida.
+    huerfano = servicio_service.crear_servicio(
+        db, mandante_id=codelco.id, contratista_id=transportes.id,
+        perfil_requisitos_id=perfil.id, nombre="Legado sin centro",
+        fecha_inicio=date.today())
+    assert huerfano.centro_trabajo_id is None
+    servicio_service.actualizar_servicio(db, huerfano.id, codelco.id, centro_trabajo_id=chuqui.id)
+    db.refresh(huerfano)
+    assert huerfano.centro_trabajo_id == chuqui.id, "no se pudo asignar el centro"
+    print("PASS: se le puede asignar centro a un servicio que no tenia")
+
+    # Y cambiarlo despues.
+    servicio_service.actualizar_servicio(db, huerfano.id, codelco.id, centro_trabajo_id=rt.id)
+    db.refresh(huerfano)
+    assert huerfano.centro_trabajo_id == rt.id
+    print("PASS: se puede cambiar el centro de un servicio")
+
+    # ── 12. No se puede editar un servicio de OTRO mandante ──────────────────
+    try:
+        servicio_service.actualizar_servicio(
+            db, huerfano.id, otro.id, centro_trabajo_id=ajeno_centro.id)
+        raise AssertionError("edito un servicio de otro mandante")
+    except AsignacionInvalida as e:
+        assert "organización" in str(e)
+    db.refresh(huerfano)
+    assert huerfano.centro_trabajo_id == rt.id, "el servicio ajeno quedo modificado"
+    print("PASS: no se puede editar un servicio de otra organizacion")
+
+    # Ni moverlo a un centro ajeno desde el propio mandante.
+    try:
+        servicio_service.actualizar_servicio(
+            db, huerfano.id, codelco.id, centro_trabajo_id=ajeno_centro.id)
+        raise AssertionError("movio el servicio a un centro de otro mandante")
+    except AsignacionInvalida:
+        pass
+    print("PASS: no se puede mover un servicio a un centro ajeno")
+
+    # ── 13. Ni a un centro cerrado ───────────────────────────────────────────
+    try:
+        servicio_service.actualizar_servicio(
+            db, huerfano.id, codelco.id, centro_trabajo_id=vacio.id)
+        raise AssertionError("movio el servicio a un centro cerrado")
+    except AsignacionInvalida as e:
+        assert "cerrado" in str(e)
+    print("PASS: no se puede mover un servicio a un centro cerrado")
+
+    # ── 14. La edicion es PARCIAL: lo que no se manda no se pisa ─────────────
+    servicio_service.actualizar_servicio(db, huerfano.id, codelco.id, nombre="Renombrado")
+    db.refresh(huerfano)
+    assert huerfano.nombre == "Renombrado"
+    assert huerfano.centro_trabajo_id == rt.id, "renombrar borro el centro"
+    perfil_antes = huerfano.perfil_requisitos_id
+    servicio_service.actualizar_servicio(db, huerfano.id, codelco.id, codigo_referencia="CTR-9")
+    db.refresh(huerfano)
+    assert huerfano.nombre == "Renombrado" and huerfano.perfil_requisitos_id == perfil_antes,         "una edicion parcial toco campos que no venian en el request"
+    print("PASS: la edicion es parcial y no pisa lo que no viene")
+
     print("TODOS LOS TESTS DE CENTRO DE TRABAJO PASARON")
 
 

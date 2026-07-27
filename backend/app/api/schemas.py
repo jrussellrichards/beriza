@@ -280,6 +280,22 @@ class ServicioResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ActualizarServicioRequest(BaseModel):
+    """
+    Edición parcial: solo viajan los campos a cambiar.
+
+    No incluye contratista ni perfil de requisitos a propósito — ver el docstring
+    de `servicio_service.actualizar_servicio`. Cambiar el perfil alteraría en
+    silencio qué documentos se exigen y podría deshabilitar trabajadores sin que
+    nadie tocara un documento.
+    """
+    centro_trabajo_id: uuid.UUID | None = None
+    nombre: str | None = None
+    codigo_referencia: str | None = None
+    descripcion: str | None = None
+    fecha_termino: date | None = None
+
+
 class ServicioListItemResponse(BaseModel):
     """Item del listado de servicios, enriquecido con contratista y perfil."""
     id: uuid.UUID
