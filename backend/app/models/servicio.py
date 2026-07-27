@@ -61,6 +61,13 @@ class Servicio(ModelBase):
         ForeignKey("contratistas_mandantes.id"), nullable=False, index=True
     )
     perfil_requisitos_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("perfiles_requisitos.id"), nullable=False)
+    # Dónde se ejecuta. Nullable porque los servicios creados antes de que
+    # existieran los centros no tienen uno, y obligarlos rompería la app entera
+    # hasta que alguien los asigne a mano. El endpoint de creación sí lo exige:
+    # a partir de ahora todo servicio nuevo nace con su lugar.
+    centro_trabajo_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("centros_trabajo.id"), nullable=True, index=True
+    )
     nombre: Mapped[str] = mapped_column(String(255), nullable=False)
     # Vocabulario del rubro: el portal del contratista muestra esta palabra
     tipo: Mapped[str] = mapped_column(String(20), nullable=False,
@@ -72,6 +79,7 @@ class Servicio(ModelBase):
     estado: Mapped[str] = mapped_column(String(20), default=EstadoServicio.ACTIVO, index=True)
 
     relacion: Mapped["ContratistaMandante"] = relationship(back_populates="servicios")
+    centro_trabajo: Mapped["CentroTrabajo | None"] = relationship(back_populates="servicios")
     perfil: Mapped["PerfilRequisitos"] = relationship(back_populates="servicios")
     trabajadores_asignados: Mapped[list["ServicioTrabajador"]] = relationship(back_populates="servicio")
 

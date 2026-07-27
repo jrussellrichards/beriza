@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Building2,
   Briefcase,
+  MapPin,
   ClipboardCheck,
   ClipboardList,
   Settings,
@@ -31,6 +32,10 @@ const nav = [
   { href: "/mandante/revision", label: "Revisión", icon: ClipboardCheck, corta: "Revisar" },
   { href: "/mandante/contratistas", label: "Contratistas", icon: Building2, corta: "Empresas" },
   { href: "/mandante/servicios", label: "Servicios", icon: Briefcase, corta: "Servicios" },
+  // Despues de Servicios a proposito: la barra del telefono muestra los cuatro
+  // primeros, y Servicios es uso diario mientras que los centros se configuran
+  // una vez. Ponerlo antes sacaba Servicios del movil.
+  { href: "/mandante/centros", label: "Centros", icon: MapPin, corta: "Centros" },
   { href: "/mandante/requisitos", label: "Perfiles", icon: ClipboardList, corta: "Perfiles" },
   // Invitar gente y decidir quien aprueba que no es un "ajuste" que se toca una
   // vez: es gestion recurrente con consecuencias reales. Enterrado como
@@ -115,6 +120,9 @@ export function SidebarMandante() {
           <p className="text-section text-ink-inverse">Acredita</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link href="/mandante/centros" className="text-ink-inverse-muted p-1" aria-label="Centros de trabajo">
+            <MapPin size={16} />
+          </Link>
           <Link href="/mandante/requisitos" className="text-ink-inverse-muted p-1" aria-label="Perfiles">
             <ClipboardList size={16} />
           </Link>

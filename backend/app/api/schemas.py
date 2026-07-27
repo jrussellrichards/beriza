@@ -226,10 +226,36 @@ class PerfilResponse(BaseModel):
 
 # ── Servicios ────────────────────────────────────────────────────────────────
 
+class CentroTrabajoRequest(BaseModel):
+    """Alta o edición de un centro de trabajo."""
+    nombre: str
+    direccion: str | None = None
+    # Debe ser un usuario del equipo del mandante; se valida en el dominio.
+    encargado_id: uuid.UUID | None = None
+    # Solo para editar: distingue "deja el encargado como está" (encargado_id
+    # ausente) de "deja el cargo vacante". Sin esto no se puede desasignar.
+    limpiar_encargado: bool = False
+
+
+class CentroTrabajoResponse(BaseModel):
+    id: uuid.UUID
+    nombre: str
+    direccion: str | None
+    encargado_id: uuid.UUID | None
+    encargado_nombre: str | None
+    activo: bool
+    # Cuántos servicios vigentes hay ahí. Es lo que responde "¿puedo cerrarlo?".
+    servicios_activos: int
+
+
 class CrearServicioRequest(BaseModel):
     contratista_id: uuid.UUID
     perfil_requisitos_id: uuid.UUID
     nombre: str
+    # Dónde se ejecuta. Obligatorio para servicios nuevos: el objetivo del
+    # cambio es que a partir de ahora ninguno nazca sin lugar. Los que ya
+    # existían quedan con null y se asignan desde la ficha del servicio.
+    centro_trabajo_id: uuid.UUID
     tipo: str = "SERVICIO"  # OBRA | FAENA | SERVICIO
     fecha_inicio: date
     codigo_referencia: str | None = None
@@ -272,6 +298,10 @@ class ServicioListItemResponse(BaseModel):
     mandante_razon_social: str
     perfil_nombre: str
     trabajadores_asignados: int
+    # Dónde se ejecuta. None en los servicios creados antes de que existieran
+    # los centros; la UI los marca como "sin asignar" para que se completen.
+    centro_trabajo_id: uuid.UUID | None = None
+    centro_trabajo_nombre: str | None = None
 
 
 class CambiarEstadoServicioRequest(BaseModel):

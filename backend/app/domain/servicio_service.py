@@ -22,6 +22,7 @@ from app.core.exceptions import (
 )
 from app.domain.estados import EstadoServicio, TipoServicio
 from app.models.contratista import ContratistaMandante
+from app.models.centro_trabajo import CentroTrabajo
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
 
@@ -137,10 +138,14 @@ def crear_servicio(
     codigo_referencia: str | None = None,
     descripcion: str | None = None,
     fecha_termino: date | None = None,
+    centro_trabajo_id: uuid.UUID | None = None,
 ) -> Servicio:
     """
     Crea un servicio para la relación contratista↔mandante.
-    Valida que la relación exista y que el perfil pertenezca al mismo mandante.
+
+    Valida que la relación exista, que el perfil pertenezca al mismo mandante y
+    —si viene— que el centro de trabajo también. Sin esa última comprobación un
+    mandante podría colgar su servicio de una faena ajena con solo pasar el id.
     """
     relacion = db.query(ContratistaMandante).filter_by(
         contratista_id=contratista_id, mandante_id=mandante_id
@@ -156,6 +161,16 @@ def crear_servicio(
             f"El perfil {perfil_requisitos_id} no pertenece al mandante {mandante_id}."
         )
 
+    if centro_trabajo_id is not None:
+        centro = db.get(CentroTrabajo, centro_trabajo_id)
+        if not centro or centro.mandante_id != mandante_id:
+            raise AsignacionInvalida("El centro de trabajo no existe en tu organización.")
+        if not centro.activo:
+            raise AsignacionInvalida(
+                f"El centro de trabajo «{centro.nombre}» está cerrado; "
+                "no se pueden crear servicios nuevos ahí."
+            )
+
     servicio = Servicio(
         contratista_mandante_id=relacion.id,
         perfil_requisitos_id=perfil_requisitos_id,
@@ -165,6 +180,7 @@ def crear_servicio(
         descripcion=descripcion,
         fecha_inicio=fecha_inicio,
         fecha_termino=fecha_termino,
+        centro_trabajo_id=centro_trabajo_id,
         estado=EstadoServicio.ACTIVO,
     )
     db.add(servicio)

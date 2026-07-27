@@ -20,6 +20,10 @@ export interface Servicio {
   mandante_razon_social: string
   perfil_nombre: string
   trabajadores_asignados: number
+  /** Dónde se ejecuta. null en los servicios creados antes de que existieran
+   *  los centros de trabajo. */
+  centro_trabajo_id: string | null
+  centro_trabajo_nombre: string | null
 }
 
 export interface Perfil {
