@@ -67,6 +67,7 @@ def crear_servicio(
             codigo_referencia=body.codigo_referencia,
             descripcion=body.descripcion,
             fecha_termino=body.fecha_termino,
+            centro_trabajo_id=body.centro_trabajo_id,
         )
     except (ContratistaNoEncontrado, PerfilNoEncontrado) as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -107,6 +108,8 @@ def listar_servicios(
             mandante_razon_social=s.relacion.mandante.razon_social,
             perfil_nombre=s.perfil.nombre,
             trabajadores_asignados=sum(1 for a in s.trabajadores_asignados if a.activo),
+            centro_trabajo_id=s.centro_trabajo_id,
+            centro_trabajo_nombre=s.centro_trabajo.nombre if s.centro_trabajo else None,
         )
         for s in servicios
     ]

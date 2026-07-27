@@ -22,6 +22,12 @@ interface ContratistaItem {
   rut: string
 }
 
+interface CentroTrabajo {
+  id: string
+  nombre: string
+  direccion: string | null
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -31,6 +37,8 @@ interface Props {
 export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
   const [contratistas, setContratistas] = useState<ContratistaItem[]>([])
   const [perfiles, setPerfiles] = useState<Perfil[]>([])
+  const [centros, setCentros] = useState<CentroTrabajo[]>([])
+  const [centroId, setCentroId] = useState("")
   const [contratistaId, setContratistaId] = useState("")
   const [perfilId, setPerfilId] = useState("")
   const [nombre, setNombre] = useState("")
@@ -49,6 +57,10 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
       .then(setContratistas).catch(() => setContratistas([]))
     api.get<Perfil[]>(`/api/v1/mandantes/${s.mandante_id}/perfiles`)
       .then(setPerfiles).catch(() => setPerfiles([]))
+    // Solo los centros ACTIVOS: uno cerrado no admite servicios nuevos y
+    // ofrecerlo sería un 400 garantizado al enviar.
+    api.get<CentroTrabajo[]>("/api/v1/centros-trabajo/")
+      .then(setCentros).catch(() => setCentros([]))
   }, [open])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,6 +71,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
       await api.post("/api/v1/servicios/", {
         contratista_id: contratistaId,
         perfil_requisitos_id: perfilId,
+        centro_trabajo_id: centroId,
         nombre,
         tipo,
         codigo_referencia: codigoRef || null,
@@ -76,7 +89,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
 
   function handleClose() {
     if (!loading) {
-      setContratistaId(""); setPerfilId(""); setNombre("")
+      setContratistaId(""); setPerfilId(""); setNombre(""); setCentroId("")
       setCodigoRef(""); setFechaInicio(""); setFechaTermino("")
       setError(null)
       onClose()
@@ -93,6 +106,29 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
           <DialogTitle>Nuevo servicio</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="centro">Centro de trabajo</Label>
+            <select
+              id="centro"
+              className={selectClass}
+              value={centroId}
+              onChange={(e) => setCentroId(e.target.value)}
+              required
+            >
+              <option value="" disabled>¿Dónde se ejecuta?</option>
+              {centros.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}{c.direccion ? ` — ${c.direccion}` : ""}
+                </option>
+              ))}
+            </select>
+            {centros.length === 0 && (
+              <p className="text-[10px] text-accion-ink">
+                Todavía no tienes centros de trabajo. Créalos en la sección Centros
+                antes de dar de alta un servicio.
+              </p>
+            )}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="contratista">Contratista</Label>
             <select

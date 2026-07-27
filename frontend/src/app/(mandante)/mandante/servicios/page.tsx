@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Briefcase, ChevronRight, Pause, Play, Plus, Search, Square, X } from "lucide-react"
+import { Briefcase, ChevronRight, MapPin, Pause, Play, Plus, Search, Square, X } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { EstadoServicioBadge, LABEL_SERVICIO } from "@/shared/ui/estado-badge"
 import { api } from "@/shared/lib/api"
@@ -63,6 +63,15 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
           )}
           <span className="text-[10px] text-ink-subtle">
             Perfil: <span className="font-medium text-ink-muted">{s.perfil_nombre}</span>
+          </span>
+          {/* Los servicios anteriores a los centros no tienen uno. Se marca en
+              ámbar para que se completen, no en rojo: no bloquea nada. */}
+          <span className={cn(
+            "inline-flex items-center gap-1 text-[10px]",
+            s.centro_trabajo_nombre ? "text-ink-subtle" : "text-accion-ink",
+          )}>
+            <MapPin size={10} />
+            {s.centro_trabajo_nombre ?? "Sin centro asignado"}
           </span>
         </div>
 

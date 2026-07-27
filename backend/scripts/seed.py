@@ -31,6 +31,7 @@ from app.models.pilar import Pilar, Subpilar, RequisitoDocumental
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
 from app.models.expediente import Acreditacion, AcreditacionEvento, Archivo, Entrega, Expediente
+from app.models.centro_trabajo import CentroTrabajo
 from app.models.permiso import UsuarioPilarPermiso
 
 engine = create_engine(settings.DATABASE_URL)
@@ -883,6 +884,7 @@ def seed_showcase_demo(session: Session):
     else:
         print("  OK Servicios ya tienen nombres realistas, saltando.")
 
+    _showcase_centros_trabajo(session)
     _showcase_permisos_equipo(session)
     en_regla = _showcase_faenas_en_regla(session)
     _showcase_estados_documentos(session, excluir_contratistas=en_regla)
@@ -892,6 +894,68 @@ def seed_showcase_demo(session: Session):
 # demo da la impresion de que nada funciona y no se puede mostrar el caso verde,
 # que es el que el cliente quiere ver.
 FAENAS_EN_REGLA = 3
+
+
+# Faenas reales de Codelco. El servicio de cada contratista se ancla a una de
+# ellas por posicion, igual que los nombres de servicio: asi la demo muestra
+# varios contratistas compartiendo faena, que es el caso que justifica la entidad.
+CENTROS_DEMO = [
+    ("Chuquicamata", "Calama, Región de Antofagasta"),
+    ("Radomiro Tomic", "Calama, Región de Antofagasta"),
+    ("Ministro Hales", "Calama, Región de Antofagasta"),
+    ("El Teniente", "Machalí, Región de O'Higgins"),
+]
+
+
+def _showcase_centros_trabajo(session: Session):
+    """
+    Crea los centros de Codelco y ancla a ellos los servicios existentes.
+
+    Sin esto la demo muestra "Sin centro asignado" en todos los servicios, que es
+    correcto —son anteriores a la entidad— pero no deja ver para que sirve. Con
+    los centros puestos se aprecia lo importante: varios contratistas distintos
+    compartiendo faena, y un mismo contratista presente en dos.
+    """
+    codelco = session.query(Mandante).filter_by(slug="codelco-demo").first()
+    if not codelco:
+        return
+
+    encargado = (
+        session.query(Usuario)
+        .filter_by(mandante_id=codelco.id, rol="prevencionista", activo=True)
+        .order_by(Usuario.email)
+        .first()
+    )
+
+    centros = []
+    for nombre, direccion in CENTROS_DEMO:
+        centro = session.query(CentroTrabajo).filter_by(
+            mandante_id=codelco.id, nombre=nombre
+        ).first()
+        if not centro:
+            centro = CentroTrabajo(
+                mandante_id=codelco.id, nombre=nombre, direccion=direccion,
+                encargado_id=encargado.id if encargado else None, activo=True,
+            )
+            session.add(centro); session.flush()
+        centros.append(centro)
+
+    # Solo los que no tienen centro: no se pisa una asignacion hecha a mano.
+    servicios = (
+        session.query(Servicio)
+        .join(ContratistaMandante, Servicio.contratista_mandante_id == ContratistaMandante.id)
+        .filter(ContratistaMandante.mandante_id == codelco.id,
+                Servicio.centro_trabajo_id.is_(None))
+        .order_by(Servicio.created_at)
+        .all()
+    )
+    for i, servicio in enumerate(servicios):
+        servicio.centro_trabajo_id = centros[i % len(centros)].id
+    session.commit()
+    if servicios:
+        print(f"  OK {len(centros)} centros de trabajo, {len(servicios)} servicio(s) anclados.")
+    else:
+        print(f"  OK {len(centros)} centros de trabajo ya existen y los servicios estan anclados.")
 
 
 def _showcase_permisos_equipo(session: Session):
