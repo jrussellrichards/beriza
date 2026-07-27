@@ -940,17 +940,41 @@ def _showcase_centros_trabajo(session: Session):
             session.add(centro); session.flush()
         centros.append(centro)
 
-    # Solo los que no tienen centro: no se pisa una asignacion hecha a mano.
-    servicios = (
+    todos = (
         session.query(Servicio)
         .join(ContratistaMandante, Servicio.contratista_mandante_id == ContratistaMandante.id)
-        .filter(ContratistaMandante.mandante_id == codelco.id,
-                Servicio.centro_trabajo_id.is_(None))
+        .filter(ContratistaMandante.mandante_id == codelco.id)
         .order_by(Servicio.created_at)
         .all()
     )
+    por_nombre = {c.nombre: c for c in centros}
+
+    # Se procesa un servicio si le falta el centro, O si su nombre todavia trae
+    # la faena como prefijo. Lo segundo corrige asignaciones previas que se
+    # hicieron por posicion y dejaron "Ministro Hales - ..." bajo Chuquicamata.
+    #
+    # Y es idempotente sin pisar decisiones humanas: en cuanto se limpia el
+    # prefijo el servicio deja de coincidir, y un nombre puesto a mano nunca
+    # empieza con el nombre de un centro.
+    def _prefijo(nombre: str):
+        return next((n for n in por_nombre if nombre.startswith(n)), None)
+
+    servicios = [s for s in todos if s.centro_trabajo_id is None or _prefijo(s.nombre)]
     for i, servicio in enumerate(servicios):
-        servicio.centro_trabajo_id = centros[i % len(centros)].id
+        # Varios servicios traian la faena EN EL NOMBRE ("Ministro Hales -
+        # Sostenimiento de tuneles") porque antes no habia donde ponerla. Si se
+        # asignara por posicion, ese servicio podia terminar archivado bajo
+        # Chuquicamata, que en una demo se lee como un error.
+        prefijo = next((n for n in por_nombre if servicio.nombre.startswith(n)), None)
+        if prefijo:
+            servicio.centro_trabajo_id = por_nombre[prefijo].id
+            # Y se le quita el prefijo: la faena ya la lleva el centro, y
+            # repetirla es el nombre viejo compensando un dato que no existia.
+            resto = servicio.nombre[len(prefijo):].lstrip(" -—")
+            if resto:
+                servicio.nombre = resto
+        else:
+            servicio.centro_trabajo_id = centros[i % len(centros)].id
     session.commit()
     if servicios:
         print(f"  OK {len(centros)} centros de trabajo, {len(servicios)} servicio(s) anclados.")
