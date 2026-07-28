@@ -12,9 +12,9 @@ class CentroTrabajo(ModelBase):
     Radomiro Tomic.
 
     Antes no existía como entidad. "Faena" era una etiqueta sobre el contrato de
-    UN contratista (`Servicio.tipo`), así que con cinco contratistas en
-    Chuquicamata había cinco contratos sueltos y ninguna forma de preguntar
-    "¿cómo está Chuquicamata?".
+    UN contratista —un campo `tipo` con obra/faena/servicio, ya eliminado—, así
+    que con cinco contratistas en Chuquicamata había cinco contratos sueltos y
+    ninguna forma de preguntar "¿cómo está Chuquicamata?".
 
     Cuelga del MANDANTE y el vínculo con el contratista es indirecto, a través de
     sus servicios. Esto es deliberado y es la corrección al árbol que proponía el

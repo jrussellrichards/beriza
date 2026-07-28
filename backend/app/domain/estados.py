@@ -49,18 +49,6 @@ def validar_transicion(desde: EstadoDocumento, hacia: EstadoDocumento) -> None:
         )
 
 
-class TipoServicio(StrEnum):
-    """
-    Qué es lo contratado, en el vocabulario del rubro. No son intercambiables:
-    una obra se construye y termina, una faena es un sitio de trabajo continuo,
-    un servicio es una prestación que puede no tener sitio fijo. Lo elige el
-    mandante al crear el servicio y el portal del contratista usa esa palabra.
-    """
-    OBRA = "OBRA"
-    FAENA = "FAENA"
-    SERVICIO = "SERVICIO"
-
-
 class EstadoServicio(StrEnum):
     """Ciclo de vida de un servicio (contrato mandante ↔ contratista)."""
     ACTIVO = "ACTIVO"

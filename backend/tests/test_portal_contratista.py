@@ -28,6 +28,7 @@ from app.models.contratista import ContratistaMandante, EmpresaContratista
 from app.models.expediente import Acreditacion, Entrega, Expediente
 from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
+from app.models.centro_trabajo import CentroTrabajo
 from app.models.servicio import (
     PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador,
 )
@@ -35,7 +36,7 @@ from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
 from app.domain import acreditacion_service
 from app.domain.estados import (
-    EstadoAcreditacion, EstadoDocumento, EstadoServicio, TipoServicio,
+    EstadoAcreditacion, EstadoDocumento, EstadoServicio,
 )
 
 HOY = date.today()
@@ -76,11 +77,18 @@ def run():
     db.add(PerfilRequisitoConfig(perfil_id=p_sur.id, requisito_documental_id=contrato.id,
                                  es_obligatorio=True, vigencia_max_dias=365))
 
+    # Solo Obra Norte tiene centro: asi se cubren las dos ramas, la que muestra
+    # el lugar y la que no tiene ninguno que mostrar.
+    chuqui = CentroTrabajo(mandante_id=codelco.id, nombre="Chuquicamata",
+                           direccion="Calama")
+    db.add(chuqui); db.flush()
+
     norte = Servicio(contratista_mandante_id=rel.id, perfil_requisitos_id=p_norte.id,
-                     nombre="Obra Norte", tipo=TipoServicio.FAENA, fecha_inicio=HOY,
+                     nombre="Obra Norte", fecha_inicio=HOY,
+                     centro_trabajo_id=chuqui.id,
                      estado=EstadoServicio.ACTIVO)
     sur = Servicio(contratista_mandante_id=rel.id, perfil_requisitos_id=p_sur.id,
-                   nombre="Obra Sur", tipo=TipoServicio.FAENA, fecha_inicio=HOY,
+                   nombre="Obra Sur", fecha_inicio=HOY,
                    estado=EstadoServicio.ACTIVO)
     db.add_all([norte, sur]); db.flush()
 
@@ -107,9 +115,13 @@ def run():
     assert "Examen de altura" in por_servicio["Obra Norte"].faltantes
     print("PASS: habilitado en un servicio y bloqueado en OTRO del mismo mandante")
 
-    # 2. El tipo del servicio viaja para que el portal use la palabra correcta.
-    assert por_servicio["Obra Norte"].servicio_tipo == TipoServicio.FAENA
-    print("PASS: el tipo del servicio (obra/faena/servicio) llega al portal")
+    # 2. El centro llega al portal. Ocupa el lugar de "obra/faena/servicio", que
+    # se pregunto para decir DONDE se ejecutaba y se elimino: dos servicios del
+    # mismo cliente pueden llamarse igual, y sin el centro el contratista no
+    # sabe a que faena mandar a su gente.
+    assert por_servicio["Obra Norte"].centro_trabajo_nombre == "Chuquicamata"
+    assert por_servicio["Obra Sur"].centro_trabajo_nombre is None,         "un servicio sin centro debe viajar en null, no inventarse uno"
+    print("PASS: el centro de trabajo del servicio llega al portal")
 
     # 3. Bandeja unificada: el trabajador incompleto aparece como pendiente.
     pend = acreditacion_service.pendientes_del_contratista(db, c.id)

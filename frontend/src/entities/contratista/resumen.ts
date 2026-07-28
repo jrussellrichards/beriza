@@ -53,9 +53,6 @@ export interface DocumentoContratista {
 
 // ── Portal v2 ────────────────────────────────────────────────────────────────
 
-/** La palabra del rubro que corresponde a este contrato. */
-export type TipoServicio = "OBRA" | "FAENA" | "SERVICIO"
-
 /**
  * ¿Este documento está en regla? Lo está solo si TODOS los mandantes que lo
  * exigen lo tienen aprobado y vigente.
@@ -72,12 +69,6 @@ export function documentoAlDia(d: DocumentoContratista, hoy = new Date()): boole
     if (!m.fecha_vigencia_hasta) return true
     return new Date(m.fecha_vigencia_hasta) >= hoy
   })
-}
-
-export const TIPO_LABEL: Record<TipoServicio, string> = {
-  OBRA: "Obra",
-  FAENA: "Faena",
-  SERVICIO: "Servicio",
 }
 
 export type TipoPendiente =
@@ -98,8 +89,6 @@ export interface Pendiente {
 export interface HabilitacionServicio {
   servicio_id: string
   servicio_nombre: string
-  /** null en los servicios creados desde que dejó de preguntarse. */
-  servicio_tipo: TipoServicio | null
   mandante_razon_social: string
   /** Dónde queda esa faena. null en servicios anteriores a los centros. */
   centro_trabajo_nombre: string | null
@@ -120,8 +109,6 @@ export interface TrabajadorHabilitacion {
 export interface ServicioContratista {
   id: string
   nombre: string
-  /** null en los servicios creados desde que dejó de preguntarse. */
-  tipo: TipoServicio | null
   codigo_referencia: string | null
   estado: string
   fecha_inicio: string
@@ -137,8 +124,6 @@ export interface ServicioContratista {
 export interface ServicioEnRiesgo {
   servicio_id: string
   servicio_nombre: string
-  /** null en los servicios creados desde que dejó de preguntarse. */
-  servicio_tipo: TipoServicio | null
   contratista_razon_social: string
   trabajadores_asignados: number
   trabajadores_no_habilitados: number

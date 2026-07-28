@@ -873,7 +873,6 @@ class HabilitacionServicio:
     """Si un trabajador puede ingresar a UN servicio, y qué le falta si no."""
     servicio_id: uuid.UUID
     servicio_nombre: str
-    servicio_tipo: str
     mandante_razon_social: str
     # None en los servicios anteriores a los centros de trabajo.
     centro_trabajo_nombre: str | None
@@ -931,7 +930,6 @@ def habilitacion_trabajadores(db: Session, contratista_id: uuid.UUID) -> list[Tr
                 trabajadores[tid].servicios.append(HabilitacionServicio(
                     servicio_id=servicio.id,
                     servicio_nombre=servicio.nombre,
-                    servicio_tipo=servicio.tipo,
                     mandante_razon_social=rel.mandante.razon_social,
                     centro_trabajo_nombre=(
                         servicio.centro_trabajo.nombre if servicio.centro_trabajo else None
@@ -958,7 +956,6 @@ def habilitacion_trabajadores(db: Session, contratista_id: uuid.UUID) -> list[Tr
 class ServicioEnRiesgo:
     servicio_id: uuid.UUID
     servicio_nombre: str
-    servicio_tipo: str
     contratista_razon_social: str
     trabajadores_asignados: int
     trabajadores_no_habilitados: int
@@ -1011,7 +1008,6 @@ def riesgo_del_mandante(db: Session, mandante_id: uuid.UUID) -> RiesgoMandante:
             servicios.append(ServicioEnRiesgo(
                 servicio_id=servicio.id,
                 servicio_nombre=servicio.nombre,
-                servicio_tipo=servicio.tipo,
                 contratista_razon_social=rel.contratista.razon_social,
                 trabajadores_asignados=len(asignados),
                 trabajadores_no_habilitados=len(no_habilitados),

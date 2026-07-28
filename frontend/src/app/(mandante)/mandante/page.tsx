@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardCheck, UserX } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
-import { TIPO_LABEL, type RiesgoMandante, type ServicioEnRiesgo } from "@/entities/contratista/resumen"
+import { type RiesgoMandante, type ServicioEnRiesgo } from "@/entities/contratista/resumen"
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-line rounded-lg", className)} />
@@ -26,9 +26,6 @@ function FaenaRow({ s }: { s: ServicioEnRiesgo }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-sm font-medium text-ink">{s.servicio_nombre}</span>
-            {s.servicio_tipo && (
-              <span className="text-[10px] text-ink-subtle">{TIPO_LABEL[s.servicio_tipo] ?? s.servicio_tipo}</span>
-            )}
           </div>
           <p className="text-xs text-ink-muted mt-0.5">{s.contratista_razon_social}</p>
         </div>

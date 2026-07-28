@@ -808,41 +808,41 @@ def main():
 # no puede imaginarse su propia operación en el producto.
 SERVICIOS_DEMO = {
     "codelco-demo": [
-        ("Chuquicamata — Mantención planta concentradora", "FAENA"),
-        ("Radomiro Tomic — Movimiento de tierras", "FAENA"),
-        ("Ampliación planta de cátodos", "OBRA"),
-        ("Transporte de personal turno noche", "SERVICIO"),
-        ("Ministro Hales — Sostenimiento de túneles", "FAENA"),
-        ("Aseo industrial y manejo de residuos", "SERVICIO"),
-        ("Montaje estructuras área seca", "OBRA"),
+        "Chuquicamata — Mantención planta concentradora",
+        "Radomiro Tomic — Movimiento de tierras",
+        "Ampliación planta de cátodos",
+        "Transporte de personal turno noche",
+        "Ministro Hales — Sostenimiento de túneles",
+        "Aseo industrial y manejo de residuos",
+        "Montaje estructuras área seca",
     ],
     "los-pelambres": [
-        ("Ampliación planta concentradora", "OBRA"),
-        ("Mantención correa transportadora", "SERVICIO"),
-        ("Habilitación campamento Cuncumén", "OBRA"),
-        ("Perforación y tronadura rajo", "FAENA"),
-        ("Servicio de alimentación casino", "SERVICIO"),
+        "Ampliación planta concentradora",
+        "Mantención correa transportadora",
+        "Habilitación campamento Cuncumén",
+        "Perforación y tronadura rajo",
+        "Servicio de alimentación casino",
     ],
     "echeverria-izquierdo": [
-        ("Edificio Nueva Las Condes — Torre B", "OBRA"),
-        ("Habilitación oficinas piso 12", "OBRA"),
-        ("Instalaciones eléctricas subterráneo", "OBRA"),
-        ("Suministro de hormigón", "SERVICIO"),
+        "Edificio Nueva Las Condes — Torre B",
+        "Habilitación oficinas piso 12",
+        "Instalaciones eléctricas subterráneo",
+        "Suministro de hormigón",
     ],
     "enap-refinerias": [
-        ("Refinería Aconcagua — Parada de planta", "FAENA"),
-        ("Inspección técnica de estanques", "SERVICIO"),
+        "Refinería Aconcagua — Parada de planta",
+        "Inspección técnica de estanques",
     ],
 }
 
 
 def seed_showcase_demo(session: Session):
     """
-    Da variedad realista a la demo: nombres y tipos de servicio del rubro, y
+    Da variedad realista a la demo: nombres de servicio del rubro, y
     documentos en estados distintos para que cada pantalla tenga contenido.
 
-    Sin esto la demo mostraba 17 servicios llamados "General", todos de tipo
-    SERVICIO, todos "en riesgo" y con la cola de revisión del mandante vacía —
+    Sin esto la demo mostraba 17 servicios llamados "General", todos "en
+    riesgo" y con la cola de revisión del mandante vacía —
     justo la pantalla donde el mandante hace su trabajo diario.
 
     Idempotente: solo toca los servicios que siguen llamándose "General".
@@ -873,14 +873,12 @@ def seed_showcase_demo(session: Session):
             ).first()
             if not servicio:
                 continue
-            nombre, tipo = nombres[i % len(nombres)]
-            servicio.nombre = nombre
-            servicio.tipo = tipo
+            servicio.nombre = nombres[i % len(nombres)]
             servicio.codigo_referencia = f"{slug[:3].upper()}-2026-{100 + i}"
             renombrados += 1
     session.commit()
     if renombrados:
-        print(f"  OK {renombrados} servicio(s) con nombre y tipo realistas.")
+        print(f"  OK {renombrados} servicio(s) con nombre realista.")
     else:
         print("  OK Servicios ya tienen nombres realistas, saltando.")
 

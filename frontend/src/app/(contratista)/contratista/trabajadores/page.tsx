@@ -6,7 +6,7 @@ import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 import { AgregarTrabajadorDialog } from "@/features/agregar-trabajador/agregar-trabajador-dialog"
 import { CargarNominaDialog } from "@/features/agregar-trabajador/cargar-nomina-dialog"
-import { TIPO_LABEL, type TrabajadorHabilitacion } from "@/entities/contratista/resumen"
+import { type TrabajadorHabilitacion } from "@/entities/contratista/resumen"
 
 /**
  * Una persona con su habilitación en cada servicio donde está asignada.
@@ -83,11 +83,6 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
               <div key={s.servicio_id} className="bg-surface border border-line-subtle rounded-lg px-3 py-2.5">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <span className="text-sm text-ink">{s.servicio_nombre}</span>
-                  {s.servicio_tipo && (
-                    <span className="text-[10px] text-ink-subtle">
-                      {TIPO_LABEL[s.servicio_tipo] ?? s.servicio_tipo} ·
-                    </span>
-                  )}
                   <span className="text-[10px] text-ink-subtle">{s.mandante_razon_social}</span>
                   {/* Dos servicios del mismo cliente pueden llamarse igual en
                       faenas distintas; sin el centro no se sabe a cuál va. */}
