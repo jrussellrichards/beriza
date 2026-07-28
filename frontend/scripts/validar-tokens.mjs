@@ -24,6 +24,18 @@ const NAMESPACES = [
   "accion", "bloqueo", "brand", "espera", "excepcion", "ink",
   "line", "ok", "proceso", "surface", "vacio",
 ]
+
+// Tokens que trae shadcn/ui por defecto y que este proyecto NUNCA definió. Los
+// componentes de shared/ui venían con ellos y nadie los migró: `bg-background`
+// dejaba el panel de los modales SIN FONDO, así que se veía el overlay oscuro a
+// través y el texto quedaba ilegible. Parecen válidos y no generan ninguna regla.
+const DE_SHADCN = [
+  "background", "foreground", "card", "card-foreground", "popover",
+  "popover-foreground", "primary", "primary-foreground", "secondary",
+  "secondary-foreground", "muted", "muted-foreground", "accent",
+  "accent-foreground", "destructive", "destructive-foreground", "input",
+  "ring", "offset-background",
+]
 const UTILIDADES = "bg|text|border|ring|divide|fill|stroke|from|via|to|outline|decoration|caret|accent|shadow"
 
 const css = readFileSync(CSS, "utf8")
@@ -37,7 +49,10 @@ function* archivos(dir) {
   }
 }
 
-const patron = new RegExp(`\\b(?:${UTILIDADES})-((?:${NAMESPACES.join("|")})(?:-[a-z0-9]+)*)`, "g")
+// Los nombres largos van primero para que la alternancia no corte a mitad
+// (`muted-foreground` antes que `muted`, si no se validaría solo `muted`).
+const NOMBRES = [...NAMESPACES, ...DE_SHADCN].sort((a, b) => b.length - a.length)
+const patron = new RegExp(`\\b(?:${UTILIDADES})-((?:${NOMBRES.join("|")})(?:-[a-z0-9]+)*)`, "g")
 const problemas = []
 
 for (const ruta of archivos(SRC)) {

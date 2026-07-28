@@ -83,7 +83,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           <select
             value={seleccion}
             onChange={(e) => setSeleccion(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="flex-1 px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
           >
             <option value="" disabled>Agregar trabajador a la faena...</option>
             {disponibles.map((t) => (
@@ -220,7 +220,7 @@ export default function ServiciosContratistaPage() {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line">
                 {servicios.map((s) => {
                   const selected = seleccionado?.id === s.id
                   return (

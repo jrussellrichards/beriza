@@ -215,7 +215,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
                   min={1}
                   value={req.vigencia_max_dias}
                   onChange={(e) => onChange(req.id, { vigencia_max_dias: Number(e.target.value) })}
-                  className="w-20 text-xs border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                  className="w-20 text-xs border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
                 />
               </div>
               {req.codigo.startsWith("F30") && (
@@ -226,7 +226,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
                     min={0}
                     value={req.umbral_deuda_max ?? 0}
                     onChange={(e) => onChange(req.id, { umbral_deuda_max: Number(e.target.value) })}
-                    className="w-28 text-xs border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                    className="w-28 text-xs border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
                   />
                 </div>
               )}

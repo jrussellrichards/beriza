@@ -97,7 +97,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
   }
 
   const selectClass =
-    "w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+    "w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

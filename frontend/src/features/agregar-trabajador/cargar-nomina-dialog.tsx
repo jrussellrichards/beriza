@@ -122,7 +122,7 @@ export function CargarNominaDialog({ onClose, onCargado }: {
                   <AlertTriangle size={13} className="text-accion-ink" />
                   Filas que no se cargaron — corrígelas y vuelve a subir el archivo
                 </p>
-                <div className="border border-line rounded-lg divide-y divide-slate-100 max-h-56 overflow-y-auto">
+                <div className="border border-line rounded-lg divide-y divide-line max-h-56 overflow-y-auto">
                   {reporte.errores.map(e => (
                     <div key={e.fila} className="px-3 py-2">
                       <p className="text-xs text-ink">

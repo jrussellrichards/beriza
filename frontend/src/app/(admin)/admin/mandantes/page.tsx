@@ -117,7 +117,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           <input
             value={nombre} onChange={e => setNombre(e.target.value)}
             placeholder="Empresa S.A."
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -125,7 +125,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           <input
             value={rut} onChange={e => setRut(e.target.value)}
             placeholder="76.123.456-7"
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -133,7 +133,7 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="admin@empresa.cl"
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -386,7 +386,7 @@ export default function MandantesPage() {
               placeholder="Buscar mandante o RUT..."
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
             />
           </div>
 
@@ -405,7 +405,7 @@ export default function MandantesPage() {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line">
                 {filtrados.map(m => {
                   const pct = Math.round((m.acreditadas / m.contratistas) * 100)
                   const barColor = pct >= 75 ? "bg-ok-ink" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"

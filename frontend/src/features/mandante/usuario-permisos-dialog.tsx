@@ -127,7 +127,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
   const puedeGuardar = editando ? true : Boolean(email && nombre)
 
   const OPCIONES_ALCANCE: { v: Alcance; label: string; ayuda: string }[] = [

@@ -193,7 +193,7 @@ export default function ConfiguracionPage() {
                     <input
                       value={razonSocial}
                       onChange={e => setRazonSocial(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
                     />
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function ConfiguracionPage() {
                   <input
                     value={rut}
                     onChange={e => setRut(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+                    className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
                   />
                 </div>
 
@@ -215,7 +215,7 @@ export default function ConfiguracionPage() {
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
                     />
                   </div>
                 </div>
@@ -227,7 +227,7 @@ export default function ConfiguracionPage() {
                     <input
                       value={sitioWeb}
                       onChange={e => setSitioWeb(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
                     />
                   </div>
                 </div>
@@ -241,7 +241,7 @@ export default function ConfiguracionPage() {
                     type="number"
                     value={diasAviso}
                     onChange={e => setDiasAviso(e.target.value)}
-                    className="w-16 px-2 py-1.5 text-sm border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                    className="w-16 px-2 py-1.5 text-sm border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
                   />
                   <label className="text-sm text-ink-muted">días de anticipación</label>
                 </div>
@@ -260,7 +260,7 @@ export default function ConfiguracionPage() {
                 Estas preferencias aún no se guardan — la configuración de notificaciones está en desarrollo.
               </p>
 
-              <div className="bg-surface rounded-xl border border-line divide-y divide-slate-100">
+              <div className="bg-surface rounded-xl border border-line divide-y divide-line">
                 {[
                   { label: "Documentos próximos a vencer", desc: "Aviso cuando un documento vence en los próximos días configurados", value: notifVencimiento, set: setNotifVencimiento },
                   { label: "Nueva brecha detectada por IA", desc: "Cuando el sistema rechaza un documento de un contratista", value: notifBrecha, set: setNotifBrecha },
@@ -290,7 +290,7 @@ export default function ConfiguracionPage() {
                 Estas preferencias aún no se guardan — la configuración de seguridad está en desarrollo.
               </p>
 
-              <div className="bg-surface rounded-xl border border-line divide-y divide-slate-100">
+              <div className="bg-surface rounded-xl border border-line divide-y divide-line">
                 <div className="flex items-center justify-between px-5 py-4">
                   <div>
                     <p className="text-sm font-medium text-ink">Doble factor de autenticación (2FA)</p>
@@ -306,7 +306,7 @@ export default function ConfiguracionPage() {
                       type="number"
                       value={sesionDias}
                       onChange={e => setSesionDias(e.target.value)}
-                      className="w-16 px-2 py-1.5 text-sm border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                      className="w-16 px-2 py-1.5 text-sm border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
                     />
                     <span className="text-sm text-ink-muted">días de inactividad</span>
                   </div>
