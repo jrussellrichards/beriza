@@ -100,6 +100,8 @@ export interface HabilitacionServicio {
   servicio_nombre: string
   servicio_tipo: TipoServicio
   mandante_razon_social: string
+  /** Dónde queda esa faena. null en servicios anteriores a los centros. */
+  centro_trabajo_nombre: string | null
   habilitado: boolean
   faltantes: string[]
 }

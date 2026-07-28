@@ -24,6 +24,11 @@ export interface Servicio {
    *  los centros de trabajo. */
   centro_trabajo_id: string | null
   centro_trabajo_nombre: string | null
+  /** Datos operativos del centro: a dónde llegar y a quién avisar. Los ve
+   *  también el contratista, que es quien tiene que llevar gente al lugar. */
+  centro_trabajo_direccion: string | null
+  centro_trabajo_encargado: string | null
+  centro_trabajo_encargado_email: string | null
 }
 
 export interface Perfil {

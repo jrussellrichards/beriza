@@ -226,6 +226,9 @@ def listar_servicios(
             joinedload(Servicio.relacion).joinedload(ContratistaMandante.contratista),
             joinedload(Servicio.perfil),
             joinedload(Servicio.trabajadores_asignados),
+            # El centro ya se leía en la respuesta pero no se traía acá: eran dos
+            # consultas extra POR SERVICIO (el centro y su encargado).
+            joinedload(Servicio.centro_trabajo).joinedload(CentroTrabajo.encargado),
         )
     )
     if mandante_id:

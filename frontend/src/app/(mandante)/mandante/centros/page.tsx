@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { MapPin, Plus, UserCircle2 } from "lucide-react"
+import Link from "next/link"
+import { ChevronRight, MapPin, Plus, UserCircle2 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 import { getSession } from "@/shared/lib/auth"
@@ -158,11 +159,19 @@ function Tarjeta({ c, onEditar, esAdmin }: {
           : <span className="text-accion-ink">Sin encargado asignado</span>}
       </p>
 
-      <p className="text-[11px] text-ink-muted">
-        {c.servicios_activos === 0
-          ? "Sin servicios activos"
-          : `${c.servicios_activos} servicio${c.servicios_activos === 1 ? "" : "s"} en curso`}
-      </p>
+      {/* Saber que hay 3 servicios sirve poco si no se puede ver cuáles: la
+          razón de que el centro exista es poder preguntar por el lugar. */}
+      {c.servicios_activos === 0 ? (
+        <p className="text-[11px] text-ink-muted">Sin servicios activos</p>
+      ) : (
+        <Link
+          href={`/mandante/servicios?centro=${c.id}`}
+          className="text-[11px] text-ink-muted hover:text-ink inline-flex items-center gap-1 w-fit transition-colors"
+        >
+          {c.servicios_activos} servicio{c.servicios_activos === 1 ? "" : "s"} en curso
+          <ChevronRight size={11} />
+        </Link>
+      )}
     </div>
   )
 }
