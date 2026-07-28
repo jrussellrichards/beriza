@@ -134,7 +134,7 @@ def crear_servicio(
     perfil_requisitos_id: uuid.UUID,
     nombre: str,
     fecha_inicio: date,
-    tipo: str = TipoServicio.SERVICIO,
+    tipo: str | None = None,
     codigo_referencia: str | None = None,
     descripcion: str | None = None,
     fecha_termino: date | None = None,
@@ -159,6 +159,15 @@ def crear_servicio(
     if perfil.mandante_id != mandante_id:
         raise AsignacionInvalida(
             f"El perfil {perfil_requisitos_id} no pertenece al mandante {mandante_id}."
+        )
+
+    # Ya no se pregunta en el formulario, pero la API sigue aceptándolo y hasta
+    # ahora guardaba cualquier cosa: un `tipo="Pizza"` se persistía tal cual y
+    # salía en el portal del contratista.
+    if tipo is not None and tipo not in set(TipoServicio):
+        raise AsignacionInvalida(
+            f"«{tipo}» no es un tipo de servicio válido. "
+            f"Debe ser uno de: {', '.join(sorted(TipoServicio))}."
         )
 
     if centro_trabajo_id is not None:

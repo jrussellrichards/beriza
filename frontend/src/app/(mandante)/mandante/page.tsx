@@ -26,7 +26,9 @@ function FaenaRow({ s }: { s: ServicioEnRiesgo }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-sm font-medium text-ink">{s.servicio_nombre}</span>
-            <span className="text-[10px] text-ink-subtle">{TIPO_LABEL[s.servicio_tipo] ?? s.servicio_tipo}</span>
+            {s.servicio_tipo && (
+              <span className="text-[10px] text-ink-subtle">{TIPO_LABEL[s.servicio_tipo] ?? s.servicio_tipo}</span>
+            )}
           </div>
           <p className="text-xs text-ink-muted mt-0.5">{s.contratista_razon_social}</p>
         </div>

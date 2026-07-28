@@ -4,7 +4,7 @@ from sqlalchemy import String, Boolean, Date, ForeignKey, Index, Integer, JSON, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from decimal import Decimal
 from app.models.base import ModelBase
-from app.domain.estados import EstadoServicio, TipoServicio
+from app.domain.estados import EstadoServicio
 
 
 class PerfilRequisitos(ModelBase):
@@ -69,9 +69,11 @@ class Servicio(ModelBase):
         ForeignKey("centros_trabajo.id"), nullable=True, index=True
     )
     nombre: Mapped[str] = mapped_column(String(255), nullable=False)
-    # Vocabulario del rubro: el portal del contratista muestra esta palabra
-    tipo: Mapped[str] = mapped_column(String(20), nullable=False,
-                                      default=TipoServicio.SERVICIO, server_default="SERVICIO")
+    # Vocabulario del rubro: el portal del contratista muestra esta palabra.
+    # Ya no se pregunta al crear el servicio —el centro de trabajo dice dónde se
+    # ejecuta, que era lo que esto aproximaba— así que los nuevos nacen en null.
+    # Los anteriores conservan la palabra que el mandante sí eligió.
+    tipo: Mapped[str | None] = mapped_column(String(20), nullable=True)
     codigo_referencia: Mapped[str | None] = mapped_column(String(100), nullable=True)
     descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
     fecha_inicio: Mapped[date] = mapped_column(Date, nullable=False)

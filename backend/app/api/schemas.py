@@ -256,7 +256,9 @@ class CrearServicioRequest(BaseModel):
     # cambio es que a partir de ahora ninguno nazca sin lugar. Los que ya
     # existían quedan con null y se asignan desde la ficha del servicio.
     centro_trabajo_id: uuid.UUID
-    tipo: str = "SERVICIO"  # OBRA | FAENA | SERVICIO
+    # Ya no se pregunta al crear: el centro de trabajo dice dónde se ejecuta,
+    # que es lo que esta palabra aproximaba. Se acepta por compatibilidad.
+    tipo: str | None = None  # OBRA | FAENA | SERVICIO
     fecha_inicio: date
     codigo_referencia: str | None = None
     descripcion: str | None = None
@@ -270,7 +272,7 @@ class ServicioResponse(BaseModel):
     contratista_mandante_id: uuid.UUID
     perfil_requisitos_id: uuid.UUID
     nombre: str
-    tipo: str
+    tipo: str | None
     codigo_referencia: str | None
     descripcion: str | None
     fecha_inicio: date
@@ -300,7 +302,7 @@ class ServicioListItemResponse(BaseModel):
     """Item del listado de servicios, enriquecido con contratista y perfil."""
     id: uuid.UUID
     nombre: str
-    tipo: str
+    tipo: str | None
     codigo_referencia: str | None
     estado: str
     fecha_inicio: date
@@ -526,7 +528,7 @@ class ResumenMandanteResponse(BaseModel):
 class HabilitacionServicioResponse(BaseModel):
     servicio_id: uuid.UUID
     servicio_nombre: str
-    servicio_tipo: str
+    servicio_tipo: str | None
     mandante_razon_social: str
     # Dos servicios pueden llamarse igual en faenas distintas; sin el centro, la
     # pregunta "¿a cuál mando a Juan?" no se puede responder desde la pantalla.
@@ -552,7 +554,7 @@ class TrabajadorHabilitacionResponse(BaseModel):
 class ServicioEnRiesgoResponse(BaseModel):
     servicio_id: uuid.UUID
     servicio_nombre: str
-    servicio_tipo: str
+    servicio_tipo: str | None
     contratista_razon_social: str
     trabajadores_asignados: int
     trabajadores_no_habilitados: int
