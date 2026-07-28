@@ -318,6 +318,12 @@ class ServicioListItemResponse(BaseModel):
     # los centros; la UI los marca como "sin asignar" para que se completen.
     centro_trabajo_id: uuid.UUID | None = None
     centro_trabajo_nombre: str | None = None
+    # Para el contratista el nombre del centro no basta: tiene que llevar gente
+    # a un lugar físico y avisarle a alguien cuando llega. La dirección y el
+    # encargado son datos que hoy se piden por WhatsApp fuera del sistema.
+    centro_trabajo_direccion: str | None = None
+    centro_trabajo_encargado: str | None = None
+    centro_trabajo_encargado_email: str | None = None
 
 
 class CambiarEstadoServicioRequest(BaseModel):
@@ -522,6 +528,9 @@ class HabilitacionServicioResponse(BaseModel):
     servicio_nombre: str
     servicio_tipo: str
     mandante_razon_social: str
+    # Dos servicios pueden llamarse igual en faenas distintas; sin el centro, la
+    # pregunta "¿a cuál mando a Juan?" no se puede responder desde la pantalla.
+    centro_trabajo_nombre: str | None
     habilitado: bool
     faltantes: list[str]
 

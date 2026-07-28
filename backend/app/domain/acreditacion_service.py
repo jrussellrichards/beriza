@@ -875,6 +875,8 @@ class HabilitacionServicio:
     servicio_nombre: str
     servicio_tipo: str
     mandante_razon_social: str
+    # None en los servicios anteriores a los centros de trabajo.
+    centro_trabajo_nombre: str | None
     habilitado: bool
     faltantes: list[str] = field(default_factory=list)
 
@@ -931,6 +933,9 @@ def habilitacion_trabajadores(db: Session, contratista_id: uuid.UUID) -> list[Tr
                     servicio_nombre=servicio.nombre,
                     servicio_tipo=servicio.tipo,
                     mandante_razon_social=rel.mandante.razon_social,
+                    centro_trabajo_nombre=(
+                        servicio.centro_trabajo.nombre if servicio.centro_trabajo else None
+                    ),
                     habilitado=not faltantes,
                     faltantes=faltantes,
                 ))

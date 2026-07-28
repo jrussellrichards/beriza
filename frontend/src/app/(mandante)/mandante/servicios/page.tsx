@@ -139,8 +139,28 @@ export default function ServiciosPage() {
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [busqueda, setBusqueda] = useState("")
   const [filtro, setFiltro] = useState<EstadoServicio | "TODOS">("TODOS")
+  const [centroFiltro, setCentroFiltro] = useState("TODOS")
   const [seleccionado, setSeleccionado] = useState<Servicio | null>(null)
   const [dialogAbierto, setDialogAbierto] = useState(false)
+
+  // El filtro se lee de la URL para que la tarjeta de Centros pueda enlazar acá
+  // ("ver los 3 servicios de Chuquicamata") y el enlace sea compartible.
+  //
+  // Se usa window.location y no useSearchParams a propósito: ese hook obliga a
+  // envolver la página en <Suspense> y ya rompió el prerender antes. Acá el
+  // efecto corre solo en el cliente, que es donde vive todo lo demás.
+  useEffect(() => {
+    const centro = new URLSearchParams(window.location.search).get("centro")
+    if (centro) setCentroFiltro(centro)
+  }, [])
+
+  function cambiarCentro(id: string) {
+    setCentroFiltro(id)
+    const url = new URL(window.location.href)
+    if (id === "TODOS") url.searchParams.delete("centro")
+    else url.searchParams.set("centro", id)
+    window.history.replaceState(null, "", url)
+  }
 
   const cargar = useCallback(() => {
     api.get<Servicio[]>("/api/v1/servicios/")
@@ -154,14 +174,28 @@ export default function ServiciosPage() {
 
   useEffect(() => { cargar() }, [cargar])
 
+  // Los centros salen de los propios servicios y no de /centros-trabajo: acá
+  // solo sirven para filtrar lo que ya está en pantalla, y uno sin servicios
+  // dejaría la tabla vacía sin explicar por qué.
+  const centros = [...new Map(
+    servicios
+      .filter((s) => s.centro_trabajo_id)
+      .map((s) => [s.centro_trabajo_id!, s.centro_trabajo_nombre ?? ""] as const),
+  )].sort((a, b) => a[1].localeCompare(b[1]))
+  const haySinCentro = servicios.some((s) => !s.centro_trabajo_id)
+
   const filtrados = servicios.filter((s) => {
     const q = busqueda.toLowerCase()
     const matchQ =
       s.nombre.toLowerCase().includes(q) ||
       s.contratista_razon_social.toLowerCase().includes(q) ||
-      (s.codigo_referencia ?? "").toLowerCase().includes(q)
+      (s.codigo_referencia ?? "").toLowerCase().includes(q) ||
+      (s.centro_trabajo_nombre ?? "").toLowerCase().includes(q)
     const matchE = filtro === "TODOS" || s.estado === filtro
-    return matchQ && matchE
+    const matchC =
+      centroFiltro === "TODOS" ||
+      (centroFiltro === "SIN_CENTRO" ? !s.centro_trabajo_id : s.centro_trabajo_id === centroFiltro)
+    return matchQ && matchE && matchC
   })
 
   const kpi = {
@@ -220,6 +254,19 @@ export default function ServiciosPage() {
                 className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
               />
             </div>
+            {(centros.length > 0 || haySinCentro) && (
+              <select
+                value={centroFiltro}
+                onChange={(e) => cambiarCentro(e.target.value)}
+                className="px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
+              >
+                <option value="TODOS">Todos los centros</option>
+                {centros.map(([id, nombre]) => (
+                  <option key={id} value={id}>{nombre}</option>
+                ))}
+                {haySinCentro && <option value="SIN_CENTRO">Sin centro asignado</option>}
+              </select>
+            )}
             <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-1">
               {(["TODOS", "ACTIVO", "SUSPENDIDO", "TERMINADO"] as const).map((e) => (
                 <button
@@ -244,7 +291,8 @@ export default function ServiciosPage() {
                 <tr className="border-b border-line-subtle bg-surface-app/60">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Servicio</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Contratista</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Perfil</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Centro</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider hidden lg:table-cell">Perfil</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Dotación</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Inicio</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
@@ -277,7 +325,17 @@ export default function ServiciosPage() {
                         <p className="text-ink-secondary truncate max-w-[200px]">{s.contratista_razon_social}</p>
                         <p className="text-[10px] text-ink-subtle font-mono">{s.contratista_rut}</p>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-ink-muted">{s.perfil_nombre}</td>
+                      <td className="px-4 py-3.5">
+                        {s.centro_trabajo_nombre ? (
+                          <p className="text-xs text-ink-secondary flex items-center gap-1.5">
+                            <MapPin size={11} className="text-ink-subtle shrink-0" />
+                            <span className="truncate max-w-[140px]">{s.centro_trabajo_nombre}</span>
+                          </p>
+                        ) : (
+                          <span className="text-xs text-accion-ink">Sin asignar</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-ink-muted hidden lg:table-cell">{s.perfil_nombre}</td>
                       <td className="px-4 py-3.5 text-xs text-ink-muted">{s.trabajadores_asignados}</td>
                       <td className="px-4 py-3.5 text-xs text-ink-subtle">{s.fecha_inicio}</td>
                       <td className="px-4 py-3.5"><EstadoServicioBadge estado={s.estado} /></td>

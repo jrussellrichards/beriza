@@ -111,6 +111,19 @@ def listar_servicios(
             trabajadores_asignados=sum(1 for a in s.trabajadores_asignados if a.activo),
             centro_trabajo_id=s.centro_trabajo_id,
             centro_trabajo_nombre=s.centro_trabajo.nombre if s.centro_trabajo else None,
+            centro_trabajo_direccion=s.centro_trabajo.direccion if s.centro_trabajo else None,
+            # El encargado es un usuario del MANDANTE y este listado lo lee
+            # también el contratista. Se expone a propósito: es el contacto de la
+            # faena a la que ese contratista tiene que llegar. No se expone
+            # ningún otro usuario del mandante por esta vía.
+            centro_trabajo_encargado=(
+                s.centro_trabajo.encargado.nombre
+                if s.centro_trabajo and s.centro_trabajo.encargado else None
+            ),
+            centro_trabajo_encargado_email=(
+                s.centro_trabajo.encargado.email
+                if s.centro_trabajo and s.centro_trabajo.encargado else None
+            ),
         )
         for s in servicios
     ]

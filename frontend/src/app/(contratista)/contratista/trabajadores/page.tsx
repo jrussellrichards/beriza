@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { CheckCircle2, ChevronDown, ChevronRight, FileSpreadsheet, Plus, Search, UserX } from "lucide-react"
+import { CheckCircle2, ChevronDown, ChevronRight, FileSpreadsheet, MapPin, Plus, Search, UserX } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 import { AgregarTrabajadorDialog } from "@/features/agregar-trabajador/agregar-trabajador-dialog"
@@ -85,6 +85,14 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
                   <span className="text-sm text-ink">{s.servicio_nombre}</span>
                   <span className="text-[10px] text-ink-subtle">{TIPO_LABEL[s.servicio_tipo] ?? s.servicio_tipo}</span>
                   <span className="text-[10px] text-ink-subtle">· {s.mandante_razon_social}</span>
+                  {/* Dos servicios del mismo cliente pueden llamarse igual en
+                      faenas distintas; sin el centro no se sabe a cuál va. */}
+                  {s.centro_trabajo_nombre && (
+                    <span className="text-[10px] text-ink-muted inline-flex items-center gap-1">
+                      <MapPin size={10} className="text-ink-subtle" />
+                      {s.centro_trabajo_nombre}
+                    </span>
+                  )}
                   <span className={cn(
                     "sm:ml-auto text-[11px] font-medium",
                     s.habilitado ? "text-ok-ink" : "text-bloqueo-ink"

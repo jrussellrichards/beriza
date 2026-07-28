@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Briefcase, ChevronRight, Plus, UserMinus, X } from "lucide-react"
+import { Briefcase, ChevronRight, MapPin, Plus, UserMinus, X } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { EstadoServicioBadge, LABEL_SERVICIO } from "@/shared/ui/estado-badge"
 import { api } from "@/shared/lib/api"
@@ -156,6 +156,36 @@ function DetailPanel({ s, onClose, onCambio }: { s: Servicio; onClose: () => voi
         </div>
         <EstadoServicioBadge estado={s.estado} />
 
+        {/* Dónde hay que presentarse y a quién avisar. Hasta ahora el sistema
+            tenía el dato y el contratista igual lo pedía por WhatsApp. */}
+        {s.centro_trabajo_nombre && (
+          <div className="mt-3 bg-surface-app border border-line-subtle rounded-lg px-3 py-2.5 space-y-1.5">
+            <p className="text-xs font-medium text-ink flex items-center gap-1.5">
+              <MapPin size={12} className="text-ink-subtle shrink-0" />
+              {s.centro_trabajo_nombre}
+            </p>
+            {s.centro_trabajo_direccion && (
+              <p className="text-[11px] text-ink-muted pl-[18px]">{s.centro_trabajo_direccion}</p>
+            )}
+            {s.centro_trabajo_encargado && (
+              <p className="text-[11px] text-ink-muted pl-[18px]">
+                Encargado: <span className="text-ink-secondary">{s.centro_trabajo_encargado}</span>
+                {s.centro_trabajo_encargado_email && (
+                  <>
+                    {" · "}
+                    <a
+                      href={`mailto:${s.centro_trabajo_encargado_email}`}
+                      className="text-brand hover:underline"
+                    >
+                      {s.centro_trabajo_encargado_email}
+                    </a>
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex gap-0 mt-4 -mb-px">
           {([["avance", "Avance"], ["dotacion", "Dotación"]] as const).map(([id, label]) => (
             <button
@@ -213,7 +243,8 @@ export default function ServiciosContratistaPage() {
               <thead>
                 <tr className="border-b border-line-subtle bg-surface-app/60">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Servicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider hidden md:table-cell">Perfil</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Dónde</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider hidden lg:table-cell">Perfil</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Dotación</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Inicio</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
@@ -245,7 +276,26 @@ export default function ServiciosContratistaPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-ink-muted hidden md:table-cell">{s.perfil_nombre}</td>
+                      <td className="px-4 py-3.5">
+                        {s.centro_trabajo_nombre ? (
+                          <>
+                            <p className="text-xs text-ink-secondary flex items-center gap-1.5">
+                              <MapPin size={11} className="text-ink-subtle shrink-0" />
+                              <span className="truncate max-w-[140px]">{s.centro_trabajo_nombre}</span>
+                            </p>
+                            {s.centro_trabajo_direccion && (
+                              <p className="text-[10px] text-ink-subtle truncate max-w-[160px] pl-[18px]">
+                                {s.centro_trabajo_direccion}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          // El contratista no puede arreglarlo: lo asigna el
+                          // mandante. Se dice en gris, no en ámbar de acción.
+                          <span className="text-xs text-ink-subtle">Por confirmar</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-ink-muted hidden lg:table-cell">{s.perfil_nombre}</td>
                       <td className="px-4 py-3.5 text-xs text-ink-muted">{s.trabajadores_asignados}</td>
                       <td className="px-4 py-3.5 text-xs text-ink-subtle">{s.fecha_inicio}</td>
                       <td className="px-4 py-3.5"><EstadoServicioBadge estado={s.estado} /></td>
