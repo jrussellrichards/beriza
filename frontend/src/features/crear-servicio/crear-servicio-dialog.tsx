@@ -12,7 +12,6 @@ import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
 import { api } from "@/shared/lib/api"
-import { cn } from "@/shared/lib/utils"
 import { getSession } from "@/shared/lib/auth"
 import type { Perfil } from "@/entities/servicio/types"
 
@@ -42,7 +41,6 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
   const [contratistaId, setContratistaId] = useState("")
   const [perfilId, setPerfilId] = useState("")
   const [nombre, setNombre] = useState("")
-  const [tipo, setTipo] = useState<"OBRA" | "FAENA" | "SERVICIO">("SERVICIO")
   const [codigoRef, setCodigoRef] = useState("")
   const [fechaInicio, setFechaInicio] = useState("")
   const [fechaTermino, setFechaTermino] = useState("")
@@ -73,7 +71,6 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
         perfil_requisitos_id: perfilId,
         centro_trabajo_id: centroId,
         nombre,
-        tipo,
         codigo_referencia: codigoRef || null,
         fecha_inicio: fechaInicio,
         fecha_termino: fechaTermino || null,
@@ -171,37 +168,6 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label>¿Qué es lo contratado?</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                { v: "OBRA" as const, label: "Obra", ayuda: "Se construye y termina" },
-                { v: "FAENA" as const, label: "Faena", ayuda: "Sitio de trabajo continuo" },
-                { v: "SERVICIO" as const, label: "Servicio", ayuda: "Prestación sin sitio fijo" },
-              ]).map(o => (
-                <button
-                  key={o.v}
-                  type="button"
-                  onClick={() => setTipo(o.v)}
-                  className={cn(
-                    "px-2 py-2 rounded-lg border text-xs transition-colors text-left",
-                    tipo === o.v
-                      ? "border-ink bg-surface-inverse text-white"
-                      : "border-line text-ink-muted hover:border-line-strong"
-                  )}
-                >
-                  <span className="block font-medium">{o.label}</span>
-                  <span className={cn("block text-[9px] mt-0.5", tipo === o.v ? "text-ink-subtle" : "text-ink-subtle")}>
-                    {o.ayuda}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-ink-subtle">
-              Es la palabra que verá el contratista en su portal.
-            </p>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="codigoRef">N° de contrato / OC (opcional)</Label>
             <Input

@@ -238,6 +238,39 @@ def run():
     assert huerfano.nombre == "Renombrado" and huerfano.perfil_requisitos_id == perfil_antes,         "una edicion parcial toco campos que no venian en el request"
     print("PASS: la edicion es parcial y no pisa lo que no viene")
 
+    # ── 15. El tipo (obra/faena/servicio) dejo de preguntarse ────────────────
+    # El centro de trabajo dice DONDE se ejecuta, que era lo que esa palabra
+    # aproximaba. Lo que se verifica es que el servicio nazca SIN tipo en vez
+    # de con un "SERVICIO" que nadie eligio: la UI mostraba esa palabra como si
+    # el mandante la hubiera escogido.
+    sin_tipo = servicio_service.crear_servicio(
+        db, mandante_id=codelco.id, contratista_id=transportes.id,
+        perfil_requisitos_id=perfil.id, nombre="Sin tipo",
+        fecha_inicio=date.today(), centro_trabajo_id=chuqui.id)
+    assert sin_tipo.tipo is None, f"debio quedar en null, quedo {sin_tipo.tipo!r}"
+    print("PASS: un servicio nuevo nace sin tipo, no con uno inventado")
+
+    # La API todavia lo acepta, y hasta ahora guardaba cualquier string: un
+    # tipo="Pizza" se persistia tal cual y salia en el portal del contratista.
+    try:
+        servicio_service.crear_servicio(
+            db, mandante_id=codelco.id, contratista_id=transportes.id,
+            perfil_requisitos_id=perfil.id, nombre="Pizzeria", tipo="Pizza",
+            fecha_inicio=date.today(), centro_trabajo_id=chuqui.id)
+        raise AssertionError("acepto un tipo que no existe en el enum")
+    except AsignacionInvalida:
+        db.rollback()
+    print("PASS: un tipo inventado se rechaza")
+
+    # Y uno valido sigue funcionando: los servicios anteriores conservan su
+    # palabra y el portal la sigue mostrando.
+    con_tipo = servicio_service.crear_servicio(
+        db, mandante_id=codelco.id, contratista_id=transportes.id,
+        perfil_requisitos_id=perfil.id, nombre="Obra antigua", tipo="OBRA",
+        fecha_inicio=date.today(), centro_trabajo_id=chuqui.id)
+    assert con_tipo.tipo == "OBRA"
+    print("PASS: un tipo valido sigue guardandose")
+
     print("TODOS LOS TESTS DE CENTRO DE TRABAJO PASARON")
 
 

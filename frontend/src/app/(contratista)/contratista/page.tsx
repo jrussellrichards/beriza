@@ -21,7 +21,9 @@ function ServicioRow({ s, motivo }: { s: ServicioContratista; motivo: string | n
       )} />
       <div className="flex-1 min-w-0">
         <span className="text-sm text-ink">{s.nombre}</span>
-        <span className="text-[10px] text-ink-subtle ml-2">{TIPO_LABEL[s.tipo] ?? s.tipo}</span>
+        {s.tipo && (
+          <span className="text-[10px] text-ink-subtle ml-2">{TIPO_LABEL[s.tipo] ?? s.tipo}</span>
+        )}
       </div>
       <span className={cn("text-xs shrink-0", motivo ? "text-bloqueo-ink" : "text-ok-ink")}>
         {motivo ?? "Lista para empezar"}
