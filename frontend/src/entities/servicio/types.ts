@@ -2,15 +2,9 @@
 
 export type EstadoServicio = "ACTIVO" | "SUSPENDIDO" | "TERMINADO"
 
-export type TipoServicio = "OBRA" | "FAENA" | "SERVICIO"
-
 export interface Servicio {
   id: string
   nombre: string
-  /** Vocabulario del rubro: el portal usa esta palabra, no una genérica.
-   *  null desde que dejó de preguntarse al crear el servicio — el centro de
-   *  trabajo dice dónde se ejecuta, que era lo que esto aproximaba. */
-  tipo: TipoServicio | null
   codigo_referencia: string | null
   estado: EstadoServicio
   fecha_inicio: string

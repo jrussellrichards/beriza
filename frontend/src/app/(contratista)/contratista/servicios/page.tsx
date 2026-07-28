@@ -8,7 +8,6 @@ import { api } from "@/shared/lib/api"
 import { getSession } from "@/shared/lib/auth"
 import { AvancePanel } from "@/entities/servicio/avance-panel"
 import type { EstadoServicio, Servicio } from "@/entities/servicio/types"
-import { TIPO_LABEL } from "@/entities/contratista/resumen"
 
 interface TrabajadorItem {
   id: string
@@ -267,10 +266,7 @@ export default function ServiciosContratistaPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="font-medium text-ink truncate max-w-[240px]">{s.nombre}</p>
-                            <p className="text-[10px] text-ink-muted">
-                              {s.tipo ? `${TIPO_LABEL[s.tipo] ?? s.tipo} · ` : ""}
-                              {s.mandante_razon_social}
-                            </p>
+                            <p className="text-[10px] text-ink-muted">{s.mandante_razon_social}</p>
                             {s.codigo_referencia && (
                               <p className="text-[10px] text-ink-subtle font-mono">{s.codigo_referencia}</p>
                             )}
