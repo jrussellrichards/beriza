@@ -91,7 +91,7 @@ export default function EquipoPage() {
             </p>
           </div>
         ) : (
-          <div className="bg-surface rounded-xl border border-line divide-y divide-slate-100">
+          <div className="bg-surface rounded-xl border border-line divide-y divide-line">
             {equipo.map(u => (
               <div key={u.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-5 py-4">
                 <div className="w-8 h-8 rounded-full bg-surface-sunken text-ink-muted text-xs font-semibold flex items-center justify-center shrink-0">

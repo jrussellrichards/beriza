@@ -306,14 +306,14 @@ export default function DocumentosPage() {
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
             placeholder="Buscar documento..."
-            className="pl-8 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="pl-8 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
           />
         </div>
 
         <select
           value={filtroEstado}
           onChange={e => setFiltroEstado(e.target.value)}
-          className="px-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          className="px-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
         >
           <option value="TODOS">Cualquier estado</option>
           <option value="FALTA">Falta subir</option>
@@ -328,7 +328,7 @@ export default function DocumentosPage() {
           <select
             value={filtroMandante}
             onChange={e => setFiltroMandante(e.target.value)}
-            className="px-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="px-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
           >
             <option value="TODOS">Todos los clientes</option>
             {mandantes.map(([id, nombre]) => (

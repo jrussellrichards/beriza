@@ -70,7 +70,7 @@ export function AsignarCentroDialog({ servicioId, servicioNombre, centroActualId
           <select
             value={centroId}
             onChange={e => setCentroId(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
           >
             <option value="" disabled>Selecciona un centro...</option>
             {centros.map(c => (

@@ -548,7 +548,7 @@ export default function ContratistasPage() {
                 placeholder="Buscar empresa o RUT..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
               />
             </div>
             <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-1">
@@ -585,7 +585,7 @@ export default function ContratistasPage() {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line">
                 {filtrados.map(c => {
                   const tOk = c.trabajadores.filter(t => t.cumple).length
                   const selected = seleccionadoId === c.id

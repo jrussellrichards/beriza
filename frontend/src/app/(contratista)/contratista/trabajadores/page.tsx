@@ -191,7 +191,7 @@ export default function TrabajadoresPage() {
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre o RUT..."
-            className="w-full pl-8 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="w-full pl-8 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
           />
         </div>
         <button

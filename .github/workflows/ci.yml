@@ -22,11 +22,13 @@ jobs:
       # Guard del sistema de diseño: los componentes deben nombrar el SIGNIFICADO
       # del color (bg-bloqueo-soft), no el color (bg-red-50). Sin esto la deriva
       # vuelve sola: se llegó a tener 1552 utilidades crudas y SIETE mapas
-      # distintos del mismo estilo de estado.
+      # distintos del mismo estilo de estado. La lista de utilidades incluye
+      # ring y divide porque `focus:ring-slate-900/10` se coló 43 veces
+      # mientras el guard solo miraba bg|text|border.
       - name: Sin colores crudos en el frontend
         run: |
           cd frontend
-          if grep -rEn "(bg|text|border)-(slate|gray|zinc|neutral|stone|amber|yellow|orange|red|emerald|green|teal|cyan|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+" src/ ; then
+          if grep -rEn "(bg|text|border|ring|divide|fill|stroke|from|via|to|outline|placeholder|caret|accent|shadow)-(slate|gray|zinc|neutral|stone|amber|yellow|orange|red|emerald|green|teal|cyan|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+" src/ ; then
             echo "::error::Usa tokens semánticos del sistema de diseño, no utilidades de color de Tailwind. Ver src/app/globals.css"
             exit 1
           fi

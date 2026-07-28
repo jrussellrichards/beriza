@@ -58,7 +58,7 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
           <input
             value={nombre} onChange={e => setNombre(e.target.value)}
             placeholder="María González"
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -66,7 +66,7 @@ function NuevoUsuarioPanel({ onClose }: { onClose: () => void }) {
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="mgonzalez@empresa.cl"
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-line-strong"
+            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
           />
         </div>
         <div className="space-y-1.5">
@@ -175,7 +175,7 @@ export default function UsuariosPage() {
               <input
                 type="text" placeholder="Buscar por nombre o email..."
                 value={busqueda} onChange={e => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20"
               />
             </div>
             <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-1">
@@ -207,7 +207,7 @@ export default function UsuariosPage() {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line">
                 {filtrados.map(u => (
                   <tr key={u.id} className="hover:bg-surface-app/70 transition-colors">
                     <td className="px-5 py-4">

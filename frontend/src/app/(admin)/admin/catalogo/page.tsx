@@ -65,7 +65,7 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
 
       {open && (
         <div className="bg-surface">
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-line">
             {requisitos.map(req => (
               <div key={req.id} className="px-5 py-3.5 flex items-start gap-3 group hover:bg-surface-app/50 transition-colors">
                 <div className="flex-1 min-w-0">

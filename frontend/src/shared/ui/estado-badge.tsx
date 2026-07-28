@@ -191,7 +191,7 @@ export function EstadoBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-micro",
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-line text-micro",
         e.soft,
         e.line,
         e.ink,
@@ -215,7 +215,7 @@ export function EstadoAgregadoBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-micro",
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-line text-micro",
         e.soft,
         e.line,
         e.ink,
@@ -239,7 +239,7 @@ export function EstadoServicioBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-micro",
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-line text-micro",
         e.soft,
         e.line,
         e.ink,

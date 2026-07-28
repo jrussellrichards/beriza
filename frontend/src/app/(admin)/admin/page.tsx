@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
               </div>
               <a href="/admin/mandantes" className="text-xs text-ink-subtle hover:text-ink-muted transition-colors">Ver todos →</a>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-line">
               {mandantes.map(m => {
                 const color = m.pct_acreditacion >= 75 ? "bg-ok-ink" : m.pct_acreditacion >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
                 return (
@@ -191,7 +191,7 @@ export default function AdminDashboardPage() {
             <Activity size={14} className="text-ink-subtle" />
             <h2 className="text-sm font-semibold text-ink">Actividad reciente — todos los mandantes</h2>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-line">
             {actividad.map((a, i) => {
               const c = TIPO_CFG[a.tipo as keyof typeof TIPO_CFG] ?? TIPO_CFG.info
               return (
