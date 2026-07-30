@@ -178,29 +178,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Credenciales demo */}
-          <div className="rounded-lg border border-line bg-surface p-4 space-y-3">
-            <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Credenciales de demo</p>
-            {[
-              { label: "BERISA Admin", email: "admin@berisa.cl", pass: "admin123" },
-              { label: "Mandante", email: "mandante@demo.cl", pass: "demo123" },
-              { label: "Contratista", email: "contratista@demo.cl", pass: "demo123" },
-            ].map(c => (
-              <button
-                key={c.email}
-                type="button"
-                onClick={() => { setEmail(c.email); setPassword(c.pass) }}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-surface-app transition-colors group text-left"
-              >
-                <div>
-                  <p className="text-xs font-medium text-ink-secondary">{c.label}</p>
-                  <p className="text-xs text-ink-subtle font-mono">{c.email}</p>
-                </div>
-                <ArrowRight size={12} className="text-ink-subtle group-hover:text-ink-muted transition-colors" />
-              </button>
-            ))}
-          </div>
-
         </div>
       </div>
     </div>

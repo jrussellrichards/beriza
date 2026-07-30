@@ -85,6 +85,22 @@ def obtener_invitacion(token: str, db: Session = Depends(get_db)):
     if not usuario or usuario.activo:
         raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
 
+    # El superadmin de BERISA no tiene organización de la cual sacar los datos.
+    # Sin este ramal la página de activación daba 404 y no había forma de
+    # estrenar una instalación limpia sin entrar por SSH.
+    if usuario.rol == "berisa_admin":
+        return InvitacionInfoResponse(
+            email=usuario.email,
+            nombre=usuario.nombre,
+            tipo="EQUIPO",
+            organizacion="BERISA",
+            razon_social="BERISA",
+            rut="",
+            giro=None,
+            mandante_razon_social="",
+            rol=usuario.rol,
+        )
+
     if usuario.contratista_id:
         empresa = db.query(EmpresaContratista).filter_by(id=usuario.contratista_id).first()
         if not empresa:
@@ -143,6 +159,10 @@ def _tipo_invitacion(db: Session, invitado: Usuario) -> str:
     —podría cambiar el RUT de su propia empresa— y además es confuso: lo único
     que tiene que hacer es elegir su contraseña.
     """
+    # Un berisa_admin no cuelga de ninguna organización: ES BERISA. No hay razón
+    # social ni RUT que confirmar, solo su contraseña.
+    if invitado.rol == "berisa_admin":
+        return "EQUIPO"
     q = db.query(Usuario).filter(Usuario.id != invitado.id, Usuario.activo.is_(True))
     if invitado.mandante_id:
         q = q.filter(Usuario.mandante_id == invitado.mandante_id)
