@@ -156,7 +156,8 @@ def seed_admin(session: Session):
         email="admin@berisa.cl", nombre="Admin BERISA",
         password_hash=_hash("admin123"), rol="berisa_admin", activo=True,
     ))
-    print("  OK admin@berisa.cl / admin123")
+    # Sin la clave: la salida del seed queda en el log del job. Está en CLAUDE.md.
+    print("  OK admin@berisa.cl creado (credenciales de demo en CLAUDE.md).")
 
 
 # ── Mandantes ─────────────────────────────────────────────────────────────────
