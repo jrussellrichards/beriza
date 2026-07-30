@@ -774,9 +774,43 @@ def _normalizar_ruts(session: Session):
         print("  OK Todos los RUT tienen dígito verificador válido.")
 
 
+def _demo_habilitada() -> tuple[bool, str]:
+    """
+    Si toca cargar los datos de demo. Devuelve también el motivo, para que el
+    log del despliegue diga qué decidió y no haya que adivinarlo.
+
+    Es OPT-IN: sin SEED_DEMO no se carga nada de demo. Un default que cargara
+    la demo salvo que alguien se acuerde de apagarla es la forma de que un día
+    aparezca "Codelco (Demo)" en la base de un cliente real. Y aunque esté
+    puesta, en producción no se carga igual: un .env copiado de desarrollo no
+    puede ser lo único que separe la demo de los datos de verdad.
+    """
+    if settings.ENVIRONMENT == "production":
+        return False, "ENVIRONMENT=production"
+    if os.getenv("SEED_DEMO", "").lower() not in ("1", "true", "si", "sí"):
+        return False, "SEED_DEMO no está activo"
+    return True, f"SEED_DEMO activo y ENVIRONMENT={settings.ENVIRONMENT}"
+
+
 def main():
     print("\n--- Seed Acredita ---")
+    demo, motivo = _demo_habilitada()
+
     with Session(engine) as session:
+        # El catálogo de pilares y requisitos NO es demo: es el catálogo global
+        # que administra BERISA y que una instalación nueva necesita para poder
+        # operar. Por eso se carga siempre, también en producción.
+        seed_pilares(session)
+        session.commit()
+        print("  OK Catálogo global de pilares y requisitos al día.")
+
+        if not demo:
+            print(f"\n  Datos de demo OMITIDOS ({motivo}).")
+            print("  Para el primer administrador: python scripts/crear_admin.py")
+            print("--- Listo ---\n")
+            return
+
+        print(f"\n  Cargando datos de demo ({motivo})...")
         _normalizar_ruts(session)
         seed_admin(session)
         reqs = seed_pilares(session)
@@ -794,11 +828,11 @@ def main():
         seed_documentos_condor(session, mandantes["codelco-demo"], reqs)
         seed_segundo_mandante_condor(session)
         seed_showcase_demo(session)
-    print("\nCredenciales de acceso:")
-    print("  admin@berisa.cl       / admin123  (berisa_admin)")
-    print("  mandante@demo.cl      / demo123   (mandante_admin — Codelco)")
-    print("  contratista@demo.cl   / demo123   (contratista_admin — Cóndor SpA)")
-    print("--- Listo ---\n")
+
+    # Las claves de la demo NO se imprimen: este script corre dentro del job de
+    # despliegue y su salida queda en el log de GitHub Actions, legible para
+    # cualquiera con acceso al repo. Están en CLAUDE.md, que es donde toca.
+    print("--- Listo (datos de demo cargados) ---\n")
 
 
 # ── Showcase para demo comercial ──────────────────────────────────────────────

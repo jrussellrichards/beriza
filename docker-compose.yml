@@ -29,6 +29,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://acredita:acredita@db:5432/acredita
       - REDIS_URL=redis://redis:6379/0
+      # Los datos de demo son opt-in: en producción no se cargan ni con esto
+      # puesto, pero en local es lo que hace que las pantallas no salgan vacías.
+      - SEED_DEMO=true
     depends_on:
       - db
       - redis
