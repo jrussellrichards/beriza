@@ -22,6 +22,29 @@ export interface RequisitoSubida {
   codigo: string
   alcance: "ENTIDAD" | "SERVICIO"
   max_archivos: number
+  /**
+   * MIME aceptados, ya resueltos por el backend contra el default global.
+   * Antes acá iba "application/pdf" cableado, y los 6 requisitos del catálogo
+   * que aceptan foto —incluida la IRL, que está en la plantilla de arranque—
+   * rechazaban la entrega antes de intentarla.
+   */
+  formatos_permitidos?: string[]
+  /** Qué es el documento y qué debe contener, según el catálogo. */
+  descripcion?: string
+}
+
+/** "PDF o foto (JPG, PNG)" a partir de la lista de MIME. */
+function etiquetaFormatos(mimes: string[]): string {
+  const nombres = mimes.map(m => ({
+    "application/pdf": "PDF",
+    "image/jpeg": "JPG",
+    "image/png": "PNG",
+    "text/csv": "CSV",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excel",
+  }[m] ?? m.split("/").pop()!.toUpperCase()))
+  const unicos = Array.from(new Set(nombres))
+  if (unicos.length === 1) return unicos[0]
+  return `${unicos.slice(0, -1).join(", ")} o ${unicos[unicos.length - 1]}`
 }
 
 interface Props {
@@ -41,6 +64,10 @@ interface Props {
 export function SubirDocumentoDialog({
   open, onClose, onSuccess, requisito, mandanteId, empresaId, trabajadorId, trabajadorNombre, servicioFijo,
 }: Props) {
+  // Si el backend no los manda (llamador antiguo), se cae al PDF de siempre.
+  const formatos = requisito.formatos_permitidos?.length
+    ? requisito.formatos_permitidos
+    : ["application/pdf"]
   const [files, setFiles] = useState<File[]>([])
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [servicioId, setServicioId] = useState(servicioFijo?.id ?? "")
@@ -109,6 +136,19 @@ export function SubirDocumentoDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Qué debe contener el documento, según el catálogo. Es lo que evita
+              que el contratista suba lo que no era y le rechacen la entrega. */}
+          {requisito.descripcion && (
+            <details className="text-xs bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+              <summary className="cursor-pointer text-ink-secondary font-medium">
+                Qué debe contener este documento
+              </summary>
+              <p className="mt-2 text-ink-muted leading-relaxed whitespace-pre-line">
+                {requisito.descripcion}
+              </p>
+            </details>
+          )}
+
           {requiereServicio && servicioFijo && (
             <p className="text-xs text-ink-muted bg-brand-soft border border-brand-line rounded-md px-3 py-2">
               Este documento acredita el servicio <strong>{servicioFijo.nombre}</strong>.
@@ -137,16 +177,18 @@ export function SubirDocumentoDialog({
 
           <div className="space-y-2">
             <Label htmlFor="archivos">
-              Archivo{requisito.max_archivos > 1 ? `s (hasta ${requisito.max_archivos})` : " PDF"}
+              Archivo{requisito.max_archivos > 1 ? `s (hasta ${requisito.max_archivos})` : ""}
             </Label>
             <Input
               id="archivos"
               type="file"
-              accept="application/pdf"
+              accept={formatos.join(",")}
               multiple={requisito.max_archivos > 1}
               onChange={(e) => { agregarArchivos(e.target.files); e.target.value = "" }}
             />
-            <p className="text-xs text-ink-muted">Máximo 20 MB por archivo. Solo PDF.</p>
+            <p className="text-xs text-ink-muted">
+              Máximo 20 MB por archivo. {etiquetaFormatos(formatos)}.
+            </p>
           </div>
 
           {files.length > 0 && (

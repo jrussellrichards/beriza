@@ -10,6 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
+from app.domain import usuario_service
 from app.middleware.auth import require_rol
 from app.models.contratista import ContratistaMandante
 from app.models.expediente import Acreditacion
@@ -70,13 +71,15 @@ def listar_mandantes(
 @router.get("/usuarios")
 def listar_usuarios(
     db: Session = Depends(get_db),
-    _=Depends(require_rol(["berisa_admin"])),
+    actor=Depends(require_rol(["berisa_admin"])),
 ):
     usuarios = db.query(Usuario).order_by(Usuario.created_at.desc()).all()
     ahora = datetime.now(timezone.utc)
     resultado = []
     for u in usuarios:
-        # Calcular tiempo relativo desde created_at como proxy de último acceso
+        # OJO: esto es la ANTIGÜEDAD de la cuenta, no un último acceso. No
+        # existe registro de login en el modelo. La columna se rotula "Creado"
+        # en la UI para no afirmar algo que el sistema no sabe.
         delta = ahora - u.created_at.replace(tzinfo=timezone.utc)
         if delta.days == 0:
             ultimo = f"Hoy {u.created_at.strftime('%H:%M')}"
@@ -97,6 +100,11 @@ def listar_usuarios(
             "rol": u.rol,
             "activo": u.activo,
             "mandante": mandante_nombre,
+            "cargo": u.cargo,
+            # Invitación que nunca se activó: activo=False igual que una baja,
+            # pero se resuelve reenviando el correo, no reactivando.
+            "pendiente": usuario_service.nunca_activo(u),
+            "es_uno_mismo": u.id == actor.id,
             "ultimo_acceso": ultimo,
         })
     return resultado

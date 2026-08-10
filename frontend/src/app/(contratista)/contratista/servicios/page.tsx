@@ -13,8 +13,20 @@ interface TrabajadorItem {
   id: string
   rut: string
   nombre_completo: string
+  // Texto libre de la nomina. Es una etiqueta y no decide nada.
   cargo: string | null
   activo: boolean
+  // Cargo del CATALOGO del mandante, el que decide que documentos se le exigen
+  // en esta faena. Solo viene en el listado de dotacion de un servicio.
+  cargo_id?: string | null
+  cargo_nombre?: string | null
+}
+
+interface CargoOpcion {
+  id: string
+  codigo: string
+  nombre: string
+  area: string | null
 }
 
 // ── Gestión de dotación ───────────────────────────────────────────────────────
@@ -25,6 +37,11 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
   const [seleccion, setSeleccion] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
+  // Cargos que aplican EN ESTA faena: los globales mas los del mandante de este
+  // servicio. No se usa /cargos/ porque ese filtra por usuario.mandante_id, que
+  // en un contratista es NULL —trabaja para varios— y devolveria vacio.
+  const [cargos, setCargos] = useState<CargoOpcion[]>([])
+  const [guardandoCargo, setGuardandoCargo] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
     const s = getSession()
@@ -42,6 +59,26 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
   }, [servicio.id])
 
   useEffect(() => { cargar() }, [cargar])
+
+  useEffect(() => {
+    api.get<CargoOpcion[]>(`/api/v1/servicios/${servicio.id}/cargos-disponibles`)
+      .then(setCargos)
+      .catch(() => setCargos([]))
+  }, [servicio.id])
+
+  async function definirCargo(trabajadorId: string, cargoId: string) {
+    setGuardandoCargo(trabajadorId)
+    setError(null)
+    try {
+      await api.patch(`/api/v1/servicios/${servicio.id}/trabajadores/${trabajadorId}/cargo`,
+                      { cargo_id: cargoId || null })
+      cargar()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo asignar el cargo")
+    } finally {
+      setGuardandoCargo(null)
+    }
+  }
 
   async function asignar() {
     if (!seleccion) return
@@ -107,11 +144,35 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
 
       <div className="space-y-1.5">
         {asignados.map((t) => (
-          <div key={t.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-app border border-line-subtle">
-            <div>
-              <p className="text-sm font-medium text-ink">{t.nombre_completo}</p>
+          <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-surface-app border border-line-subtle">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-ink truncate">{t.nombre_completo}</p>
               <p className="text-xs text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
             </div>
+
+            {/* Cargo con el que participa en ESTA faena. Decide que documentos se
+                le exigen. Sin cargo NO queda exento: se le exige todo. */}
+            {cargos.length > 0 && puedeEditar && (
+              <div className="shrink-0 flex items-center gap-1.5">
+                <select
+                  value={t.cargo_id ?? ""}
+                  disabled={guardandoCargo === t.id}
+                  onChange={(e) => definirCargo(t.id, e.target.value)}
+                  className={cn(
+                    "text-xs rounded-md border px-2 py-1 bg-surface transition-colors",
+                    t.cargo_id ? "border-line text-ink" : "border-accion-line text-accion-ink bg-accion-soft",
+                  )}
+                  title={t.cargo_id
+                    ? "Cargo con el que participa en esta faena"
+                    : "Sin cargo: se le exige todo el set de documentos"}
+                >
+                  <option value="">Sin cargo</option>
+                  {cargos.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             {puedeEditar && (
               <button
                 onClick={() => desasignar(t.id)}

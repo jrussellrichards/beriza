@@ -11,3 +11,17 @@ __pycache__/
 *.pyo
 .next/
 backend/uploads/
+
+# Bases SQLite de pruebas manuales. Se generan al depurar migraciones y no
+# deben viajar al repo.
+*.db
+*.sqlite
+*.sqlite3
+
+# Planillas de referencia. Suelen ser documentación de un cliente o de un
+# tercero recibida para analizar: publicarlas en el repo es una fuga.
+*.xlsx
+*.xlsm
+*.xls
+
+.vercel

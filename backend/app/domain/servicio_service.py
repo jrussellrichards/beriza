@@ -23,6 +23,7 @@ from app.core.exceptions import (
 from app.domain.estados import EstadoServicio
 from app.models.contratista import ContratistaMandante
 from app.models.centro_trabajo import CentroTrabajo
+from app.models.pilar import RequisitoDocumental
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
 
@@ -101,6 +102,73 @@ def configurar_requisito_perfil(
         _reconciliar_contratistas_del_perfil(db, perfil_id)
 
     return config
+
+
+def aplicar_plantilla(db: Session, perfil_id: uuid.UUID, nombre: str) -> dict:
+    """
+    Deja el perfil exigiendo exactamente lo que dice la plantilla.
+
+    Es un SET, no un merge: los requisitos que la plantilla no incluye quedan en
+    es_obligatorio=False, no se borran. Se conserva la fila de config para no
+    perder la vigencia y el umbral que el mandante ya había parametrizado —
+    apagar y volver a encender un requisito no debe resetear sus parámetros.
+
+    Solo toca el catálogo GLOBAL. Los requisitos propios del mandante son suyos y
+    una plantilla de BERISA no tiene por qué opinar sobre ellos.
+    """
+    from app.domain import plantillas
+    from app.domain.reglas_service import VIGENCIA_DEFAULT_DIAS
+
+    obtener_perfil(db, perfil_id)
+    codigos = plantillas.codigos_de(db, nombre)
+
+    globales = (
+        db.query(RequisitoDocumental)
+        .filter(RequisitoDocumental.mandante_id.is_(None))
+        .all()
+    )
+    faltantes = codigos - {r.codigo for r in globales}
+    if faltantes:
+        # La plantilla nombra códigos que el catálogo no tiene: aplicarla dejaría
+        # al mandante exigiendo menos de lo que cree, en silencio.
+        raise ValueError(
+            f"La plantilla {nombre} referencia requisitos que no existen en el "
+            f"catálogo global: {', '.join(sorted(faltantes))}"
+        )
+
+    configs = {
+        c.requisito_documental_id: c
+        for c in db.query(PerfilRequisitoConfig).filter_by(perfil_id=perfil_id).all()
+    }
+    activados = desactivados = 0
+    for req in globales:
+        debe_exigirse = req.codigo in codigos
+        config = configs.get(req.id)
+        if config is None:
+            db.add(PerfilRequisitoConfig(
+                perfil_id=perfil_id,
+                requisito_documental_id=req.id,
+                es_obligatorio=debe_exigirse,
+                vigencia_max_dias=VIGENCIA_DEFAULT_DIAS,
+                umbral_deuda_max=0,
+            ))
+            if debe_exigirse:
+                activados += 1
+        elif config.es_obligatorio != debe_exigirse:
+            config.es_obligatorio = debe_exigirse
+            if debe_exigirse:
+                activados += 1
+            else:
+                desactivados += 1
+    db.commit()
+
+    # Mismo criterio que configurar_requisito_perfil: lo que el contratista ya
+    # tiene resuelto con otro mandante no se le vuelve a pedir.
+    if activados:
+        _reconciliar_contratistas_del_perfil(db, perfil_id)
+
+    return {"plantilla": nombre, "exigidos": len(codigos),
+            "activados": activados, "desactivados": desactivados}
 
 
 def _reconciliar_contratistas_del_perfil(db: Session, perfil_id: uuid.UUID) -> None:

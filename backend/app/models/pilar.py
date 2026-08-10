@@ -13,6 +13,12 @@ class Pilar(ModelBase):
     nombre: Mapped[str] = mapped_column(String(255), nullable=False)
     descripcion: Mapped[str] = mapped_column(Text, nullable=True)
     orden: Mapped[int] = mapped_column(Integer, default=0)
+    # Nombre de color del sistema de diseño (blue | amber | purple | slate...).
+    # Vive en la base y no en un dict del código porque el color estaba repetido
+    # en cuatro lugares distintos —dos backend, dos frontend— y dos de ellos
+    # indexaban por `codigo`: un pilar nuevo nacía gris sin que nadie lo notara.
+    # El backend sirve el nombre; el frontend lo traduce a clases de Tailwind.
+    color: Mapped[str] = mapped_column(String(20), nullable=False, default="slate", server_default="slate")
 
     subpilares: Mapped[list["Subpilar"]] = relationship(back_populates="pilar")
 
@@ -45,6 +51,17 @@ class RequisitoDocumental(ModelBase):
     # ENTIDAD | SERVICIO — ENTIDAD se acredita una vez para el mandante;
     # SERVICIO se acredita por cada servicio contratado
     alcance: Mapped[str] = mapped_column(String(20), nullable=False, default=Alcance.ENTIDAD, server_default=Alcance.ENTIDAD)
+    # BASE | AMPLIADO | OPCIONAL — describe la NATURALEZA NORMATIVA del requisito,
+    # no si un mandante lo exige. BASE es obligación legal de todo empleador en
+    # Chile; AMPLIADO solo se exige si se cumple el supuesto escrito en la
+    # descripción (dotación, exposición, tipo de obra); OPCIONAL es práctica de
+    # mercado que ninguna norma impone al contratista.
+    #
+    # Qué exige un perfil el día uno es una decisión distinta y vive en
+    # PerfilRequisitoConfig.es_obligatorio: un requisito puede ser BASE y no
+    # estar en la plantilla de arranque. Mezclar ambas cosas en un solo campo
+    # obligaría a todo mandante a todo el catálogo.
+    nivel: Mapped[str] = mapped_column(String(20), nullable=False, default="OPCIONAL", server_default="OPCIONAL")
     # Validación de entrega data-driven: cuántos archivos admite y qué formatos.
     # formatos_permitidos NULL = usa el default global de settings.
     max_archivos: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")

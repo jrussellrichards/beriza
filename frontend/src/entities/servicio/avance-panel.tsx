@@ -10,10 +10,15 @@ import { HistorialDialog } from "@/entities/documento/historial-dialog"
 import type { AvanceServicio, RequisitoAvance } from "./types"
 
 // Estados de documento del backend: 1=Enviado | 2=En Análisis | 3=Observado | 4=Aprobado
+
+// Se indexa por el COLOR que sirve el backend, no por el código del pilar: con
+// el código, cualquier pilar que no sea uno de los tres originales caía al gris
+// por defecto sin que nadie lo notara. Las clases van literales porque el JIT de
+// Tailwind purga las que se arman concatenando.
 const PILAR_COLOR: Record<string, string> = {
-  LEGAL: "bg-brand-soft text-brand-hover border-brand-line",
-  HSE: "bg-accion-soft text-accion-ink border-accion-line",
-  COMPLIANCE: "bg-excepcion-soft text-excepcion-ink border-excepcion-line",
+  blue: "bg-brand-soft text-brand-hover border-brand-line",
+  amber: "bg-accion-soft text-accion-ink border-accion-line",
+  purple: "bg-excepcion-soft text-excepcion-ink border-excepcion-line",
 }
 
 function EstadoDocBadge({ estado }: { estado: number | null }) {
@@ -126,7 +131,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
         {avance.pilares.map((p) => (
           <div key={p.codigo}>
             <div className="flex items-center gap-2 mb-2">
-              <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[p.codigo] ?? "bg-surface-sunken text-ink-muted border-line")}>
+              <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded border", PILAR_COLOR[p.color] ?? "bg-surface-sunken text-ink-muted border-line")}>
                 {p.nombre}
               </span>
               <Ratio n={p.aprobados} total={p.total} />

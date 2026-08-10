@@ -94,7 +94,7 @@ def alertas_de_vencimiento(db: Session, hoy: date | None = None) -> dict:
     por_contratista: dict = {}
     for acred in candidatas:
         exp = acred.expediente
-        contratista_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+        contratista_id = exp.empresa_duena_id
         if not contratista_id:
             continue
         por_contratista.setdefault(contratista_id, []).append({
@@ -143,5 +143,5 @@ def _vencer(db: Session, acred: Acreditacion) -> None:
 
 def _relacion_de(db: Session, acred: Acreditacion) -> tuple | None:
     exp = acred.expediente
-    contratista_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+    contratista_id = exp.empresa_duena_id
     return (contratista_id, acred.mandante_id) if contratista_id else None

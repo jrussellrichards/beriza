@@ -47,6 +47,38 @@ class PerfilRequisitoConfig(ModelBase):
 
     perfil: Mapped["PerfilRequisitos"] = relationship(back_populates="requisitos_config")
     requisito: Mapped["RequisitoDocumental"] = relationship()
+    cargos: Mapped[list["PerfilRequisitoCargo"]] = relationship(
+        back_populates="config", cascade="all, delete-orphan"
+    )
+
+
+class PerfilRequisitoCargo(ModelBase):
+    """
+    A qué cargos aplica un requisito de trabajador dentro de un perfil.
+
+    SIN FILAS = aplica a TODOS los trabajadores del servicio. Ese es el
+    comportamiento que el sistema tuvo siempre, así que la tabla nace vacía y no
+    cambia nada hasta que alguien la use. Es lo que hace la migración aditiva.
+
+    CON FILAS = aplica solo a esos cargos. Sirve para lo que hoy no se puede
+    decir: "la licencia clase D pídesela al conductor, no a la secretaria".
+
+    Cuelga de PerfilRequisitoConfig y no del RequisitoDocumental global porque la
+    decisión es del mandante, no de la ley: quién necesita qué depende de cómo
+    ese mandante organiza su faena.
+    """
+    __tablename__ = "perfil_requisito_cargo"
+    __table_args__ = (
+        UniqueConstraint("perfil_requisito_config_id", "cargo_id", name="uq_perfil_req_cargo"),
+    )
+
+    perfil_requisito_config_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("perfil_requisito_config.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    cargo_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cargos.id"), nullable=False, index=True)
+
+    config: Mapped["PerfilRequisitoConfig"] = relationship(back_populates="cargos")
+    cargo: Mapped["Cargo"] = relationship()
 
 
 class Servicio(ModelBase):
@@ -103,9 +135,19 @@ class ServicioTrabajador(ModelBase):
 
     servicio_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("servicios.id"), nullable=False)
     trabajador_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trabajadores.id"), nullable=False, index=True)
+    # El cargo va en la ASIGNACIÓN y no en el trabajador: la misma persona puede
+    # ser operador de excavadora en un servicio y administrativo en otro, y sus
+    # exigencias son distintas en cada uno.
+    #
+    # NULL significa "sin cargo declarado", NO significa "exento". Ver
+    # acreditacion_service._aplica_a_cargo: a quien no tiene cargo se le exige
+    # TODO, incluido lo restringido por cargo. Lo contrario permitiría bajar las
+    # exigencias de alguien simplemente no declarando su cargo.
+    cargo_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("cargos.id"), nullable=True, index=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     fecha_asignacion: Mapped[date] = mapped_column(Date, nullable=False)
     fecha_desasignacion: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     servicio: Mapped["Servicio"] = relationship(back_populates="trabajadores_asignados")
     trabajador: Mapped["Trabajador"] = relationship()
+    cargo: Mapped["Cargo | None"] = relationship()

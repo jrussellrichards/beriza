@@ -434,9 +434,7 @@ def procesar_documento(db: Session, entrega_id: uuid.UUID) -> ResultadoAnalisis:
     for acred in acreditaciones:
         resultado = reglas_service.validar_documento(
             db, requisito.id, campos_dict, acred.mandante_id,
-            contratista_id=expediente.empresa_id or (
-                entrega.expediente.trabajador.empresa_id if expediente.trabajador_id else None
-            ),
+            contratista_id=expediente.empresa_duena_id,
         )
         acred.mensaje_brecha = None if resultado.aprobado else "; ".join(resultado.brechas)
         _cambiar_estado(db, acred, resultado.estado, actor=None)
@@ -486,7 +484,7 @@ def _recalcular_acreditacion(db: Session, acred: Acreditacion) -> None:
     """Actualiza el agregado ACREDITADA/BLOQUEADA/EN_PROCESO de la relación."""
     from app.domain import acreditacion_service  # import local: mismo nivel de capa
     exp = acred.expediente
-    contratista_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+    contratista_id = exp.empresa_duena_id
     if contratista_id:
         acreditacion_service.recalcular_estado_global(db, contratista_id, acred.mandante_id)
 

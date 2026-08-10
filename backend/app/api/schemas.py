@@ -52,6 +52,26 @@ class InvitacionInfoResponse(BaseModel):
     rol: str = "contratista_admin"
 
 
+class InvitarMiembroEquipoRequest(BaseModel):
+    """Alta de alguien en la propia organización. El rol se valida contra lo que
+    el invitante puede otorgar (ver usuario_service.ROLES_QUE_PUEDE_OTORGAR)."""
+    email: EmailStr
+    nombre: str
+    rol: str = "prevencionista"
+    cargo: str | None = None
+
+
+class ActualizarUsuarioRequest(BaseModel):
+    """
+    Edición de una cuenta existente. El email NO está: es la identidad con la
+    que se activó y con la que se resuelven las invitaciones.
+    """
+    nombre: str | None = None
+    cargo: str | None = None
+    rol: str | None = None
+    activo: bool | None = None
+
+
 class CrearUsuarioRequest(BaseModel):
     email: EmailStr
     nombre: str
@@ -157,6 +177,12 @@ class UsuarioMandanteResponse(BaseModel):
     # y no administra": en la lista del equipo son dos cosas muy distintas.
     aprueba_todo: bool
     cargo: str | None
+    # Invitación que nunca se activó. Tiene activo=False igual que una cuenta
+    # dada de baja, pero la salida es la opuesta: a una se le reenvía el correo,
+    # a la otra se le devuelve el acceso.
+    pendiente: bool = False
+    # Para que la UI no ofrezca acciones que el backend va a rechazar con 403.
+    es_uno_mismo: bool = False
 
 
 class InvitarMandanteRequest(BaseModel):
@@ -188,6 +214,12 @@ class CrearRequisitoCatalogoRequest(BaseModel):
     max_archivos: int = 1
     sin_vencimiento: bool = False
     sensible: bool = False
+    # En qué subpilar del pilar cae. Opcional por compatibilidad: si no viene, el
+    # endpoint usa el primero por orden, que es lo que hacía siempre. Eso era
+    # inofensivo cuando cada pilar tenía un solo subpilar; con la taxonomía de 11
+    # significa que todo requisito propio de HSE aterriza en "Gestión preventiva"
+    # aunque sea de salud ocupacional.
+    subpilar_id: uuid.UUID | None = None
 
 
 class ActualizarRequisitoCatalogoRequest(BaseModel):
@@ -197,6 +229,9 @@ class ActualizarRequisitoCatalogoRequest(BaseModel):
     max_archivos: int | None = None
     sin_vencimiento: bool | None = None
     sensible: bool | None = None
+    # Permite corregir un requisito mal clasificado sin borrarlo y recrearlo, que
+    # es lo único que se podía hacer antes (y que pierde sus expedientes).
+    subpilar_id: uuid.UUID | None = None
 
 
 # ── Perfiles de requisitos ───────────────────────────────────────────────────
@@ -212,6 +247,34 @@ class ConfigurarRequisitoPerfilRequest(BaseModel):
     vigencia_max_dias: int
     umbral_deuda_max: float = 0.0
     parametros_extra: dict | None = None
+
+
+class CrearCargoRequest(BaseModel):
+    codigo: str
+    nombre: str
+    area: str | None = None
+
+
+class ActualizarCargoRequest(BaseModel):
+    nombre: str | None = None
+    area: str | None = None
+    activo: bool | None = None
+
+
+class DefinirCargoAsignacionRequest(BaseModel):
+    # null = sin cargo declarado. NO exime: ver acreditacion_service._aplica_a_cargo.
+    cargo_id: uuid.UUID | None = None
+
+
+class DefinirCargosRequisitoRequest(BaseModel):
+    # Lista COMPLETA de cargos a los que aplica el requisito dentro del perfil.
+    # Vacia = aplica a todos los trabajadores (el comportamiento por defecto).
+    cargo_ids: list[uuid.UUID] = []
+
+
+class AplicarPlantillaRequest(BaseModel):
+    # ARRANQUE | COMPLETA | OBRA — ver app/domain/plantillas.py
+    plantilla: str
 
 
 class PerfilResponse(BaseModel):
@@ -357,6 +420,7 @@ class RequisitoAvanceResponse(BaseModel):
 class PilarAvanceResponse(BaseModel):
     codigo: str
     nombre: str
+    color: str
     total: int
     aprobados: int
     cumple: bool
@@ -373,6 +437,10 @@ class TrabajadorAvanceResponse(BaseModel):
     total: int
     aprobados: int
     cumple: bool
+    # El perfil no le exige nada para su cargo. NO es lo mismo que cumplir: el
+    # sistema no puede afirmar nada sobre esta persona. La UI debe distinguirlo
+    # para no mostrar un verde que nadie verificó.
+    sin_requisitos: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -411,10 +479,30 @@ class TrabajadorResponse(BaseModel):
     id: uuid.UUID
     rut: str
     nombre_completo: str
+    # Texto libre que el contratista teclea en la nomina. Es una etiqueta, no
+    # participa de ninguna regla.
     cargo: str | None
     activo: bool
 
     model_config = {"from_attributes": True}
+
+
+class TrabajadorAsignadoResponse(BaseModel):
+    """
+    Trabajador dentro de un servicio, con el cargo ESTRUCTURADO de su asignacion.
+
+    Es distinto de TrabajadorResponse.cargo: aquel es el texto libre de la nomina
+    y este es el cargo del catalogo, que es el que decide que documentos se le
+    exigen. Se devuelven los dos a proposito, porque durante la transicion el
+    contratista necesita ver lo que escribio para elegir bien el del catalogo.
+    """
+    id: uuid.UUID
+    rut: str
+    nombre_completo: str
+    cargo: str | None
+    activo: bool
+    cargo_id: uuid.UUID | None = None
+    cargo_nombre: str | None = None
 
 
 # ── Documentos ───────────────────────────────────────────────────────────────
@@ -488,6 +576,12 @@ class PendienteRevisionResponse(BaseModel):
     documento_id: uuid.UUID
     requisito_codigo: str
     requisito_nombre: str
+    # El criterio de revisión. Cada requisito del catálogo trae su fundamento
+    # normativo y una línea "REVISOR:" con qué mirar para aprobar. Con la
+    # revisión 100% humana, esto ES la instrucción de trabajo: sin ella el
+    # revisor aprueba a ojo y el catálogo de 44 no sirve de nada.
+    requisito_descripcion: str = ""
+    subpilar_nombre: str | None = None
     pilar_id: uuid.UUID
     pilar_nombre: str
     contratista_razon_social: str
@@ -603,6 +697,9 @@ class DocumentoContratistaResponse(BaseModel):
     requisito_id: uuid.UUID
     requisito_codigo: str
     requisito_nombre: str
+    # Qué es el documento y qué debe contener. Es lo que evita que el contratista
+    # suba lo que no era y le rechacen la entrega.
+    requisito_descripcion: str = ""
     entidad_tipo: str
     alcance: str
     max_archivos: int
@@ -612,6 +709,9 @@ class DocumentoContratistaResponse(BaseModel):
     trabajador_nombre: str | None
     servicio_id: uuid.UUID | None
     servicio_nombre: str | None
+    # MIME aceptados, ya resueltos contra el default global. El diálogo de subida
+    # los usa en el accept del input en vez de asumir PDF.
+    formatos_permitidos: list[str] = []
     mandantes: list[EstadoPorMandanteResponse]
 
     model_config = {"from_attributes": True}

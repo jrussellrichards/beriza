@@ -23,6 +23,7 @@ import uuid as uuid_lib
 
 from app.core.config import settings
 from app.domain import rut_service
+from app.domain import plantillas as _plantillas
 from app.domain.estados import Alcance, EstadoDocumento, EstadoServicio, TipoEvento
 from app.models import Base, Usuario
 from app.models.mandante import Mandante
@@ -38,34 +39,669 @@ engine = create_engine(settings.DATABASE_URL)
 
 HOY = date.today()
 
-# ── Parametrización del catálogo (decisiones de negocio explícitas) ──────────
+# ── Catálogo global de BERISA ────────────────────────────────────────────────
+#
+# Normativa chilena + práctica universal del rubro. NADA propio de un mandante:
+# lo que un cliente exige de más son requisitos suyos (mandante_id NOT NULL) y
+# este archivo no los toca.
+#
+# `nivel` describe la NATURALEZA NORMATIVA, que es un hecho sobre la ley:
+#   BASE      obligación legal universal de todo empleador en Chile.
+#   AMPLIADO  exigible solo si se cumple el supuesto escrito en la descripción
+#             (dotación, exposición a un agente, nacionalidad, tipo de obra).
+#   OPCIONAL  práctica de mercado; ninguna norma la impone al contratista.
+#
+# Qué exige un perfil el día uno es una decisión DISTINTA y vive en las
+# PLANTILLAS de más abajo. Un requisito puede ser BASE y no estar en el arranque:
+# el DS 44 obliga a toda empresa a tener programa preventivo, pero pedírselo a
+# una PyME en su primera pantalla la hace abandonar.
+#
+# La vigencia no es un atributo del documento sino del umbral que exige cada
+# mandante: viaja a PerfilRequisitoConfig.vigencia_max_dias. "No vence" NO se
+# expresa con vigencia=0 sino con sin_vencimiento=True, que es lo que filtra
+# vencimiento_service.
 
-# Vigencia máxima en días exigida por defecto para cada requisito
-VIGENCIAS = {
-    "F30": 30, "F30_1": 30, "CONTRATO": 365, "EXAM_MED": 365,
-    "MIPER": 365, "RIOHS": 365, "DAS": 365,
-    "CARPETA_TRIBUTARIA": 90, "VIGENCIA_SOCIEDAD": 365, "DJ_CONFLICTO": 365,
-}
+from dataclasses import dataclass
+
+PDF_IMG = ["application/pdf", "image/jpeg", "image/png"]
+PDF_TAB = [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/csv",
+]
+
+PILARES_CATALOGO = [
+    ("LEGAL", "Legal / Laboral", 1, "blue", [
+        ("LEGAL_EMPRESA",     "Cumplimiento laboral y previsional", 1),
+        ("LEGAL_REGLAMENTOS", "Obligaciones del empleador",         2),
+        ("LEGAL_VINCULO",     "Contratación y vínculo laboral",     3),
+    ]),
+    ("HSE", "HSE — Salud, Seguridad y Medio Ambiente", 2, "amber", [
+        ("HSE_GESTION",      "Gestión preventiva y documentos del sistema",           1),
+        ("HSE_ORGANIZACION", "Organización preventiva y seguro Ley 16.744",           2),
+        ("HSE_SALUD",        "Salud ocupacional, agentes de riesgo y medio ambiente", 3),
+        ("HSE_PERSONAS",     "Protección e información de las personas",              4),
+    ]),
+    ("COMPLIANCE", "Compliance — Societario, tributario y de integridad", 3, "purple", [
+        ("COMPLIANCE_SOCIETARIO", "Existencia legal y representación",       1),
+        ("COMPLIANCE_TRIBUTARIO", "Situación tributaria y financiera",       2),
+        ("COMPLIANCE_SEGUROS",    "Seguros y garantías del contrato",        3),
+        ("COMPLIANCE_INTEGRIDAD", "Integridad, probidad y datos personales", 4),
+    ]),
+]
+
+
+@dataclass(frozen=True)
+class Req:
+    codigo: str
+    subpilar: str
+    nombre: str
+    entidad: str                   # EMPRESA | TRABAJADOR
+    alcance: str                   # Alcance.ENTIDAD | Alcance.SERVICIO
+    nivel: str                     # BASE | AMPLIADO | OPCIONAL
+    vigencia: int = 365            # vigencia_max_dias por defecto del perfil
+    sin_vencimiento: bool = False  # True => el cron de vencimientos lo ignora
+    sensible: bool = False         # True => no se reutiliza solo entre mandantes
+    max_archivos: int = 1
+    formatos: list | None = None   # None => solo application/pdf
+    desc: str = ""
+
+
+CATALOGO = [
+    # ── LEGAL · Cumplimiento laboral y previsional ───────────────────────────
+    Req("F30", "LEGAL_EMPRESA",
+        "Certificado F30 — Antecedentes laborales y previsionales",
+        "EMPRESA", Alcance.ENTIDAD, "BASE", vigencia=30,
+        desc="Certificado de la Dirección del Trabajo con las multas cursadas y deudas "
+             "previsionales registradas del empleador. Se obtiene gratis en Mi DT con "
+             "ClaveÚnica. Fundamento: art. 183-C del Código del Trabajo (derecho de "
+             "información de la empresa principal) y DS 319/2006. Ninguna norma fija "
+             "vigencia en días: los 30 son práctica y viven en la configuración del "
+             "mandante. LÍMITE: refleja lo ya registrado, no audita planillas — un F30 "
+             "limpio no prueba que todos los trabajadores estén cubiertos. "
+             "REVISOR: emisor DT con folio verificable, RUT del contratista, emisión "
+             "de menos de 30 días."),
+
+    Req("F30_1", "LEGAL_EMPRESA",
+        "Certificado F30-1 — Cumplimiento de obligaciones laborales y previsionales",
+        "EMPRESA", Alcance.ENTIDAD, "BASE", vigencia=30,
+        desc="Acredita el cumplimiento respecto de una obra, faena o servicio y por un "
+             "período determinado. Es el pivote del ciclo mensual: se pide antes de "
+             "cursar cada estado de pago. Fundamento: art. 183-C CT y DS 319/2006 — "
+             "pedirlo periódicamente es lo que permite al mandante degradar su "
+             "responsabilidad de solidaria a subsidiaria (arts. 183-B y 183-D). "
+             "NOTA: el nombre anterior decía «Deuda previsional trabajadores», que es "
+             "incorrecto — el certificado no certifica deuda. El alcance debería ser "
+             "SERVICIO; se mantiene ENTIDAD hasta migrar los expedientes vivos. "
+             "REVISOR: emisor DT, RUT del contratista, que nombre la obra o faena y el "
+             "período, y que ese período sea el del estado de pago."),
+
+    Req("NOMINA_PERSONAL", "LEGAL_EMPRESA",
+        "Nómina de trabajadores asignados a la obra, faena o servicio",
+        "EMPRESA", Alcance.SERVICIO, "AMPLIADO", vigencia=90,
+        sensible=True, max_archivos=2, formatos=PDF_TAB,
+        desc="SUPUESTO: el mandante necesita el padrón nominativo contra el que cuadrar "
+             "el F30-1. Listado con nombre, RUT, cargo, tipo de contrato y fecha de "
+             "ingreso. FUNDAMENTO ACOTADO: el DS 76/2006 art. 5 obliga a la EMPRESA "
+             "PRINCIPAL a mantener un registro con el NÚMERO de trabajadores de cada "
+             "contratista y las fechas estimadas de inicio y término — el detalle "
+             "persona a persona es práctica de control de acceso, no obligación legal. "
+             "El formato no está normado: no se puede rechazar por formato. "
+             "REVISOR: papel del contratista con fecha y firma del representante legal, "
+             "y que la cantidad de personas coincida con las asignadas al servicio."),
+
+    # ── LEGAL · Obligaciones del empleador ───────────────────────────────────
+    Req("PROTOCOLO_KARIN", "LEGAL_REGLAMENTOS",
+        "Protocolo de prevención y procedimiento de investigación de acoso laboral, "
+        "acoso sexual y violencia en el trabajo (Ley Karin)",
+        "EMPRESA", Alcance.ENTIDAD, "BASE", vigencia=365, max_archivos=2,
+        desc="Protocolo de prevención más el procedimiento de investigación y sanción, "
+             "en dos archivos. Debe identificar canales de denuncia internos y externos "
+             "y las medidas de resguardo. Fundamento: Ley 21.643, vigente desde el "
+             "01-08-2024, SIN umbral de dotación — alcanza a toda empresa con al menos "
+             "un trabajador. Incorpora el art. 211-A del Código del Trabajo y ordena "
+             "elaborarlo a través de los organismos administradores de la Ley 16.744 "
+             "según directrices de la SUSESO: se ACEPTA el protocolo emitido o visado "
+             "por la mutualidad o el ISL. Las empresas de 10 o más lo incorporan a su "
+             "RIOHS y pueden subir el mismo PDF en ambos requisitos. No hay plazo legal "
+             "de caducidad: los 365 días son parámetro del producto. "
+             "REVISOR: que nombre a la empresa con RUT, al menos un canal de denuncia, "
+             "y firma o visación con fecha."),
+
+    Req("DECL_INCLUSION_LABORAL", "LEGAL_REGLAMENTOS",
+        "Comunicación electrónica de cumplimiento de la Ley 21.015 de inclusión laboral",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=365,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista ocupa 100 o más trabajadores. Bajo "
+             "ese umbral la ley no lo exige y el requisito debe quedar apagado. "
+             "Fundamento: Ley 21.015 — la comunicación se registra en Mi DT hasta el 31 "
+             "de enero de cada año e informa el cumplimiento de la cuota del 1% o las "
+             "medidas alternativas invocadas. "
+             "REVISOR: comprobante electrónico de la DT del período vigente, con RUT del "
+             "contratista y fecha de envío."),
+
+    # ── LEGAL · Contratación y vínculo laboral ───────────────────────────────
+    Req("CONTRATO", "LEGAL_VINCULO",
+        "Contrato de trabajo y sus anexos",
+        "TRABAJADOR", Alcance.ENTIDAD, "BASE",
+        vigencia=365, sin_vencimiento=True, sensible=True, max_archivos=3,
+        desc="Contrato escriturado y firmado por ambas partes, con sus anexos de "
+             "modificación o destinación a la obra (hasta 3 archivos: no existe un "
+             "requisito «anexo» aparte). FUNDAMENTO ACOTADO: el art. 9 del Código del "
+             "Trabajo obliga a ESCRITURAR y FIRMAR entre empleador y trabajador; "
+             "ENTREGARLO al mandante es práctica contractual, no obligación legal. "
+             "MINIMIZACIÓN: el mandante que solo necesita constatar el vínculo puede "
+             "aceptar el anexo de destinación o un certificado de vigencia de contrato "
+             "en lugar del contrato íntegro. NO VENCE: lo que caduca es la certeza de "
+             "que la persona sigue en faena, y eso lo resuelven la nómina y el F30-1, "
+             "no una resubida anual. SENSIBLE: contiene remuneración y domicilio. "
+             "REVISOR: nombre y RUT de ambas partes, cargo, fecha de ingreso y firma."),
+
+    Req("CEDULA_IDENTIDAD", "LEGAL_VINCULO",
+        "Cédula de identidad vigente del trabajador",
+        "TRABAJADOR", Alcance.ENTIDAD, "OPCIONAL",
+        vigencia=365, sensible=True, max_archivos=2, formatos=PDF_IMG,
+        desc="Práctica de mercado para control de acceso a faena: ninguna norma la exige "
+             "como documento de acreditación. Se sube por ambos lados, y por eso acepta "
+             "fotografía además de PDF — exigir PDF aquí garantiza que el 100% de las "
+             "entregas se rechacen. SENSIBLE: es un documento de identidad. "
+             "SÍ VENCE, a diferencia del contrato y de la IRL: la cédula trae fecha de "
+             "expiración impresa, así que marcarla sin_vencimiento la dejaría aprobada "
+             "para siempre y el mandante controlaría acceso con un documento caducado. "
+             "Mismo criterio que HABILITACION_MIGRATORIA. "
+             "REVISOR: que el RUT y el nombre coincidan con los del trabajador cargado "
+             "en Acredita y que la cédula esté vigente."),
+
+    Req("HABILITACION_MIGRATORIA", "LEGAL_VINCULO",
+        "Habilitación migratoria para trabajar (trabajador extranjero)",
+        "TRABAJADOR", Alcance.ENTIDAD, "AMPLIADO", vigencia=365,
+        sensible=True, max_archivos=2, formatos=PDF_IMG,
+        desc="SUPUESTO DE ACTIVACIÓN: el trabajador es extranjero. Permiso de residencia "
+             "o de trabajo vigente conforme a la Ley 21.325 de Migración y Extranjería. "
+             "IMPORTANTE: NO pedir «contrato registrado en Extranjería» — la visa sujeta "
+             "a contrato fue ELIMINADA por la Ley 21.325; pedirla es exigir un documento "
+             "que ya no existe. SENSIBLE: dato de nacionalidad y situación migratoria. "
+             "REVISOR: que el permiso esté vigente a la fecha y habilite para trabajar, "
+             "y que el RUT o número de documento coincida con el del trabajador."),
+
+    # ── HSE · Gestión preventiva y documentos del sistema ────────────────────
+    Req("MIPER", "HSE_GESTION",
+        "Matriz de Identificación de Peligros y Evaluación de Riesgos (MIPER) y mapa de riesgos",
+        "EMPRESA", Alcance.SERVICIO, "BASE", vigencia=365, max_archivos=3,
+        desc="Documento raíz del pilar: de él dependen el programa preventivo, la "
+             "vigilancia de la salud y casi todos los requisitos condicionales. Se sube "
+             "la matriz, el mapa de riesgos del art. 62 y, si existe, el registro de "
+             "difusión firmado. Fundamento: DS 44/2024 art. 7 — toda entidad empleadora "
+             "debe confeccionarla considerando riesgos ergonómicos, psicosociales, "
+             "violencia y acoso, con enfoque de género, y revisarla al menos anualmente "
+             "o ante cambios, accidente o riesgo grave e inminente. IMPORTANTE PARA EL "
+             "REVISOR: las entidades de HASTA 25 PERSONAS cumplen con la matriz elaborada "
+             "según la pauta y la asistencia técnica de su organismo administrador "
+             "(art. 64) — NO rechazar una matriz simplificada de microempresa por "
+             "«genérica». El DS 40/1969 está DEROGADO desde el 01-02-2025: no citarlo. "
+             "REVISOR: peligros por puesto de trabajo, fecha de última revisión de menos "
+             "de 12 meses, firma del representante legal o del responsable de prevención."),
+
+    Req("PROG_PREVENTIVO", "HSE_GESTION",
+        "Programa de trabajo preventivo y evaluación anual de cumplimiento",
+        "EMPRESA", Alcance.SERVICIO, "BASE", vigencia=365, max_archivos=2,
+        desc="Deriva de la MIPER: acciones, responsables y plazos para controlar los "
+             "riesgos identificados. Fundamento: DS 44/2024 art. 8 — debe elaborarse "
+             "dentro de los 30 días corridos siguientes a la matriz — y art. 14, que "
+             "obliga a evaluar anualmente su cumplimiento. Las entidades de hasta 25 "
+             "personas lo cumplen con la asistencia técnica de su organismo administrador "
+             "(art. 64). Lo aprueba el REPRESENTANTE LEGAL, no la mutualidad: no exigir "
+             "visación de la mutual. "
+             "REVISOR: que las actividades se puedan rastrear a peligros de la MIPER, "
+             "que tenga responsables y plazos, y firma del representante legal."),
+
+    Req("RIHS", "HSE_GESTION",
+        "Reglamento Interno de Higiene y Seguridad (RIHS) y comprobante de ingreso web DT/SEREMI",
+        "EMPRESA", Alcance.ENTIDAD, "BASE", vigencia=730, max_archivos=2,
+        desc="Fundamento: DS 44/2024 art. 56 — «toda entidad empleadora estará obligada a "
+             "establecer y mantener al día un Reglamento Interno de Higiene y Seguridad "
+             "en el Trabajo», SIN umbral de dotación, en desarrollo del art. 67 de la Ley "
+             "16.744. Art. 57: no requiere aprobación previa, debe ingresarse en la web "
+             "de la DT y de la SEREMI de Salud. El contenido mínimo del art. 58 ya incluye "
+             "el procedimiento de EPP y el de investigación de siniestros. ES DISTINTO "
+             "DEL RIOHS del art. 153 CT, que sí tiene umbral de 10 trabajadores; quien "
+             "está obligado a ambos puede refundirlos y subir el mismo PDF en los dos. "
+             "REVISOR: portada con razón social y RUT, índice que cubra el art. 58, y "
+             "comprobante de ingreso web con fecha. La AUSENCIA del comprobante se "
+             "OBSERVA, no se rechaza: la norma exige el ingreso, no nomina un comprobante."),
+
+    Req("RIOHS", "HSE_GESTION",
+        "Reglamento Interno de Orden, Higiene y Seguridad (RIOHS) y comprobante de registro",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=730, max_archivos=2,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista ocupa normalmente 10 O MÁS "
+             "TRABAJADORES PERMANENTES. Bajo ese umbral la ley NO lo exige y el requisito "
+             "debe quedar apagado — exigírselo a una contratista de 6 personas es pedir "
+             "un documento que la ley no le pide, y es el error que el catálogo anterior "
+             "cometía al tenerlo como requisito plano. Fundamento: art. 153 del Código "
+             "del Trabajo. Desde la Ley 21.643 debe incorporar el protocolo y el "
+             "procedimiento de la Ley Karin. Puede venir refundido con el RIHS. "
+             "CAMBIO: deja de ser sin_vencimiento — el DS 44 art. 57 obliga a mantenerlo "
+             "al día. REVISOR: que contenga materias de ORDEN (jornada, remuneraciones, "
+             "sanciones, procedimiento de reclamos) además de higiene y seguridad, y el "
+             "comprobante de registro en el sitio web de la DT."),
+
+    Req("PLAN_EMERGENCIA", "HSE_GESTION",
+        "Plan de emergencias y registro del simulacro anual",
+        "EMPRESA", Alcance.ENTIDAD, "BASE", vigencia=365, max_archivos=2,
+        desc="Fundamento: DS 44/2024 art. 19 — obligación universal, y el plan debe ser "
+             "ensayado «a lo menos una vez al año». Es una de las pocas vigencias del "
+             "catálogo con periodicidad fijada por norma —junto con CAPACITACION_SST "
+             "(máximo 2 años, art. 16) y EVAL_PSICOSOCIAL— así que los 365 días aquí no "
+             "son práctica de mercado. Se suben el plan y el acta del simulacro. "
+             "REVISOR: procedimientos de evacuación, vías y zonas de seguridad, "
+             "responsables identificados, y acta de simulacro de menos de 12 meses."),
+
+    Req("PROC_TRABAJO_SEGURO", "HSE_GESTION",
+        "Procedimientos de trabajo seguro aplicables al servicio",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=730, max_archivos=10,
+        desc="Práctica de mercado: ninguna norma chilena exige esta carpeta como "
+             "documento. Lo que el DS 44 art. 15 obliga es a INFORMAR los métodos de "
+             "trabajo correctos, y eso se acredita con la IRL. Se ofrece porque casi "
+             "todo mandante lo pide, pero se declara como lo que es. "
+             "REVISOR: que cada procedimiento identifique la tarea, sus riesgos y los "
+             "controles, y tenga fecha y aprobación."),
+
+    # ── HSE · Organización preventiva y seguro Ley 16.744 ────────────────────
+    Req("CERT_AFILIACION_OA", "HSE_ORGANIZACION",
+        "Certificado de afiliación al organismo administrador de la Ley 16.744",
+        "EMPRESA", Alcance.ENTIDAD, "BASE", vigencia=90,
+        desc="Acredita ante qué mutualidad o ante el ISL está adherido el contratista. "
+             "Fundamento: DS 76/2006 art. 5 — la empresa principal debe mantener en su "
+             "registro, de cada contratista, el organismo administrador de la Ley 16.744; "
+             "es un deber propio del mandante, y este documento es cómo lo cumple. La "
+             "vigencia en días es práctica: la afiliación no caduca sola. "
+             "REVISOR: emisor mutualidad o ISL, RUT del contratista, y que declare "
+             "afiliación vigente."),
+
+    Req("CERT_SINIESTRALIDAD", "HSE_ORGANIZACION",
+        "Certificado de siniestralidad y tasa de cotización adicional",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=365, max_archivos=3,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista tiene al menos un período de "
+             "evaluación cumplido ante su organismo administrador. Una empresa recién "
+             "constituida no lo tiene y no puede obtenerlo. FUNDAMENTO CORREGIDO: el "
+             "DS 76 art. 5 FACULTA a la empresa principal a solicitar información de "
+             "siniestralidad, no la obliga a registrarla; el DS 67 regula cómo se calcula "
+             "la cotización adicional, no un deber de exhibirla. Por eso AMPLIADO y no "
+             "BASE. REVISOR: emisor mutualidad o ISL, período evaluado, y tasa de "
+             "cotización adicional expresada."),
+
+    Req("DAS", "HSE_ORGANIZACION",
+        "Estadísticas de accidentabilidad y enfermedades profesionales declaradas",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=365, sensible=True, max_archivos=2,
+        desc="Autodeclaración del contratista sobre su accidentabilidad. Fundamento "
+             "acotado: el DS 44 arts. 73 a 75 obligan a LLEVAR el registro de siniestros; "
+             "entregarlo al mandante es práctica. Tiene MENOR valor probatorio que el "
+             "certificado de siniestralidad de la mutualidad, que viene de un tercero — "
+             "un mandante que ya activó CERT_SINIESTRALIDAD probablemente no necesita "
+             "este. SENSIBLE: suele contener nombres de accidentados y relato de los "
+             "hechos, que son datos de salud. "
+             "REVISOR: período cubierto, tasa de accidentabilidad y de siniestralidad, "
+             "firma del responsable de prevención."),
+
+    Req("CPHS_DELEGADO_ACTA", "HSE_ORGANIZACION",
+        "Acta de constitución del Comité Paritario o de elección del Delegado de SST",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=730, max_archivos=2,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista ocupa más de 25 personas (Comité "
+             "Paritario, DS 44 art. 23) o entre 10 y 25 sin comité (Delegado de Seguridad "
+             "y Salud en el Trabajo, art. 66). Bajo 10 trabajadores no existe ninguna de "
+             "las dos figuras y el requisito debe quedar apagado. "
+             "NO CONFUNDIR con el Comité Paritario DE FAENA del DS 76, cuya constitución "
+             "es obligación de la EMPRESA PRINCIPAL, no del contratista: ese no va en "
+             "este catálogo. REVISOR: acta con nombres de representantes de la empresa y "
+             "de los trabajadores, fecha de constitución o elección, y firmas."),
+
+    Req("RESP_PREVENCION", "HSE_ORGANIZACION",
+        "Designación y acreditación del responsable de prevención asignado al servicio",
+        "EMPRESA", Alcance.SERVICIO, "AMPLIADO", vigencia=730, sensible=True, max_archivos=2,
+        desc="SUPUESTO: el mandante necesita una contraparte preventiva identificable "
+             "para la faena. Fundamento: DS 44 art. 65 — hasta 100 trabajadores la "
+             "gestión recae en el representante legal o en quien designe, capacitado por "
+             "el organismo administrador; el art. 50 exige Departamento de Prevención con "
+             "experto sobre 100. La norma no condiciona la DESIGNACIÓN, así que este "
+             "requisito es AMPLIADO por decisión de producto, no porque la ley lo "
+             "restrinja. SENSIBLE: incluye datos de contacto personales. "
+             "REVISOR: carta de designación firmada por el representante legal, nombre y "
+             "RUT del designado, y su certificado de experto o de capacitación."),
+
+    # ── HSE · Salud ocupacional, agentes de riesgo y medio ambiente ──────────
+    Req("PROG_VIGILANCIA_SALUD", "HSE_SALUD",
+        "Programa de vigilancia ambiental y de la salud por agente de riesgo",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=365, max_archivos=5,
+        desc="SUPUESTO DE ACTIVACIÓN: existe exposición a un agente de riesgo declarada "
+             "en la MIPER. Fundamento: DS 44 art. 67 — la obligación nace solo si el "
+             "agente está presente. Cubre en un solo requisito los programas de "
+             "vigilancia de la SUSESO y el MINSAL: PREXOR (ruido), PLANESI (sílice), "
+             "TMERT-EESS (musculoesquelético de extremidades superiores), radiación UV "
+             "(Ley 20.096 art. 19) e hipobaria intermitente crónica (DS 28/2012, entre "
+             "3.000 y 5.500 msnm). Se sube un archivo por programa aplicable. "
+             "REVISOR: que el agente vigilado corresponda a un peligro de la MIPER, que "
+             "el programa lo respalde el organismo administrador, y su fecha."),
+
+    Req("EVAL_PSICOSOCIAL", "HSE_SALUD",
+        "Informe de evaluación de riesgos psicosociales CEAL-SM/SUSESO y plan de intervención",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=730, max_archivos=2,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista ocupa 10 o más trabajadores. "
+             "Fundamento: protocolo de vigilancia de riesgos psicosociales del MINSAL y "
+             "la SUSESO; el cuestionario CEAL-SM/SUSESO reemplazó al SUSESO-ISTAS21 y "
+             "rige desde el 01-01-2023, con reaplicación cada 2 años. "
+             "PRIVACIDAD: se sube el INFORME AGREGADO de resultados y el plan de "
+             "intervención, NUNCA las respuestas individuales de los trabajadores. "
+             "REVISOR: que sea el informe de resultados por dimensión, con fecha de "
+             "aplicación de menos de 2 años, y que venga acompañado del plan si hay "
+             "dimensiones en riesgo alto."),
+
+    Req("EXAM_MED", "HSE_SALUD",
+        "Certificado de aptitud ocupacional",
+        "TRABAJADOR", Alcance.ENTIDAD, "AMPLIADO", vigencia=365, sensible=True,
+        desc="SUPUESTO DE ACTIVACIÓN: el puesto tiene exposición a un agente de riesgo "
+             "declarada en la MIPER, o el mandante califica la faena como de riesgo. "
+             "FUNDAMENTO ACOTADO Y HONESTO: el DS 44 art. 67 ancla los exámenes a la "
+             "existencia de un agente de riesgo; el art. 186 del Código del Trabajo "
+             "remite al art. 185, cuyo reglamento NUNCA FUE DICTADO, de modo que la "
+             "calificación de «faena peligrosa» no está normativamente cerrada. Por eso "
+             "AMPLIADO y no BASE. "
+             "PRIVACIDAD, NO NEGOCIABLE: se sube el CERTIFICADO de aptitud (apto / apto "
+             "con restricciones / no apto), JAMÁS resultados clínicos, diagnósticos ni "
+             "la batería de exámenes. SENSIBLE: es un dato de salud. "
+             "REVISOR: nombre y RUT del trabajador, el veredicto de aptitud, la fecha, y "
+             "el centro o médico que lo emite."),
+
+    Req("HDS_SUSTANCIAS", "HSE_SALUD",
+        "Hojas de datos de seguridad (HDS) de sustancias químicas peligrosas",
+        "EMPRESA", Alcance.SERVICIO, "AMPLIADO", vigencia=730, max_archivos=30,
+        formatos=PDF_IMG,
+        desc="SUPUESTO DE ACTIVACIÓN: el servicio contempla el uso o almacenamiento de "
+             "sustancias químicas peligrosas. Fundamento: DS 57/2019 del MINSAL, que "
+             "implementa el Sistema Globalmente Armonizado (SGA) — obligatorio para el "
+             "sector industrial desde el 09-02-2022 y para el no industrial desde el "
+             "09-02-2023. La HDS y la etiqueta deben estar EN ESPAÑOL. Admite hasta 30 "
+             "archivos porque una obra usa decenas de productos. "
+             "REVISOR: que cada hoja tenga las 16 secciones del SGA, esté en español, e "
+             "identifique el producto tal como se usa en faena."),
+
+    Req("PLAN_RESIDUOS_PELIGROSOS", "HSE_SALUD",
+        "Plan de manejo de residuos peligrosos aprobado por la SEREMI de Salud",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=730, max_archivos=2,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista genera residuos peligrosos por sobre "
+             "el umbral de pequeño generador. Fundamento: DS 148/2003 del MINSAL. "
+             "ADVERTENCIA DE DATO: los umbrales exactos de pequeño generador NO fueron "
+             "verificados en fuente primaria al construir este catálogo — trátalos como "
+             "referenciales y no los uses como criterio de rechazo sin confirmarlos. "
+             "REVISOR: resolución de la SEREMI que aprueba el plan, con número y fecha, "
+             "y RUT del generador."),
+
+    # ── HSE · Protección e información de las personas ───────────────────────
+    Req("EPP_GESTION", "HSE_PERSONAS",
+        "Procedimiento de EPP, certificados de calidad y registro de capacitación anual",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=730, max_archivos=10,
+        desc="SUPUESTO DE ACTIVACIÓN: el servicio requiere elementos de protección "
+             "personal. Reúne el procedimiento de selección, uso, mantención y reposición, "
+             "los certificados de calidad o el registro ISP de los EPP, y el registro de "
+             "la capacitación anual de al menos una hora sobre su uso. Fundamento: DS 44 "
+             "art. 13 (entrega gratuita y capacitación), DS 594 art. 53 y DS 44 art. 58 "
+             "N°2 letra e). Se ACEPTA el capítulo correspondiente del RIHS como el "
+             "procedimiento: no exigir un documento separado. "
+             "REVISOR: que los certificados correspondan a los EPP que el servicio usa y "
+             "que el registro de capacitación tenga menos de 12 meses."),
+
+    Req("CAPACITACION_SST", "HSE_PERSONAS",
+        "Registro del curso de capacitación en seguridad y salud en el trabajo (mínimo 8 horas)",
+        "EMPRESA", Alcance.ENTIDAD, "BASE", vigencia=730, sensible=True,
+        max_archivos=10, formatos=PDF_IMG,
+        desc="DECISIÓN DE VOLUMEN DELIBERADA: el sujeto obligado del art. 16 es la ENTIDAD "
+             "EMPLEADORA y la evidencia que la propia norma describe (asistentes, "
+             "relatores, evaluaciones) es el acta con nómina. Por eso es EMPRESA y no "
+             "TRABAJADOR: modelado por persona, un contratista de 50 trabajadores "
+             "generaría 50 expedientes por capacitación en una cola que hoy se revisa de "
+             "a uno a mano. Fundamento: DS 44/2024 art. 16 — capacitación teórica o "
+             "práctica de al menos 8 horas, con enfoque de género, con la periodicidad "
+             "que defina el programa preventivo, «que no podrá exceder de dos años». "
+             "La capacitación de EPP del art. 13 NO va aquí: es condicional y anual, y "
+             "vive en EPP_GESTION. "
+             "REVISOR: fecha, duración en horas, relator, contenidos y nómina firmada; "
+             "que declare al menos 8 horas y tenga menos de dos años."),
+
+    Req("IRL_ODI", "HSE_PERSONAS",
+        "Información de Riesgos Laborales (IRL, ex ODI) firmada por el trabajador",
+        "TRABAJADOR", Alcance.SERVICIO, "BASE",
+        vigencia=365, sin_vencimiento=True, max_archivos=2, formatos=PDF_IMG,
+        desc="ÚNICO REQUISITO DE TRABAJADOR BASE junto al contrato, y se justifica porque "
+             "la ley lo exige persona por persona y ANTES del inicio de labores: su "
+             "ausencia es una brecha legal directa que el mandante hereda al recibir a "
+             "esa persona en faena. Fundamento: DS 44/2024 art. 15 — «cada persona "
+             "trabajadora, previo al inicio de las labores» debe recibir información de "
+             "los riesgos, las medidas preventivas y los métodos de trabajo correctos, "
+             "determinados conforme a la matriz y el programa. "
+             "NO TIENE PERIODICIDAD ANUAL: la norma no la establece. Por eso no vence, y "
+             "se re-emite POR EVENTO — ingreso al servicio, cambio de puesto o proceso, "
+             "cambio de tecnologías, materiales o sustancias. El mandante que quiera "
+             "refresco anual sube vigencia_max_dias en su perfil, que es para lo que ese "
+             "campo existe. Se acepta acta consolidada firmada por varios trabajadores, "
+             "adjuntada en cada expediente. En la UI conviene decir «IRL (ex ODI)»: el "
+             "mercado todavía dice ODI. "
+             "REVISOR: nombre, RUT y cargo, los riesgos de sus tareas, firma del "
+             "trabajador, y fecha anterior o igual a su ingreso al servicio."),
+
+    Req("EPP_ENTREGA", "HSE_PERSONAS",
+        "Registro de entrega de EPP firmado por el trabajador",
+        "TRABAJADOR", Alcance.SERVICIO, "AMPLIADO", vigencia=365,
+        sensible=True, max_archivos=2, formatos=PDF_IMG,
+        desc="SUPUESTO DE ACTIVACIÓN: el servicio requiere EPP. ADVERTENCIA DE VOLUMEN: "
+             "es el requisito más caro del catálogo — se multiplica por dotación Y por "
+             "servicio. Un contratista de 50 personas en 2 servicios genera 100 "
+             "expedientes solo por esto. Actívalo cuando el riesgo de la faena lo "
+             "justifique, no por defecto. Fundamento: DS 594 art. 53 y DS 44 art. 13 "
+             "obligan a ENTREGAR los elementos gratuitamente; el registro firmado es la "
+             "evidencia estándar de esa entrega, no un documento nominado por la norma. "
+             "REVISOR: nombre y RUT del trabajador, detalle de los elementos entregados, "
+             "fecha y firma de recepción."),
+
+    # ── COMPLIANCE · Existencia legal y representación ───────────────────────
+    Req("SII_SITUACION_TRIBUTARIA", "COMPLIANCE_SOCIETARIO",
+        "Constancia de situación tributaria del SII (inicio de actividades y giro)",
+        "EMPRESA", Alcance.ENTIDAD, "BASE", vigencia=90, max_archivos=2,
+        desc="Acredita que la empresa existe ante el SII, tiene inicio de actividades y "
+             "un giro compatible con el servicio contratado. Es la verificación de "
+             "homologación más universal del mercado chileno. "
+             "PRECISIÓN: el e-RUT es la cédula de identificación tributaria, NO un "
+             "certificado de inicio de actividades — puede subirse como archivo "
+             "complementario, pero no reemplaza la constancia. Se omitió deliberadamente "
+             "citar el art. 68 del Código Tributario porque no se verificó en fuente "
+             "primaria. Redundante si el mandante activa CARPETA_TRIBUTARIA, que ya lo "
+             "contiene. REVISOR: RUT y razón social, que registre inicio de actividades "
+             "vigente, y el giro."),
+
+    Req("VIGENCIA_SOCIEDAD", "COMPLIANCE_SOCIETARIO",
+        "Certificado de vigencia de la sociedad, con anotaciones marginales",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=60, max_archivos=2,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista es persona jurídica. DEGRADADO desde "
+             "BASE por una razón concreta del modelo: EmpresaContratista no tiene un "
+             "campo tipo_persona, así que en BASE todo contratista persona natural "
+             "quedaría con una brecha imposible de cerrar. Práctica de mercado, no "
+             "obligación legal: en el mercado se pide entre 30 y 60 días de antigüedad. "
+             "REVISOR: emisor Registro de Comercio o Registro de Empresas y Sociedades, "
+             "razón social y RUT, y que incluya anotaciones marginales."),
+
+    Req("VIGENCIA_PODERES", "COMPLIANCE_SOCIETARIO",
+        "Certificado de vigencia de poderes o personería del representante legal",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=60, max_archivos=2,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista es persona jurídica y el mandante "
+             "necesita verificar quién puede obligarla. DEGRADADO desde BASE: ninguna "
+             "norma lo exige, y una SpA o EIRL cuya administración consta en el estatuto "
+             "no obtiene este certificado sino uno de estatuto actualizado. Se aceptan "
+             "las tres formas: certificado de vigencia de poderes, certificado de "
+             "estatuto actualizado, o la escritura de poder. "
+             "REVISOR: que identifique al representante con nombre y RUT y describa sus "
+             "facultades, y que tenga menos de 60 días."),
+
+    Req("ESCRITURA_CONSTITUCION", "COMPLIANCE_SOCIETARIO",
+        "Escritura de constitución y sus modificaciones",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL",
+        vigencia=365, sin_vencimiento=True, max_archivos=5,
+        desc="Práctica de homologación de proveedores. NO VENCE: una escritura de "
+             "constitución es un hecho histórico; lo que cambia son las modificaciones, "
+             "y por eso admite hasta 5 archivos. Un mandante que ya exige el certificado "
+             "de vigencia con anotaciones marginales normalmente no necesita esto. "
+             "REVISOR: que la razón social y el RUT coincidan con los del contratista y "
+             "que estén todas las modificaciones que las anotaciones marginales declaran."),
+
+    # ── COMPLIANCE · Situación tributaria y financiera ───────────────────────
+    Req("CARPETA_TRIBUTARIA", "COMPLIANCE_TRIBUTARIO",
+        "Carpeta tributaria electrónica del SII",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=90, sensible=True, max_archivos=5,
+        desc="Práctica de mercado para evaluación financiera del proveedor. La vigencia "
+             "de 90 días está verificada en el SII y la carpeta trae código de "
+             "verificación en línea. YA CONTIENE el F22 y los balances: no crear "
+             "requisitos separados para esos. SENSIBLE: expone ingresos, deudas y "
+             "situación financiera completa del contratista — nunca se propaga sola a "
+             "otro mandante. REVISOR: que sea la carpeta emitida por el SII con código "
+             "de verificación, RUT correcto, y menos de 90 días."),
+
+    Req("TGR_DEUDA_FISCAL", "COMPLIANCE_TRIBUTARIO",
+        "Certificado de deuda fiscal de la Tesorería General de la República",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=30, sensible=True, max_archivos=2,
+        desc="Práctica de mercado. Se acepta como segundo archivo el convenio de pago "
+             "vigente: una deuda con convenio al día no debiera bloquear la acreditación, "
+             "y esa decisión es del mandante. SENSIBLE: información financiera. "
+             "REVISOR: emisor TGR, RUT del contratista, y el monto o la declaración de "
+             "no tener deuda; menos de 30 días."),
+
+    Req("INFORME_COMERCIAL", "COMPLIANCE_TRIBUTARIO",
+        "Informe comercial de protestos y morosidades",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=60, sensible=True,
+        desc="Práctica de mercado para evaluar solvencia. DECISIÓN DE CATÁLOGO: no se "
+             "nombra ningún proveedor comercial en el catálogo global — el mandante "
+             "acepta el informe del bureau que prefiera. SENSIBLE: información "
+             "financiera. REVISOR: emisor identificable, RUT del contratista, fecha de "
+             "menos de 60 días, y el detalle de protestos y morosidades vigentes."),
+
+    # ── COMPLIANCE · Seguros y garantías del contrato ────────────────────────
+    Req("POLIZA_RESP_CIVIL", "COMPLIANCE_SEGUROS",
+        "Póliza de responsabilidad civil vigente",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=365, max_archivos=2,
+        desc="Exigencia contractual pura: ninguna norma obliga al contratista a "
+             "contratarla. Segundo archivo: el comprobante de pago de la prima, sin el "
+             "cual una póliza emitida puede no estar vigente. "
+             "REVISOR: que el asegurado sea el contratista, el monto y la cobertura, y "
+             "que la vigencia cubra el período del servicio."),
+
+    Req("GARANTIA_FIEL_CUMPLIMIENTO", "COMPLIANCE_SEGUROS",
+        "Boleta de garantía o póliza de fiel cumplimiento del contrato",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=365, sensible=True, max_archivos=2,
+        desc="Instrumento contractual, típicamente entre el 5% y el 10% del valor del "
+             "contrato. SENSIBLE por una razón no obvia: el monto de la garantía revela "
+             "el valor del contrato con este mandante, que es información comercial que "
+             "el contratista no quiere propagar a otros mandantes. "
+             "REVISOR: tomador, beneficiario, monto, y que la vigencia cubra el plazo del "
+             "contrato más el período de garantía pactado."),
+
+    Req("GARANTIA_OBLIG_LABORALES", "COMPLIANCE_SEGUROS",
+        "Garantía o póliza por obligaciones laborales y previsionales",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=365, sensible=True, max_archivos=2,
+        desc="Cubre al mandante frente a su responsabilidad solidaria o subsidiaria. "
+             "PRECISIÓN DE FUNDAMENTO: esa responsabilidad del mandante sí es legal "
+             "(arts. 183-B y 183-D del Código del Trabajo), pero exigir al contratista "
+             "que contrate una garantía por ella NO lo es — es exigencia contractual. "
+             "SENSIBLE: revela el valor del contrato. "
+             "REVISOR: tomador, beneficiario, monto y vigencia."),
+
+    Req("POLIZA_TODO_RIESGO_OBRA", "COMPLIANCE_SEGUROS",
+        "Póliza todo riesgo de construcción y montaje (CAR/EAR)",
+        "EMPRESA", Alcance.SERVICIO, "AMPLIADO", vigencia=365, max_archivos=2,
+        desc="SUPUESTO DE ACTIVACIÓN: el servicio es una obra física de construcción o "
+             "montaje. No tiene sentido para un servicio de aseo, informático o de "
+             "asesoría. Exigencia contractual, no legal. "
+             "REVISOR: que la materia asegurada corresponda a la obra del servicio, el "
+             "monto asegurado, y que la vigencia cubra el plazo de ejecución."),
+
+    # ── COMPLIANCE · Integridad, probidad y datos personales ─────────────────
+    Req("DJ_CONFLICTO", "COMPLIANCE_INTEGRIDAD",
+        "Declaración jurada de conflicto de interés",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=365,
+        desc="Práctica de debida diligencia; solo es obligatoria ante ChileCompra. "
+             "CORRECCIÓN DE DATO: en el catálogo anterior este requisito estaba a la vez "
+             "en SIN_VENCIMIENTO y con vigencia 365 — dos parámetros contradictorios, "
+             "donde el primero ganaba y la renovación anual nunca ocurría. Queda con "
+             "renovación anual, que es lo que el documento pide: la declaración envejece "
+             "porque las relaciones cambian. "
+             "REVISOR: firma del representante legal, fecha, y que declare expresamente "
+             "las relaciones con el mandante o la ausencia de ellas."),
+
+    Req("MODELO_PREV_DELITOS", "COMPLIANCE_INTEGRIDAD",
+        "Modelo de prevención de delitos (Ley 20.393) y designación del encargado",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=730, max_archivos=3,
+        desc="ADVERTENCIA DE FUNDAMENTO: la Ley 20.393 NO obliga a tener modelo de "
+             "prevención de delitos. Es voluntario y opera como eximente o atenuante de "
+             "responsabilidad penal de la persona jurídica. La Ley 21.595 de delitos "
+             "económicos, vigente para personas jurídicas desde el 01-09-2024, amplió "
+             "mucho el catálogo de delitos y ELIMINÓ la certificación del modelo por "
+             "terceros: no exigir certificado de certificadora. Se acepta una declaración "
+             "de controles equivalentes de un contratista que no tenga modelo formal. "
+             "REVISOR: que exista designación del encargado de prevención con nombre, y "
+             "que el modelo describa actividades de riesgo y controles."),
+
+    Req("ADHESION_CODIGO_ETICA", "COMPLIANCE_INTEGRIDAD",
+        "Carta de adhesión al código de ética o conducta del mandante",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=730,
+        desc="Práctica de mercado. Lo genérico —y por eso lo que vive en el catálogo "
+             "global— es la CARTA DE ADHESIÓN firmada; el código de ética propiamente "
+             "tal lo adjunta cada mandante en la configuración de su requisito, porque "
+             "es un documento suyo. "
+             "REVISOR: firma del representante legal, fecha, y que identifique el código "
+             "al que adhiere."),
+
+    Req("DJ_BENEFICIARIO_FINAL", "COMPLIANCE_INTEGRIDAD",
+        "Declaración jurada de socios, beneficiarios finales y empresas relacionadas",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=365, sensible=True, max_archivos=2,
+        desc="Obligatoria solo ante ChileCompra; para el resto es debida diligencia. "
+             "SENSIBLE: expone la estructura de propiedad del contratista. "
+             "REVISOR: identificación de socios con porcentaje de participación, "
+             "beneficiarios finales personas naturales, firma y fecha."),
+
+    Req("DPA_DATOS_PERSONALES", "COMPLIANCE_INTEGRIDAD",
+        "Acuerdo de tratamiento de datos personales (encargado del tratamiento)",
+        "EMPRESA", Alcance.ENTIDAD, "AMPLIADO", vigencia=730, sensible=True, max_archivos=2,
+        desc="SUPUESTO DE ACTIVACIÓN: el contratista trata datos personales por cuenta "
+             "del mandante. Fundamento: Ley 21.719 sobre protección de datos personales, "
+             "cuya entrada en vigencia el 01-12-2026 está verificada. "
+             "ADVERTENCIA DE DATO: el contenido mínimo exacto que la ley exige al "
+             "contrato de encargo NO fue verificado en fuente primaria — no lo uses como "
+             "checklist de rechazo hasta confirmarlo. "
+             "REVISOR: que identifique a las partes, la finalidad del tratamiento, las "
+             "categorías de datos y las medidas de seguridad, con firma y fecha."),
+]
+
 VIGENCIA_DEFAULT = 90
+VIGENCIAS = {r.codigo: r.vigencia for r in CATALOGO}
 
-# Alcance: ENTIDAD se acredita una vez para el mandante; SERVICIO por cada faena.
-# La MIPER es específica de los riesgos de cada faena → SERVICIO.
-ALCANCES = {
-    "MIPER": Alcance.SERVICIO,
+# Qué exige un perfil el DÍA UNO. La definición NO vive acá: vive en
+# app/domain/plantillas.py, porque la API también la necesita — un mandante real
+# nunca corre este script y sin plantilla tendría que marcar 44 casillas a mano.
+# El seed solo la consume, para que no existan dos definiciones que se separen.
+NIVEL_BASE = frozenset(r.codigo for r in CATALOGO if r.nivel == "BASE")
+
+PLANTILLAS = {
+    "ARRANQUE": _plantillas.ARRANQUE,
+    "COMPLETA": NIVEL_BASE,
+    "OBRA": NIVEL_BASE | _plantillas.EXTRA_OBRA,
 }
 
-# Cantidad máxima de archivos por entrega (contrato + anexos, carpeta multi-PDF)
-MAX_ARCHIVOS = {
-    "CONTRATO": 3,
-    "CARPETA_TRIBUTARIA": 5,
-}
+CATALOGO_POR_CODIGO = {r.codigo: r for r in CATALOGO}
 
-# Documentos que no caducan: quedan fuera del cron de vencimientos y sus alertas
-SIN_VENCIMIENTO = {"RIOHS", "DJ_CONFLICTO"}
-
-# Contenido de negocio: no se comparte con un mandante nuevo por reutilización
-# automática — el contratista autoriza caso a caso (bandeja de solicitudes).
-SENSIBLES = {"CARPETA_TRIBUTARIA"}
+# Qué documenta la demo. Se DERIVA de la plantilla en vez de repetir una lista de
+# códigos: si se hardcodea, cada cambio de ARRANQUE la desincroniza en silencio y
+# la demo termina sembrando documentos de requisitos que el perfil no exige
+# —invisibles, porque _configs_de_perfil filtra es_obligatorio=True— mientras deja
+# sin cubrir los que sí exige, que aparecen como brechas de un contratista que la
+# propia demo declara acreditado.
+DOCS_DEMO_EMPRESA = [c for c in sorted(PLANTILLAS["ARRANQUE"])
+                     if CATALOGO_POR_CODIGO[c].entidad == "EMPRESA"]
+DOCS_DEMO_TRABAJADOR = [c for c in sorted(PLANTILLAS["ARRANQUE"])
+                        if CATALOGO_POR_CODIGO[c].entidad == "TRABAJADOR"]
 
 
 def _hash(password: str) -> str:
@@ -78,72 +714,100 @@ def _vigencia(dias: int) -> date:
 
 # ── Pilares y requisitos ──────────────────────────────────────────────────────
 
-def _aplicar_parametros_catalogo(reqs: dict[str, RequisitoDocumental]):
-    """Aplica alcance, max_archivos, vigencia y sensibilidad según las
-    decisiones de negocio del módulo."""
-    for codigo, req in reqs.items():
-        req.alcance = ALCANCES.get(codigo, Alcance.ENTIDAD)
-        req.max_archivos = MAX_ARCHIVOS.get(codigo, 1)
-        req.sin_vencimiento = codigo in SIN_VENCIMIENTO
-        req.sensible = codigo in SENSIBLES
-
-
 def seed_pilares(session: Session) -> dict[str, RequisitoDocumental]:
-    if session.query(Pilar).count() > 0:
-        print("  OK Pilares ya existen, actualizando alcances del catálogo.")
-        reqs = {r.codigo: r for r in session.query(RequisitoDocumental).all()}
-        _aplicar_parametros_catalogo(reqs)
-        return reqs
+    """
+    Upsert idempotente del catálogo global, por CÓDIGO.
 
-    legal = Pilar(codigo="LEGAL", nombre="Legal / Laboral", orden=1)
-    session.add(legal); session.flush()
+    Reemplaza dos mecanismos que se estorbaban entre sí:
 
-    legal_sub = Subpilar(pilar_id=legal.id, codigo="LEGAL_EMPRESA", nombre="Documentos empresa", orden=1)
-    session.add(legal_sub); session.flush()
+    1. El guard todo-o-nada `if session.query(Pilar).count() > 0: return`, que
+       convertía cualquier requisito nuevo en un no-op silencioso en toda base
+       ya sembrada — incluida producción. El deploy pasaba verde y el catálogo
+       seguía teniendo 10 requisitos.
+    2. `_aplicar_parametros_catalogo`, que en cada corrida recorría TODOS los
+       requisitos de la base —incluidos los propios de cada mandante— y
+       reescribía alcance, max_archivos, sin_vencimiento y sensible desde dicts
+       que solo conocían 10 códigos. El daño peor era `sensible`: lo devolvía a
+       False y reutilizacion_service pasaba a propagar solo el contrato de
+       trabajo y el certificado de aptitud al resto de los mandantes del
+       contratista, sin que nadie hiciera nada.
 
-    f30 = RequisitoDocumental(subpilar_id=legal_sub.id, codigo="F30",
-        nombre="Certificado F30 — Antecedentes laborales y previsionales", entidad_tipo="EMPRESA")
-    f30_1 = RequisitoDocumental(subpilar_id=legal_sub.id, codigo="F30_1",
-        nombre="Certificado F30-1 — Deuda previsional trabajadores", entidad_tipo="EMPRESA")
-    contrato = RequisitoDocumental(subpilar_id=legal_sub.id, codigo="CONTRATO",
-        nombre="Contrato de trabajo", entidad_tipo="TRABAJADOR")
-    session.add_all([f30, f30_1, contrato])
+    Esta función toca EXCLUSIVAMENTE las filas con mandante_id IS NULL cuyo
+    código está en CATALOGO. Lo que un mandante creó para sí queda intacto.
+    """
+    codigos = [r.codigo for r in CATALOGO]
+    if len(codigos) != len(set(codigos)):
+        dups = sorted({c for c in codigos if codigos.count(c) > 1})
+        raise RuntimeError(
+            f"Códigos duplicados en CATALOGO: {dups}. El índice parcial "
+            "uq_requisitos_documentales_codigo_global los rechazaría a mitad "
+            "de la transacción, dejando el seed a medio aplicar."
+        )
 
-    hse = Pilar(codigo="HSE", nombre="HSE — Salud, Seguridad y Medio Ambiente", orden=2)
-    session.add(hse); session.flush()
+    subpilares_validos = {s for _, _, _, _, subs in PILARES_CATALOGO for s, _, _ in subs}
+    huerfanos = sorted({r.subpilar for r in CATALOGO} - subpilares_validos)
+    if huerfanos:
+        raise RuntimeError(f"CATALOGO referencia subpilares inexistentes: {huerfanos}")
 
-    hse_sub = Subpilar(pilar_id=hse.id, codigo="HSE_TRABAJADOR", nombre="Documentos trabajador", orden=1)
-    session.add(hse_sub); session.flush()
+    pilares = {p.codigo: p for p in session.query(Pilar).all()}
+    subpilares: dict[str, Subpilar] = {}
 
-    exam_med = RequisitoDocumental(subpilar_id=hse_sub.id, codigo="EXAM_MED",
-        nombre="Examen médico ocupacional", entidad_tipo="TRABAJADOR")
-    miper = RequisitoDocumental(subpilar_id=hse_sub.id, codigo="MIPER",
-        nombre="Matriz de Identificación de Peligros y Evaluación de Riesgos (MIPER)", entidad_tipo="EMPRESA")
-    riohs = RequisitoDocumental(subpilar_id=hse_sub.id, codigo="RIOHS",
-        nombre="Reglamento Interno de Orden, Higiene y Seguridad (RIOHS)", entidad_tipo="EMPRESA")
-    das = RequisitoDocumental(subpilar_id=hse_sub.id, codigo="DAS",
-        nombre="Declaración de Accidentabilidad y Siniestralidad (DAS)", entidad_tipo="EMPRESA")
-    session.add_all([exam_med, miper, riohs, das])
+    for codigo, nombre, orden, color, subs in PILARES_CATALOGO:
+        pilar = pilares.get(codigo)
+        if pilar is None:
+            pilar = Pilar(codigo=codigo, nombre=nombre, orden=orden, color=color)
+            session.add(pilar)
+        else:
+            pilar.nombre, pilar.orden, pilar.color = nombre, orden, color
+        session.flush()
 
-    compliance = Pilar(codigo="COMPLIANCE", nombre="Compliance / Tributario", orden=3)
-    session.add(compliance); session.flush()
+        existentes = {
+            s.codigo: s
+            for s in session.query(Subpilar).filter_by(pilar_id=pilar.id).all()
+        }
+        for sub_cod, sub_nom, sub_ord in subs:
+            sub = existentes.get(sub_cod)
+            if sub is None:
+                sub = Subpilar(pilar_id=pilar.id, codigo=sub_cod,
+                               nombre=sub_nom, orden=sub_ord)
+                session.add(sub)
+            else:
+                sub.nombre, sub.orden = sub_nom, sub_ord
+            session.flush()
+            subpilares[sub_cod] = sub
 
-    comp_sub = Subpilar(pilar_id=compliance.id, codigo="COMPLIANCE_EMPRESA", nombre="Documentos empresa", orden=1)
-    session.add(comp_sub); session.flush()
+    reqs = {
+        r.codigo: r
+        for r in session.query(RequisitoDocumental)
+        .filter(RequisitoDocumental.mandante_id.is_(None))
+        .all()
+    }
+    creados = actualizados = 0
 
-    carpeta = RequisitoDocumental(subpilar_id=comp_sub.id, codigo="CARPETA_TRIBUTARIA",
-        nombre="Carpeta tributaria electrónica", entidad_tipo="EMPRESA")
-    vigencia_soc = RequisitoDocumental(subpilar_id=comp_sub.id, codigo="VIGENCIA_SOCIEDAD",
-        nombre="Certificado de vigencia de la sociedad", entidad_tipo="EMPRESA")
-    dj = RequisitoDocumental(subpilar_id=comp_sub.id, codigo="DJ_CONFLICTO",
-        nombre="Declaración jurada de conflicto de interés", entidad_tipo="EMPRESA")
-    session.add_all([carpeta, vigencia_soc, dj])
+    for r in CATALOGO:
+        req = reqs.get(r.codigo)
+        if req is None:
+            req = RequisitoDocumental(codigo=r.codigo, mandante_id=None)
+            session.add(req)
+            creados += 1
+        else:
+            actualizados += 1
+        req.subpilar_id = subpilares[r.subpilar].id
+        req.nombre = r.nombre
+        req.descripcion = r.desc
+        req.entidad_tipo = r.entidad
+        req.alcance = r.alcance
+        req.nivel = r.nivel
+        req.max_archivos = r.max_archivos
+        req.formatos_permitidos = r.formatos
+        req.sin_vencimiento = r.sin_vencimiento
+        req.sensible = r.sensible
+        reqs[r.codigo] = req
+
     session.flush()
-
-    reqs = {r.codigo: r for r in [f30, f30_1, contrato, exam_med, miper, riohs, das, carpeta, vigencia_soc, dj]}
-    _aplicar_parametros_catalogo(reqs)
-    print("  OK 3 pilares y 10 requisitos creados.")
-    return reqs
+    print(f"  OK Catálogo global: {creados} creado(s), {actualizados} actualizado(s). "
+          f"Total {len(CATALOGO)} requisitos en {len(subpilares)} subpilares.")
+    return {r.codigo: reqs[r.codigo] for r in CATALOGO}
 
 
 # ── Admin BERISA ──────────────────────────────────────────────────────────────
@@ -250,11 +914,19 @@ def seed_perfiles_y_servicios(session: Session, reqs: dict[str, RequisitoDocumen
             str(c.requisito_documental_id)
             for c in session.query(PerfilRequisitoConfig).filter_by(perfil_id=perfil.id).all()
         }
+        plantilla = PLANTILLAS["ARRANQUE"]
         for codigo, req in reqs.items():
             if str(req.id) not in configs_existentes:
                 session.add(PerfilRequisitoConfig(
                     perfil_id=perfil.id, requisito_documental_id=req.id,
-                    es_obligatorio=True, vigencia_max_dias=VIGENCIAS.get(codigo, VIGENCIA_DEFAULT),
+                    # Solo la plantilla nace obligatoria. El resto se siembra en
+                    # False: config inerte para _configs_de_perfil (no genera
+                    # brecha ni expediente) pero ya parametrizada y visible en la
+                    # pantalla del mandante, a un clic de encenderse. Sin esto,
+                    # 44 requisitos globales se convertirían en 44 exigencias
+                    # para todo mandante nuevo el día uno.
+                    es_obligatorio=(codigo in plantilla),
+                    vigencia_max_dias=VIGENCIAS.get(codigo) or VIGENCIA_DEFAULT,
                     umbral_deuda_max=0,
                 ))
         session.flush()
@@ -458,12 +1130,11 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
                        cargo="Prevencionista", activo=True)
     session.add_all([pedro, maria]); session.flush()
 
-    for codigo in ["F30","F30_1","MIPER","RIOHS","DAS","CARPETA_TRIBUTARIA","VIGENCIA_SOCIEDAD","DJ_CONFLICTO"]:
+    for codigo in DOCS_DEMO_EMPRESA:
         _doc_empresa(session, r[codigo], mid, condor.id, 4, 90)
-    _doc_trabajador(session, r["CONTRATO"], mid, pedro.id, 4, 365)
-    _doc_trabajador(session, r["EXAM_MED"], mid, pedro.id, 4, 365)
-    _doc_trabajador(session, r["CONTRATO"], mid, maria.id, 4, 365)
-    _doc_trabajador(session, r["EXAM_MED"], mid, maria.id, 4, 365)
+    for trabajador in (pedro, maria):
+        for codigo in DOCS_DEMO_TRABAJADOR:
+            _doc_trabajador(session, r[codigo], mid, trabajador.id, 4, 365)
 
     # 2 — Ingeniería Subterránea Ltda — EN_PROCESO
     subterranea = EmpresaContratista(rut="77.333.444-7", razon_social="Ingeniería Subterránea Ltda",
@@ -535,12 +1206,11 @@ def seed_codelco_contratistas(session: Session, codelco: Mandante, reqs: dict):
     e2 = Trabajador(empresa_id=excav.id, rut="18.777.888-3", nombre_completo="Andrea Rojas Pérez",
                     cargo="Capataz", activo=True)
     session.add_all([e1, e2]); session.flush()
-    for codigo in ["F30","F30_1","MIPER","RIOHS","DAS","CARPETA_TRIBUTARIA","VIGENCIA_SOCIEDAD","DJ_CONFLICTO"]:
+    for codigo in DOCS_DEMO_EMPRESA:
         _doc_empresa(session, r[codigo], mid, excav.id, 4, 75)
-    _doc_trabajador(session, r["CONTRATO"], mid, e1.id, 4, 300)
-    _doc_trabajador(session, r["EXAM_MED"], mid, e1.id, 4, 300)
-    _doc_trabajador(session, r["CONTRATO"], mid, e2.id, 4, 300)
-    _doc_trabajador(session, r["EXAM_MED"], mid, e2.id, 4, 300)
+    for trabajador in (e1, e2):
+        for codigo in DOCS_DEMO_TRABAJADOR:
+            _doc_trabajador(session, r[codigo], mid, trabajador.id, 4, 300)
 
     # 6 — Servicios Mineros del Pacífico SA — EN_PROCESO
     pacif = EmpresaContratista(rut="81.222.333-K", razon_social="Servicios Mineros del Pacífico SA",
@@ -648,9 +1318,8 @@ def seed_otros_mandantes(session: Session, mandantes: dict, reqs: dict):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-DOCS_CONDOR_EMPRESA = ["F30", "F30_1", "MIPER", "RIOHS", "DAS",
-                       "CARPETA_TRIBUTARIA", "VIGENCIA_SOCIEDAD", "DJ_CONFLICTO"]
-DOCS_CONDOR_TRABAJADOR = ["CONTRATO", "EXAM_MED"]
+DOCS_CONDOR_EMPRESA = DOCS_DEMO_EMPRESA
+DOCS_CONDOR_TRABAJADOR = DOCS_DEMO_TRABAJADOR
 
 
 def seed_documentos_condor(session: Session, codelco: Mandante, reqs: dict):
@@ -704,7 +1373,12 @@ def seed_segundo_mandante_condor(session: Session):
     Sin esto la demo no muestra lo que el portal existe para mostrar: con un solo
     cliente, cada documento tiene un badge y la vista por documento se ve igual
     que la vieja. Con dos, se ve que el F30 se subió una vez y sirve para ambos,
-    y que la carpeta tributaria (sensible) queda esperando autorización.
+    y que el contrato de trabajo (sensible) queda esperando autorización.
+
+    El ejemplo sensible es el CONTRATO y no la carpeta tributaria: reconciliar
+    reutilización solo mira configs con es_obligatorio=True, y CARPETA_TRIBUTARIA
+    es nivel OPCIONAL, así que no entra en la plantilla de arranque del perfil de
+    demo. CONTRATO sí, y también es sensible.
 
     Idempotente: si la relación ya existe, no hace nada.
     """
@@ -1066,9 +1740,14 @@ def _showcase_faenas_en_regla(session: Session):
     Completa los documentos de unas pocas relaciones para que sus faenas queden
     "todo en regla".
 
-    El perfil "General" exige TODO el catalogo, asi que sin esto ningun
-    contratista puede cumplir del todo y el dashboard del mandante muestra el
-    100% de las faenas en riesgo.
+    Sin esto ningun contratista cumple del todo y el dashboard del mandante
+    muestra el 100% de las faenas en riesgo.
+
+    Solo recorre las configs OBLIGATORIAS del perfil. El perfil "General" ya no
+    exige todo el catalogo —desde que existen las PLANTILLAS exige la de
+    arranque— y las demas configs estan sembradas en es_obligatorio=False a
+    proposito. Crearles documento fabricaria filas que ninguna pantalla derivada
+    muestra, porque _configs_de_perfil filtra es_obligatorio=True.
     """
     codelco = session.query(Mandante).filter_by(slug="codelco-demo").first()
     if not codelco:
@@ -1103,7 +1782,7 @@ def _showcase_faenas_en_regla(session: Session):
             continue   # sin dotacion no hay caso interesante que mostrar
 
         for cfg in session.query(PerfilRequisitoConfig).filter_by(
-            perfil_id=servicio.perfil_requisitos_id
+            perfil_id=servicio.perfil_requisitos_id, es_obligatorio=True
         ).all():
             req = cfg.requisito
             if req.entidad_tipo == "EMPRESA":

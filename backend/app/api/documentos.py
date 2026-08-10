@@ -154,6 +154,8 @@ def pendientes_revision(
             documento_id=acred.id,
             requisito_codigo=requisito.codigo,
             requisito_nombre=requisito.nombre,
+            requisito_descripcion=requisito.descripcion or "",
+            subpilar_nombre=requisito.subpilar.nombre,
             pilar_id=pilar.id,
             pilar_nombre=pilar.nombre,
             puede_aprobar=ids_aprobables is None or pilar.id in ids_aprobables,

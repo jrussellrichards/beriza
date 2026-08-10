@@ -14,6 +14,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.config import settings
 from app.core.exceptions import ServicioNoEncontrado
 from app.domain.estados import (
     Alcance,
@@ -23,6 +24,7 @@ from app.domain.estados import (
     EstadoServicio,
 )
 from app.domain import reutilizacion_service
+from app.models.cargo import Cargo
 from app.models.contratista import ContratistaMandante
 from app.models.expediente import Acreditacion, Expediente
 from app.models.pilar import RequisitoDocumental, Subpilar
@@ -37,6 +39,11 @@ class RequisitoAvance:
     requisito_id: uuid.UUID
     requisito_codigo: str
     requisito_nombre: str
+    # Qué es el documento, su fundamento normativo y qué debe mirar el revisor
+    # para aprobarlo. Con la revisión 100% humana este texto es la instrucción
+    # de trabajo: sin él, el contratista adivina qué subir y el revisor aprueba
+    # sin criterio. Viaja hasta la UI a propósito.
+    requisito_descripcion: str
     entidad_tipo: str
     alcance: str
     estado: int | None            # None = documento no subido aún
@@ -52,6 +59,11 @@ class RequisitoAvance:
     pilar_nombre: str | None = None
     # Config de entrega del catálogo, para que el frontend arme la subida
     max_archivos: int = 1
+    # MIME aceptados, ya resueltos contra el default global. Viaja en el ITEM y no
+    # se lee del expediente porque el caso que importa es el documento que aún NO
+    # se ha subido: ahí no hay expediente y el contratista es justamente quien
+    # necesita saber si puede mandar una foto.
+    formatos_permitidos: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -62,6 +74,7 @@ class PilarAvance:
     aprobados: int
     cumple: bool
     requisitos: list[RequisitoAvance] = field(default_factory=list)
+    color: str = "slate"
 
 
 @dataclass
@@ -73,6 +86,10 @@ class TrabajadorAvance:
     total: int
     aprobados: int
     cumple: bool
+    # Al perfil no le aplica NINGÚN requisito para el cargo de esta persona.
+    # Es un estado distinto de "cumple": el sistema no puede afirmar nada sobre
+    # ella, y no saber nunca puede leerse como "puede entrar". Ver _cumple_items.
+    sin_requisitos: bool = False
 
 
 @dataclass
@@ -101,6 +118,9 @@ class EstadoPilar:
     pilar_nombre: str
     cumple: bool
     brechas: list[str] = field(default_factory=list)
+    # Color del pilar tal como está en la base. Antes la API lo derivaba del
+    # código con un dict, así que un pilar nuevo salía gris sin aviso.
+    pilar_color: str = "slate"
 
 
 @dataclass
@@ -153,6 +173,11 @@ def obtener_avance_servicio(db: Session, servicio_id: uuid.UUID) -> AvanceServic
     configs_trabajador = [c for c in configs if c.requisito.entidad_tipo == EntidadTipo.TRABAJADOR]
 
     trabajadores = _trabajadores_asignados(db, [servicio_id])
+    cargos = _cargos_asignados(db, [servicio_id])
+    nombres_cargo = {
+        c.id: c.nombre
+        for c in db.query(Cargo).filter(Cargo.id.in_([v for v in cargos.values() if v])).all()
+    } if any(cargos.values()) else {}
 
     docs_empresa = _acreds_por_clave(_acreds_de_entidad(db, mandante_id, empresa_id=empresa_id))
 
@@ -163,15 +188,25 @@ def obtener_avance_servicio(db: Session, servicio_id: uuid.UUID) -> AvanceServic
     avance_trabajadores: list[TrabajadorAvance] = []
     for t in trabajadores:
         docs_t = _acreds_por_clave(_acreds_de_entidad(db, mandante_id, trabajador_id=t.id))
+        cargo_id = cargos.get((servicio_id, t.id))
         items_t = [
             _item_para(docs_t, cfg.requisito, servicio, trabajador=t)
             for cfg in configs_trabajador
+            if _aplica_a_cargo(cfg, cargo_id)
         ]
         items.extend(items_t)
         aprobados_t = sum(1 for i in items_t if i.estado == EstadoDocumento.APROBADO)
+        # Se muestra el cargo del CATÁLOGO, no el texto libre de la nómina: es el
+        # que explica por qué a esta persona se le piden N documentos y a otra M.
+        # Con el texto libre, la diferencia entre dos trabajadores parecería una
+        # inconsistencia del sistema en vez de la regla que el mandante configuró.
+        cargo_catalogo = nombres_cargo.get(cargo_id) if cargo_id else None
         avance_trabajadores.append(TrabajadorAvance(
-            trabajador_id=t.id, nombre=t.nombre_completo, rut=t.rut, cargo=t.cargo,
-            total=len(items_t), aprobados=aprobados_t, cumple=aprobados_t == len(items_t),
+            trabajador_id=t.id, nombre=t.nombre_completo, rut=t.rut,
+            cargo=cargo_catalogo or t.cargo,
+            total=len(items_t), aprobados=aprobados_t,
+            cumple=_cumple_items(items_t),
+            sin_requisitos=not items_t,
         ))
 
     return AvanceServicio(
@@ -237,11 +272,15 @@ def evaluar_relacion(
     )
     servicios_por_trabajador: dict[uuid.UUID, set[uuid.UUID]] = {}
     trabajadores: dict[uuid.UUID, Trabajador] = {}
+    # (servicio, trabajador) -> cargo con el que está asignado. Se arma acá y no
+    # con una query aparte porque las asignaciones ya están cargadas.
+    cargos_por_asignacion: dict[tuple, uuid.UUID | None] = {}
     for a in asignaciones:
         if not a.trabajador.activo:
             continue
         servicios_por_trabajador.setdefault(a.trabajador_id, set()).add(a.servicio_id)
         trabajadores[a.trabajador_id] = a.trabajador
+        cargos_por_asignacion[(a.servicio_id, a.trabajador_id)] = a.cargo_id
 
     for t in trabajadores.values():
         docs_t = _acreds_por_clave(_acreds_de_entidad(db, mandante_id, trabajador_id=t.id))
@@ -249,7 +288,8 @@ def evaluar_relacion(
             s for s in servicios_activos if s.id in servicios_por_trabajador[t.id]
         ]
         items_t = _items_de_entidad(
-            docs_t, servicios_del_t, configs_por_servicio, EntidadTipo.TRABAJADOR, trabajador=t
+            docs_t, servicios_del_t, configs_por_servicio, EntidadTipo.TRABAJADOR,
+            trabajador=t, cargos_por_asignacion=cargos_por_asignacion,
         )
         pilares_t = _agrupar_estado_por_pilar(todas_configs, items_t)
         evaluacion.items_trabajadores[str(t.id)] = items_t
@@ -257,7 +297,11 @@ def evaluar_relacion(
             trabajador_id=t.id,
             nombre=t.nombre_completo,
             rut=t.rut,
-            cumple=all(p.cumple for p in pilares_t),
+            # `all()` sobre una lista vacía es True, así que sin items esto
+            # afirmaría que cumple. Misma trampa que _cumple_items resuelve en el
+            # avance por servicio: sin requisitos aplicables no se puede afirmar
+            # nada, y "no sé" no es "puede entrar".
+            cumple=bool(items_t) and all(p.cumple for p in pilares_t),
             pilares=pilares_t,
         ))
 
@@ -363,6 +407,26 @@ def _trabajadores_asignados(db: Session, servicio_ids: list[uuid.UUID]) -> list[
     return list(vistos.values())
 
 
+def _cargos_asignados(db: Session, servicio_ids: list[uuid.UUID]) -> dict[tuple, uuid.UUID | None]:
+    """
+    Cargo con el que cada persona está asignada a cada servicio.
+
+    La clave es (servicio_id, trabajador_id) y no solo el trabajador porque el
+    cargo es de la ASIGNACIÓN: la misma persona puede ser operador en una faena y
+    administrativo en otra, con exigencias distintas en cada una.
+    """
+    filas = (
+        db.query(
+            ServicioTrabajador.servicio_id,
+            ServicioTrabajador.trabajador_id,
+            ServicioTrabajador.cargo_id,
+        )
+        .filter(ServicioTrabajador.servicio_id.in_(servicio_ids), ServicioTrabajador.activo.is_(True))
+        .all()
+    )
+    return {(f.servicio_id, f.trabajador_id): f.cargo_id for f in filas}
+
+
 def _acreds_de_entidad(
     db: Session,
     mandante_id: uuid.UUID,
@@ -417,6 +481,10 @@ def _item_para(
         requisito_id=requisito.id,
         requisito_codigo=requisito.codigo,
         requisito_nombre=requisito.nombre,
+        requisito_descripcion=requisito.descripcion or "",
+        formatos_permitidos=(
+            requisito.formatos_permitidos or list(settings.FORMATOS_PERMITIDOS_DEFAULT)
+        ),
         entidad_tipo=requisito.entidad_tipo,
         alcance=requisito.alcance,
         estado=acred.estado if acred else None,
@@ -431,17 +499,65 @@ def _item_para(
     )
 
 
+def _cumple_items(items: list) -> bool:
+    """
+    ¿Esta persona cumple? Solo si tiene items exigidos Y todos están aprobados.
+
+    La lista VACÍA devuelve False, y ese es el punto de esta función. Con
+    `aprobados == total` una lista vacía da 0 == 0 = True, así que alguien a
+    quien no le aplica ningún requisito —porque su cargo quedó fuera de todos—
+    aparecía habilitado sin haber subido un solo documento. Es el mismo falso
+    verde que el fail-closed de _aplica_a_cargo evita para el cargo NULL, una
+    rama más allá.
+
+    No saber no puede leerse como "puede entrar". El mandante lo resuelve
+    asignándole requisitos a ese cargo o sacando a la persona de la faena; la UI
+    lo distingue con `sin_requisitos` para no decir "no cumple" cuando en verdad
+    es "no evaluable".
+    """
+    return bool(items) and all(i.estado == EstadoDocumento.APROBADO for i in items)
+
+
+def _aplica_a_cargo(cfg: PerfilRequisitoConfig, cargo_id) -> bool:
+    """
+    ¿Este requisito le aplica a alguien asignado con este cargo?
+
+    Regla, en dos partes:
+
+    - El config SIN cargos configurados aplica a todos. Es el comportamiento que
+      el sistema tuvo siempre, y lo que hace que la tabla vacía no cambie nada.
+
+    - El config CON cargos aplica solo a esos... salvo que la persona no tenga
+      cargo declarado, en cuyo caso también le aplica. FAIL-CLOSED, deliberado:
+      si un trabajador sin cargo quedara exento de lo restringido por cargo,
+      omitir el cargo bajaría sus exigencias, y alguien sin un solo documento
+      aparecería habilitado porque `habilitado = not faltantes` con cero items da
+      True. El costo de equivocarse hacia este lado es ruido; hacia el otro, una
+      persona entrando a faena sin acreditar.
+    """
+    if not cfg.cargos:
+        return True
+    if cargo_id is None:
+        return True
+    return any(pc.cargo_id == cargo_id for pc in cfg.cargos)
+
+
 def _items_de_entidad(
     docs: dict[tuple[str, str | None], Acreditacion],
     servicios: list[Servicio],
     configs_por_servicio: dict[uuid.UUID, list[PerfilRequisitoConfig]],
     entidad_tipo: str,
     trabajador: Trabajador | None = None,
+    cargos_por_asignacion: dict[tuple, uuid.UUID | None] | None = None,
 ) -> list[RequisitoAvance]:
     """
     Items de una entidad (empresa o trabajador) para varios servicios:
     alcance ENTIDAD → un solo item (deduplicado entre perfiles);
     alcance SERVICIO → un item por cada servicio cuyo perfil lo exige.
+
+    `cargos_por_asignacion` mapea (servicio_id, trabajador_id) → cargo_id y filtra
+    los requisitos restringidos por cargo. Si no se pasa, no se filtra nada — así
+    los llamadores que no evalúan personas no tienen que construirlo.
     """
     items: list[RequisitoAvance] = []
     entidad_vistos: set[str] = set()
@@ -450,6 +566,10 @@ def _items_de_entidad(
             req = cfg.requisito
             if req.entidad_tipo != entidad_tipo:
                 continue
+            if trabajador is not None and cargos_por_asignacion is not None:
+                cargo_id = cargos_por_asignacion.get((servicio.id, trabajador.id))
+                if not _aplica_a_cargo(cfg, cargo_id):
+                    continue
             if req.alcance == Alcance.ENTIDAD:
                 if str(req.id) in entidad_vistos:
                     continue
@@ -504,6 +624,7 @@ def _agrupar_estado_por_pilar(
             pilar_nombre=pilar.nombre,
             cumple=len(brechas) == 0,
             brechas=brechas,
+            pilar_color=pilar.color,
         ))
     return resultado
 
@@ -531,6 +652,7 @@ def _agrupar_avance_por_pilar(
             aprobados=aprobados,
             cumple=aprobados == len(pilar_items),
             requisitos=pilar_items,
+            color=pilar.color,
         ))
     return resultado
 
@@ -589,6 +711,7 @@ class DocumentoContratista:
     requisito_id: uuid.UUID
     requisito_codigo: str
     requisito_nombre: str
+    requisito_descripcion: str
     entidad_tipo: str
     alcance: str
     max_archivos: int
@@ -599,6 +722,11 @@ class DocumentoContratista:
     servicio_id: uuid.UUID | None
     servicio_nombre: str | None
     mandantes: list[EstadoPorMandante] = field(default_factory=list)
+    # Lista EFECTIVA de MIME aceptados, con el default global ya resuelto. Va
+    # resuelta y no NULL para que el frontend no tenga que conocer el default: el
+    # diálogo de subida tenía "application/pdf" cableado y rechazaba las fotos de
+    # los 6 requisitos que sí las aceptan.
+    formatos_permitidos: list[str] = field(default_factory=list)
 
 
 def vista_documental(db: Session, contratista_id: uuid.UUID) -> list[DocumentoContratista]:
@@ -634,6 +762,7 @@ def vista_documental(db: Session, contratista_id: uuid.UUID) -> list[DocumentoCo
                     requisito_id=item.requisito_id,
                     requisito_codigo=item.requisito_codigo,
                     requisito_nombre=item.requisito_nombre,
+                    requisito_descripcion=item.requisito_descripcion,
                     entidad_tipo=item.entidad_tipo,
                     alcance=item.alcance,
                     max_archivos=item.max_archivos,
@@ -643,6 +772,7 @@ def vista_documental(db: Session, contratista_id: uuid.UUID) -> list[DocumentoCo
                     trabajador_nombre=item.trabajador_nombre,
                     servicio_id=item.servicio_id,
                     servicio_nombre=item.servicio_nombre,
+                    formatos_permitidos=item.formatos_permitidos,
                 )
                 docs[clave] = doc
             doc.mandantes.append(EstadoPorMandante(
@@ -913,20 +1043,28 @@ def habilitacion_trabajadores(db: Session, contratista_id: uuid.UUID) -> list[Tr
                 continue
             avance = obtener_avance_servicio(db, servicio.id)
             faltan_por_trabajador: dict[uuid.UUID, list[str]] = {}
-            asignados: set[uuid.UUID] = set()
             for pilar in avance.pilares:
                 for item in pilar.requisitos:
                     if not item.trabajador_id:
                         continue
-                    asignados.add(item.trabajador_id)
                     if item.estado != EstadoDocumento.APROBADO:
                         faltan_por_trabajador.setdefault(item.trabajador_id, []).append(
                             item.requisito_nombre
                         )
-            for tid in asignados:
+            # La dotación sale de las ASIGNACIONES, no de los items. Deducirla de
+            # los items hacía desaparecer a quien no tuviera ninguno —posible
+            # desde que existe el filtro por cargo— y la pantalla le decía "no
+            # está asignado a ningún servicio" a alguien que sí lo estaba.
+            sin_requisitos = {t.trabajador_id for t in avance.trabajadores if t.sin_requisitos}
+            for tid in (t.trabajador_id for t in avance.trabajadores):
                 if tid not in trabajadores:
                     continue
                 faltantes = faltan_por_trabajador.get(tid, [])
+                if tid in sin_requisitos:
+                    # No evaluable: el perfil no le exige nada para su cargo. Se
+                    # reporta como brecha para que alguien lo mire, en vez de
+                    # dejarlo pasar en silencio.
+                    faltantes = ["Su cargo no tiene requisitos configurados en este perfil"]
                 trabajadores[tid].servicios.append(HabilitacionServicio(
                     servicio_id=servicio.id,
                     servicio_nombre=servicio.nombre,
@@ -990,7 +1128,13 @@ def riesgo_del_mandante(db: Session, mandante_id: uuid.UUID) -> RiesgoMandante:
             avance = obtener_avance_servicio(db, servicio.id)
 
             no_habilitados: set[uuid.UUID] = set()
-            asignados: set[uuid.UUID] = set()
+            # La dotación son las personas ASIGNADAS, no las que tienen items.
+            # Deducirla de los items subcontaba la faena en cuanto el filtro por
+            # cargo dejaba a alguien sin ninguno, y el dashboard declaraba menos
+            # gente de la que hay en terreno.
+            asignados: set[uuid.UUID] = {t.trabajador_id for t in avance.trabajadores}
+            # No evaluable cuenta como NO habilitado: es lo que obliga a mirarlo.
+            no_habilitados |= {t.trabajador_id for t in avance.trabajadores if t.sin_requisitos}
             pendientes = 0
             brechas_empresa: list[str] = []
 
@@ -999,7 +1143,6 @@ def riesgo_del_mandante(db: Session, mandante_id: uuid.UUID) -> RiesgoMandante:
                     if item.estado in (EstadoDocumento.ENVIADO, EstadoDocumento.EN_ANALISIS):
                         pendientes += 1
                     if item.trabajador_id:
-                        asignados.add(item.trabajador_id)
                         if item.estado != EstadoDocumento.APROBADO:
                             no_habilitados.add(item.trabajador_id)
                     elif item.estado != EstadoDocumento.APROBADO:

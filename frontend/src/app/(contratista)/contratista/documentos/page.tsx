@@ -393,6 +393,8 @@ export default function DocumentosPage() {
             codigo: subirDoc.requisito_codigo,
             alcance: subirDoc.alcance,
             max_archivos: subirDoc.max_archivos,
+            formatos_permitidos: subirDoc.formatos_permitidos,
+            descripcion: subirDoc.requisito_descripcion,
           } satisfies RequisitoSubida}
           // La entrega es del expediente, no de un mandante: el backend la
           // propaga a todos los que la necesiten, sin mover al que ya aprobó una

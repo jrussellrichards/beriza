@@ -24,6 +24,10 @@ export interface UsuarioEquipo {
   aprueba_todo: boolean
   /** Etiqueta libre ("Jefe de Terreno"). No participa de la autorización. */
   cargo: string | null
+  /** Invitación que nunca se activó: se reenvía, no se reactiva. */
+  pendiente?: boolean
+  /** El backend lo marca para no ofrecer acciones que rechazará con 403. */
+  es_uno_mismo?: boolean
 }
 
 /** Alcance de aprobación, la primera de las dos preguntas. */
@@ -179,7 +183,47 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
             </>
           )}
 
-          {/* Pregunta 1: alcance */}
+          {/* Administración. Va ANTES del alcance: la lista de pilares crece con el
+              catálogo y en 1080p empujaba esta pregunta bajo el pliegue, donde nadie
+              la veía. Además condiciona al alcance (quien administra aprueba todo),
+              así que preguntarla primero es el orden natural.
+              Solo al invitar — cambiar el rol de alguien que ya existe se hace
+              desde su ficha, no acá. */}
+          {!editando && (
+            <div className="space-y-1.5 pt-1 border-t border-line-subtle">
+              <label className="text-sm font-medium text-ink-secondary">Administra la cuenta</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { v: false, label: "No" },
+                  { v: true, label: "Sí" },
+                ].map(o => (
+                  <button
+                    key={String(o.v)}
+                    onClick={() => setAdministra(o.v)}
+                    className={cn(
+                      "py-2 rounded-lg border text-xs font-medium transition-colors",
+                      administra === o.v ? "border-ink bg-surface-inverse text-white"
+                                         : "border-line text-ink-muted hover:border-line-strong"
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              {administra ? (
+                <p className="text-[10px] text-accion-ink bg-accion-soft border border-accion-line rounded px-2 py-1.5">
+                  Podrá invitar y quitar personas, configurar los perfiles de exigencias,
+                  invitar contratistas, crear servicios y otorgar excepciones.
+                </p>
+              ) : (
+                <p className="text-[10px] text-ink-subtle">
+                  Revisa y aprueba según el alcance de abajo, sin cambiar la configuración.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Alcance de aprobación */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-ink-secondary">Qué puede aprobar</label>
             <div className="space-y-1.5">
@@ -237,42 +281,6 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
               {elegidos.length === 0 && (
                 <p className="text-[10px] text-accion-ink">
                   Sin ningún pilar marcado no podrá aprobar nada, solo revisar.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Pregunta 2: administración. Solo al invitar — cambiar el rol de
-              alguien que ya existe se hace desde su ficha, no acá. */}
-          {!editando && (
-            <div className="space-y-1.5 pt-1 border-t border-line-subtle">
-              <label className="text-sm font-medium text-ink-secondary">Administra la cuenta</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { v: false, label: "No" },
-                  { v: true, label: "Sí" },
-                ].map(o => (
-                  <button
-                    key={String(o.v)}
-                    onClick={() => setAdministra(o.v)}
-                    className={cn(
-                      "py-2 rounded-lg border text-xs font-medium transition-colors",
-                      administra === o.v ? "border-ink bg-surface-inverse text-white"
-                                         : "border-line text-ink-muted hover:border-line-strong"
-                    )}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-              {administra ? (
-                <p className="text-[10px] text-accion-ink bg-accion-soft border border-accion-line rounded px-2 py-1.5">
-                  Podrá invitar y quitar personas, configurar los perfiles de exigencias,
-                  invitar contratistas, crear servicios y otorgar excepciones.
-                </p>
-              ) : (
-                <p className="text-[10px] text-ink-subtle">
-                  Revisa y aprueba según el alcance de arriba, sin cambiar la configuración.
                 </p>
               )}
             </div>
