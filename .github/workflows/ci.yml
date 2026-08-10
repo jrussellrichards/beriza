@@ -121,9 +121,13 @@ jobs:
             # Escribir .env desde GitHub Secret (después del reset)
             echo "$ENV_FILE" > /root/acredita/.env
 
-            docker compose -f docker-compose.prod.yml --env-file .env up --build -d
-            sleep 8
-            docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
-            docker compose -f docker-compose.prod.yml exec -T backend python scripts/seed.py
+            # Migrar ANTES de levantar el backend nuevo. Si se levanta primero,
+            # el código nuevo consulta columnas que la migración todavía no creó
+            # y la ventana hasta `alembic upgrade head` responde 500.
+            # `run --rm` levanta db+redis por depends_on y usa la imagen nueva.
+            docker compose -f docker-compose.prod.yml --env-file .env build
+            docker compose -f docker-compose.prod.yml --env-file .env run --rm backend alembic upgrade head
+            docker compose -f docker-compose.prod.yml --env-file .env run --rm backend python scripts/seed.py
+            docker compose -f docker-compose.prod.yml --env-file .env up -d
         env:
           ENV_FILE: ${{ secrets.ENV }}
