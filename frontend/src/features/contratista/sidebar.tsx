@@ -6,13 +6,14 @@ import { useEffect, useState } from "react"
 import { cn } from "@/shared/lib/utils"
 import { LogoAcredita, MarcaAcredita } from "@/shared/ui/logo"
 import { api } from "@/shared/lib/api"
-import { Briefcase, FileText, Users, LayoutDashboard, LogOut } from "lucide-react"
+import { Briefcase, FileText, Users, LayoutDashboard, LogOut, UserCog } from "lucide-react"
 
 const nav = [
   { href: "/contratista", label: "Inicio", icon: LayoutDashboard },
   { href: "/contratista/servicios", label: "Servicios", icon: Briefcase },
   { href: "/contratista/trabajadores", label: "Trabajadores", icon: Users },
   { href: "/contratista/documentos", label: "Documentos", icon: FileText },
+  { href: "/contratista/equipo", label: "Equipo", icon: UserCog },
 ]
 
 function esActivo(path: string, href: string) {

@@ -1,9 +1,28 @@
 # Acredita — Arquitectura de Documentos y Servicios
 
 > Documento vivo. Se actualiza con cada fase del rediseño de almacenamiento
-> de documentos. Última actualización: 2026-07-14 (Fases 1–4 + rediseño
-> completo del frontend implementados; pipeline IA pospuesto — el sistema
-> opera con revisión manual del mandante).
+> de documentos. Última actualización: 2026-07-17 (Fases 1–4 + rediseño
+> completo del frontend + primer deploy a producción; pipeline IA pospuesto —
+> el sistema opera con revisión manual del mandante).
+
+## Producción
+
+| Pieza | Dónde | Cómo se actualiza |
+|---|---|---|
+| Frontend | Vercel — https://beriza.vercel.app | Automático con cada push a `main` (integración GitHub) |
+| Backend + worker + BD + Redis | Hetzner (94.130.227.168), Docker Compose | Workflow `berisa-ci` en cada push a `main`: SSH → `git reset` → `docker compose up --build` → `alembic upgrade head` → seed idempotente |
+
+**Conexión frontend↔backend**: el navegador llama a `/api/*` en el propio
+dominio de Vercel y Next lo proxea server-side al backend
+(`rewrites` + `BACKEND_URL` en las env de Vercel, con
+`skipTrailingSlashRedirect` para no romper las rutas con slash final de
+FastAPI). Esto evita CORS y el bloqueo de mixed-content mientras el backend
+no tenga dominio + HTTPS propio.
+
+Pendientes de endurecimiento: dominio + TLS para el backend (hoy el tramo
+Vercel→Hetzner va por HTTP plano), Hetzner Object Storage para archivos
+(`FILE_STORAGE=s3`), `RESEND_API_KEY` real con dominio verificado para
+emails, y backups de Postgres.
 
 ---
 

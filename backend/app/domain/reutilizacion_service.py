@@ -182,7 +182,7 @@ def definir_sensibilidad(
     if not exp or exp.eliminado_en is not None:
         raise DocumentoNoEncontrado(f"Expediente {expediente_id} no encontrado.")
 
-    dueño_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+    dueño_id = exp.empresa_duena_id
     if dueño_id != contratista_id:
         raise DocumentoNoEncontrado(f"Expediente {expediente_id} no encontrado.")
 

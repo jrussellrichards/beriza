@@ -243,3 +243,11 @@ def run():
 
 if __name__ == "__main__":
     run()
+
+# ── Puente para pytest ────────────────────────────────────────────────────────
+# Estos archivos nacieron como scripts (`python tests/test_x.py`) y su punto de
+# entrada se llama run(), que pytest NO recolecta porque no empieza con "test_".
+# Resultado: la suite reportaba verde corriendo 5 de los ~30 tests que existen.
+# El envoltorio los expone sin tocar la lógica, y el modo script sigue andando.
+def test_centro_trabajo():
+    run()

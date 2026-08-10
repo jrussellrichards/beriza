@@ -69,6 +69,26 @@ class Expediente(ModelBase):
     )
     acreditaciones: Mapped[list["Acreditacion"]] = relationship(back_populates="expediente")
 
+    @property
+    def empresa_duena_id(self) -> uuid.UUID | None:
+        """
+        La empresa contratista dueña del expediente, venga por la vía que venga.
+
+        Un expediente cuelga de una empresa O de un trabajador (ck_expediente_
+        entidad_xor), y el trabajador siempre pertenece a una empresa. Casi todo
+        el dominio necesita "de qué contratista es esto" sin importar cuál de las
+        dos vías se usó, y estaba resuelto copiando la misma expresión en ocho
+        archivos. Cada copia era una oportunidad de olvidar la rama del
+        trabajador, que es la que devuelve None silenciosamente.
+
+        Es property de Python y no hybrid_property a propósito: todos los usos
+        son sobre un objeto ya cargado. Si alguna vez hace falta filtrar por esto
+        en SQL, hay que agregar la expresión — no asumir que ya funciona.
+        """
+        if self.empresa_id:
+            return self.empresa_id
+        return self.trabajador.empresa_id if self.trabajador_id else None
+
 
 # Identidad única del expediente vivo (eliminado_en IS NULL):
 #   alcance ENTIDAD  (servicio NULL) → único por (requisito, entidad)

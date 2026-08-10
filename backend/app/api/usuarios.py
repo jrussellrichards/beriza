@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.api.schemas import (
     ActivarCuentaRequest,
+    ActualizarUsuarioRequest,
     CrearUsuarioRequest,
     InvitacionInfoResponse,
+    InvitarMiembroEquipoRequest,
     LoginRequest,
     TokenResponse,
     UsuarioResponse,
@@ -16,11 +18,17 @@ from app.api.schemas import (
 from app.core.config import settings
 from app.core.exceptions import PermisoInsuficiente
 from app.core.security import hash_password, verify_password
+from app.domain import usuario_service
 from app.infrastructure.database import get_db
+from app.infrastructure.email import Email, get_email_cliente
 from app.middleware.auth import get_usuario_actual, require_rol
 from app.models.contratista import ContratistaMandante, EmpresaContratista
 from app.models.mandante import Mandante
+from app.models.permiso import UsuarioPilarPermiso
 from app.models.usuario import Usuario
+
+import logging
+logger = logging.getLogger("acredita")
 
 router = APIRouter()
 
@@ -83,6 +91,11 @@ def obtener_invitacion(token: str, db: Session = Depends(get_db)):
 
     usuario = db.get(Usuario, usuario_id)
     if not usuario or usuario.activo:
+        raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
+    # Misma razón que en /activar: una cuenta revocada tiene activo=False, y sin
+    # esto cualquiera con el UUID leía el email, el nombre y la organización de
+    # alguien a quien justamente se le quitó el acceso.
+    if not usuario_service.nunca_activo(usuario):
         raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
 
     # El superadmin de BERISA no tiene organización de la cual sacar los datos.
@@ -196,6 +209,21 @@ def activar_cuenta(body: ActivarCuentaRequest, db: Session = Depends(get_db)):
     usuario = db.get(Usuario, usuario_id)
     if not usuario or usuario.activo:
         raise HTTPException(status_code=400, detail="Token inválido o cuenta ya activada")
+    # Solo se activa quien NUNCA definió contraseña. Sin esta condición bastaba
+    # activo=False, y desde que DELETE /usuarios/{id} desactiva en vez de borrar,
+    # una cuenta REVOCADA quedaba justo en ese estado: cualquiera con el UUID
+    # podía volver a "activarla" con una contraseña nueva, SIN autenticarse, y
+    # recuperaba el acceso que un administrador acababa de quitarle.
+    #
+    # El UUID no es un secreto —viaja en enlaces de invitación, en respuestas de
+    # la API y en la URL de activación—, así que nunca fue material de
+    # autenticación. La única defensa es que el estado no sea reactivable.
+    if not usuario_service.nunca_activo(usuario):
+        raise HTTPException(
+            status_code=400,
+            detail="Esta cuenta ya fue activada antes. Si perdiste el acceso, "
+                   "pídele a un administrador de tu organización que te lo devuelva.",
+        )
 
     es_equipo = _tipo_invitacion(db, usuario) == "EQUIPO"
 
@@ -294,3 +322,254 @@ def crear_usuario(
     db.commit()
     db.refresh(nuevo)
     return nuevo
+
+
+# ── Equipo de la propia organización ──────────────────────────────────────────
+#
+# Van declaradas ANTES de las rutas con {usuario_id}: FastAPI resuelve por orden
+# y "mi-equipo" se parsearía como un UUID.
+#
+# La organización sale del TOKEN, nunca de la URL. Por eso no hay
+# /contratistas/{id}/usuarios: sin id en la ruta no existe el caso de pedir el
+# equipo de otra empresa, y la regla de tenant no se puede olvidar.
+
+@router.get("/mi-equipo")
+def listar_mi_equipo(
+    db: Session = Depends(get_db),
+    actor: Usuario = Depends(require_rol(["mandante_admin", "contratista_admin"])),
+):
+    """El equipo de la organización de quien pregunta, activos e invitados."""
+    q = db.query(Usuario)
+    if actor.contratista_id:
+        q = q.filter(Usuario.contratista_id == actor.contratista_id)
+    else:
+        q = q.filter(Usuario.mandante_id == actor.mandante_id)
+
+    return [
+        {
+            "id": str(u.id),
+            "email": u.email,
+            "nombre": u.nombre,
+            "rol": u.rol,
+            "cargo": u.cargo,
+            "activo": u.activo,
+            # Distingue "invitado que nunca entró" de "cuenta dada de baja".
+            # Los dos tienen activo=False y en la UI son cosas muy distintas:
+            # a uno se le reenvía la invitación, al otro se le reactiva.
+            "pendiente": usuario_service.nunca_activo(u),
+            "es_uno_mismo": u.id == actor.id,
+        }
+        for u in sorted(q.all(), key=lambda x: (not x.activo, x.nombre))
+    ]
+
+
+@router.post("/mi-equipo/invitar", status_code=status.HTTP_201_CREATED)
+def invitar_a_mi_equipo(
+    body: InvitarMiembroEquipoRequest,
+    db: Session = Depends(get_db),
+    actor: Usuario = Depends(require_rol(["contratista_admin"])),
+):
+    """
+    El contratista suma a alguien de su empresa.
+
+    Solo contratista_admin: el mandante ya tiene su propio endpoint de invitación
+    porque además define el alcance de aprobación por pilar, que del lado
+    contratista no existe.
+    """
+    email = body.email.strip().lower()
+    existente = db.query(Usuario).filter_by(email=email).first()
+    if existente:
+        # El mensaje distingue los dos casos porque la salida es distinta:
+        # reenviar la invitación, o pedirle que recupere su clave.
+        pista = ("Esa invitación sigue pendiente: puedes reenviarla."
+                 if usuario_service.nunca_activo(existente)
+                 else "Esa cuenta ya está activa.")
+        raise HTTPException(status_code=400, detail=f"Ya existe un usuario con {email}. {pista}")
+
+    try:
+        usuario_service.exigir_rol_otorgable(actor, body.rol)
+    except PermisoInsuficiente as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    empresa = db.get(EmpresaContratista, actor.contratista_id)
+    nuevo = Usuario(
+        email=email, nombre=body.nombre.strip(), password_hash="",
+        rol=body.rol, activo=False,
+        contratista_id=actor.contratista_id,
+        cargo=body.cargo or None,
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+
+    link = f"{settings.FRONTEND_URL}/activar?token={nuevo.id}"
+    try:
+        get_email_cliente().enviar(Email(
+            destinatario=email,
+            asunto=f"Invitación a Acredita — {empresa.razon_social if empresa else ''}",
+            cuerpo_html=f"""
+            <h2>Te invitaron a Acredita</h2>
+            <p>{empresa.razon_social if empresa else 'Tu empresa'} te sumó para gestionar
+            la documentación de acreditación.</p>
+            <p>Para activar tu cuenta y definir tu contraseña:</p>
+            <a href="{link}">Activar cuenta</a>
+            <p>Este enlace es personal e intransferible.</p>
+            """,
+        ))
+    except Exception:
+        logger.exception("No se pudo enviar la invitación a %s", email)
+        return {"mensaje": f"Usuario creado, pero el email a {email} no pudo enviarse.",
+                "link_activacion": link}
+    return {"mensaje": f"Invitación enviada a {email}"}
+
+
+# ── Ciclo de vida de la cuenta ────────────────────────────────────────────────
+#
+# Las tres organizaciones —BERISA, mandante y contratista— usan los MISMOS
+# endpoints. Quién puede tocar a quién lo decide usuario_service.puede_gestionar
+# a partir de mandante_id / contratista_id, no la ruta: tener tres rutas
+# paralelas garantizaba que la regla se separara en la tercera.
+
+@router.patch("/{usuario_id}", response_model=UsuarioResponse)
+def actualizar_usuario(
+    usuario_id: uuid.UUID,
+    body: ActualizarUsuarioRequest,
+    db: Session = Depends(get_db),
+    actor: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin"])),
+):
+    """
+    Edita nombre, cargo, rol o estado de una cuenta de la propia organización.
+
+    El email NO se puede cambiar: es la identidad con la que se activó la cuenta
+    y con la que se resuelven las invitaciones. Cambiarlo dejaría enlaces de
+    activación apuntando a una persona distinta.
+    """
+    objetivo = db.get(Usuario, usuario_id)
+    if not objetivo:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    try:
+        usuario_service.exigir_puede_gestionar(actor, objetivo)
+
+        if body.nombre is not None:
+            objetivo.nombre = body.nombre.strip()
+        if body.cargo is not None:
+            objetivo.cargo = body.cargo.strip() or None
+
+        # Rol y activo son los dos cambios con consecuencias: pueden dejar a
+        # alguien fuera o a una organización sin administrador.
+        if body.rol is not None and body.rol != objetivo.rol:
+            usuario_service.exigir_no_es_uno_mismo(actor, objetivo, "cambiar el rol de")
+            usuario_service.exigir_rol_otorgable(actor, body.rol)
+            usuario_service.exigir_no_es_ultimo_admin(db, objetivo)
+            objetivo.rol = body.rol
+        if body.activo is not None and body.activo != objetivo.activo:
+            if not body.activo:
+                usuario_service.exigir_no_es_uno_mismo(actor, objetivo, "desactivar")
+                usuario_service.exigir_no_es_ultimo_admin(db, objetivo)
+            elif usuario_service.nunca_activo(objetivo):
+                # Reactivar a quien nunca definió contraseña lo dejaría "activo"
+                # sin poder entrar, y peor: activo=True es lo que distingue una
+                # invitación pendiente de una cuenta real en toda la UI.
+                raise HTTPException(
+                    status_code=400,
+                    detail="Esta persona nunca activó su cuenta. Reenvíale la invitación.",
+                )
+            objetivo.activo = body.activo
+    except PermisoInsuficiente as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    db.commit()
+    db.refresh(objetivo)
+    return objetivo
+
+
+@router.delete("/{usuario_id}", status_code=status.HTTP_200_OK)
+def eliminar_usuario(
+    usuario_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    actor: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin"])),
+):
+    """
+    Quita el acceso de una persona.
+
+    DESACTIVA en vez de borrar. Un usuario que aprobó documentos está en
+    AcreditacionEvento como el responsable de esa decisión, y borrarlo rompería
+    la trazabilidad, que es lo único que este producto promete.
+
+    ÚNICA excepción: una invitación que nunca se activó sí se borra de verdad.
+    No tiene historial que preservar, y dejarla como fila inactiva bloquea el
+    email para siempre — es exactamente lo que pasa hoy cuando alguien invita a
+    una dirección mal tipeada y el reintento choca con "ya existe un usuario".
+    """
+    objetivo = db.get(Usuario, usuario_id)
+    if not objetivo:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    try:
+        usuario_service.exigir_puede_gestionar(actor, objetivo)
+        usuario_service.exigir_no_es_uno_mismo(actor, objetivo, "eliminar")
+        usuario_service.exigir_no_es_ultimo_admin(db, objetivo)
+    except PermisoInsuficiente as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    if usuario_service.nunca_activo(objetivo):
+        email = objetivo.email
+        db.query(UsuarioPilarPermiso).filter_by(usuario_id=objetivo.id).delete()
+        db.delete(objetivo)
+        db.commit()
+        return {"mensaje": f"Invitación a {email} cancelada. El correo queda libre."}
+
+    objetivo.activo = False
+    db.commit()
+    return {
+        "mensaje": f"{objetivo.nombre} ya no tiene acceso. Su historial de "
+                   "aprobaciones se conserva."
+    }
+
+
+@router.post("/{usuario_id}/reenviar-invitacion")
+def reenviar_invitacion(
+    usuario_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    actor: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin"])),
+):
+    """
+    Vuelve a mandar el correo de activación a quien todavía no entró.
+
+    Sin esto, un correo que cayó en spam dejaba a la persona fuera sin salida: el
+    link solo se devolvía en la rama de error del envío original y no se
+    persistía en ninguna parte.
+    """
+    objetivo = db.get(Usuario, usuario_id)
+    if not objetivo:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    try:
+        usuario_service.exigir_puede_gestionar(actor, objetivo)
+    except PermisoInsuficiente as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    if not usuario_service.nunca_activo(objetivo):
+        raise HTTPException(
+            status_code=400,
+            detail="Esta cuenta ya está activa. Si perdió su contraseña, necesita recuperarla.",
+        )
+
+    link = f"{settings.FRONTEND_URL}/activar?token={objetivo.id}"
+    try:
+        get_email_cliente().enviar(Email(
+            destinatario=objetivo.email,
+            asunto="Tu invitación a Acredita",
+            cuerpo_html=f"""
+            <h2>Tu invitación sigue disponible</h2>
+            <p>Para activar tu cuenta y definir tu contraseña:</p>
+            <a href="{link}">Activar cuenta</a>
+            <p>Este enlace es personal e intransferible.</p>
+            """,
+        ))
+    except Exception:
+        logger.exception("No se pudo reenviar la invitación a %s", objetivo.email)
+        # El link vuelve solo en la respuesta autenticada de quien lo pidió, para
+        # que pueda pasarlo por otro medio. Nunca se loguea.
+        return {
+            "mensaje": f"No se pudo enviar el correo a {objetivo.email}.",
+            "link_activacion": link,
+        }
+    return {"mensaje": f"Invitación reenviada a {objetivo.email}"}

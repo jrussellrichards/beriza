@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Search, Plus, X, CheckCircle2, Users } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { useApiData } from "@/shared/lib/use-api-data"
+import { CuentaDialog } from "@/features/equipo/cuenta-dialog"
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -11,8 +12,22 @@ type Rol = "berisa_admin" | "mandante_admin" | "prevencionista" | "contratista_a
 
 interface Usuario {
   id: string; nombre: string; email: string
-  rol: Rol; mandante?: string; activo: boolean; ultimo_acceso: string
+  rol: Rol; mandante?: string; activo: boolean
+  cargo: string | null
+  /** Invitación que nunca se activó. Distinto de una cuenta dada de baja. */
+  pendiente: boolean
+  es_uno_mismo: boolean
+  /** Antigüedad de la cuenta. NO es un último acceso: no hay registro de login. */
+  ultimo_acceso: string
 }
+
+/** BERISA puede otorgar cualquier rol. El backend lo revalida. */
+const ROLES_BERISA = [
+  { v: "prevencionista", label: "Revisor / Colaborador", ayuda: "Sin administración de la cuenta" },
+  { v: "mandante_admin", label: "Admin de mandante", ayuda: "Administra la organización del mandante" },
+  { v: "contratista_admin", label: "Admin de contratista", ayuda: "Administra la empresa contratista" },
+  { v: "berisa_admin", label: "BERISA Admin", ayuda: "Opera la plataforma completa" },
+]
 
 
 const ROL_CFG: Record<Rol, { label: string; color: string }> = {
@@ -121,7 +136,10 @@ export default function UsuariosPage() {
   const [filtroRol, setFiltroRol] = useState<Rol | "TODOS">("TODOS")
   const [creando, setCreando] = useState(false)
 
-  const { data: USUARIOS } = useApiData<Usuario[]>("/api/v1/admin/usuarios", [])
+  const { data: USUARIOS, refetch } = useApiData<Usuario[]>("/api/v1/admin/usuarios", [])
+  const [cuenta, setCuenta] = useState<Usuario | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [errorAccion, setErrorAccion] = useState<string | null>(null)
 
   const filtrados = USUARIOS.filter(u => {
     const matchQ = u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -203,7 +221,7 @@ export default function UsuariosPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Rol</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Mandante</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Último acceso</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Creado</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -233,12 +251,21 @@ export default function UsuariosPage() {
                     <td className="px-4 py-4">
                       <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium", u.activo ? "text-ok-ink" : "text-ink-subtle")}>
                         <span className={cn("w-1.5 h-1.5 rounded-full", u.activo ? "bg-ok-ink" : "bg-line-strong")} />
-                        {u.activo ? "Activo" : "Inactivo"}
+                        {u.activo ? "Activo" : u.pendiente ? "Invitación pendiente" : "Sin acceso"}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-xs text-ink-subtle">{u.ultimo_acceso}</td>
                     <td className="px-4 py-4">
-                      <button disabled title="La edición de usuarios aún no está implementada" className="text-xs text-ink-subtle hover:text-ink-secondary px-2 py-1 rounded hover:bg-surface-sunken transition-colors">Editar</button>
+                      {/* Sobre uno mismo no se ofrece: el backend rechaza
+                          desactivarse y cambiarse el rol con 403. */}
+                      {!u.es_uno_mismo && (
+                        <button
+                          onClick={() => setCuenta(u)}
+                          className="text-xs text-ink-muted hover:text-ink px-2 py-1 rounded hover:bg-surface-sunken transition-colors"
+                        >
+                          Editar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -251,6 +278,17 @@ export default function UsuariosPage() {
         </div>
       </div>
 
+      {(aviso || errorAccion) && (
+        <div className="px-6 sm:px-8 pb-4">
+          <p className={cn(
+            "text-sm px-4 py-2 rounded-lg border",
+            errorAccion
+              ? "text-bloqueo-ink bg-bloqueo-soft border-bloqueo-line"
+              : "text-ok-ink bg-ok-soft border-ok-line",
+          )}>{errorAccion || aviso}</p>
+        </div>
+      )}
+
       {/* Panel nuevo usuario */}
       <div className={cn(
         "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
@@ -258,6 +296,17 @@ export default function UsuariosPage() {
       )}>
         {creando && <NuevoUsuarioPanel onClose={() => setCreando(false)} />}
       </div>
+
+      {cuenta && (
+        <CuentaDialog
+          cuenta={cuenta}
+          roles={ROLES_BERISA}
+          onClose={() => setCuenta(null)}
+          onCambio={() => { setCuenta(null); refetch() }}
+          onAviso={setAviso}
+          onError={setErrorAccion}
+        />
+      )}
     </div>
   )
 }

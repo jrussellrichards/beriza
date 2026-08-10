@@ -21,9 +21,6 @@ from app.models.usuario import Usuario
 
 router = APIRouter()
 
-COLOR_MAP = {"LEGAL": "blue", "HSE": "amber", "COMPLIANCE": "purple"}
-
-
 @router.get("/")
 def listar_pilares(
     db: Session = Depends(get_db),
@@ -59,6 +56,9 @@ def listar_pilares(
                     "descripcion": r.descripcion or "",
                     "entidad_tipo": r.entidad_tipo,
                     "alcance": r.alcance,
+                    # BASE | AMPLIADO | OPCIONAL — naturaleza normativa, no si
+                    # este mandante lo exige (eso es es_obligatorio del perfil).
+                    "nivel": r.nivel,
                     "max_archivos": r.max_archivos,
                     "sin_vencimiento": r.sin_vencimiento,
                     "sensible": r.sensible,
@@ -77,7 +77,7 @@ def listar_pilares(
             "codigo": p.codigo,
             "nombre": p.nombre,
             "orden": p.orden,
-            "color": COLOR_MAP.get(p.codigo, "slate"),
+            "color": p.color,
             "subpilares": subpilares,
         })
     return resultado
@@ -91,10 +91,15 @@ def crear_requisito(
     usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
     """
-    Agrega un requisito, dentro del primer subpilar del pilar.
+    Agrega un requisito al subpilar indicado.
     berisa_admin lo agrega al catálogo global; mandante_admin crea un
     requisito propio (mandante_id fijado desde el token, nunca desde
     el body) visible solo para su organización.
+
+    `subpilar_id` es opcional y cae al primero por orden si no viene, que es lo
+    que este endpoint hacía siempre. Eso era correcto cuando cada pilar tenía un
+    único subpilar; con 11 subpilares deja de serlo, así que el cliente debería
+    mandarlo. El subpilar debe pertenecer al pilar de la ruta.
     """
     pilar = db.get(Pilar, pilar_id)
     if not pilar or not pilar.subpilares:
@@ -122,7 +127,16 @@ def crear_requisito(
     if body.alcance not in (Alcance.ENTIDAD, Alcance.SERVICIO):
         raise HTTPException(status_code=400, detail="alcance debe ser ENTIDAD o SERVICIO")
 
-    subpilar = sorted(pilar.subpilares, key=lambda x: x.orden)[0]
+    if body.subpilar_id is not None:
+        subpilar = next((s for s in pilar.subpilares if s.id == body.subpilar_id), None)
+        if subpilar is None:
+            raise HTTPException(
+                status_code=400,
+                detail="El subpilar indicado no pertenece a este pilar",
+            )
+    else:
+        subpilar = sorted(pilar.subpilares, key=lambda x: x.orden)[0]
+
     req = RequisitoDocumental(
         subpilar_id=subpilar.id,
         mandante_id=mandante_id,
@@ -172,6 +186,20 @@ def actualizar_requisito(
         req.sin_vencimiento = body.sin_vencimiento
     if body.sensible is not None:
         req.sensible = body.sensible
+    if body.subpilar_id is not None:
+        # Reclasificar dentro del MISMO pilar. Cambiar de pilar movería el
+        # requisito bajo otro permiso de aprobación: quien podía resolverlo
+        # dejaría de poder y viceversa, en silencio y sobre expedientes vivos.
+        # Si hace falta, se hace explícito y con su propia decisión de producto.
+        destino = db.get(Subpilar, body.subpilar_id)
+        if destino is None:
+            raise HTTPException(status_code=404, detail="Subpilar no encontrado")
+        if destino.pilar_id != req.subpilar.pilar_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Solo se puede mover el requisito entre subpilares del mismo pilar",
+            )
+        req.subpilar_id = destino.id
     db.commit()
     return {"mensaje": "Requisito actualizado"}
 

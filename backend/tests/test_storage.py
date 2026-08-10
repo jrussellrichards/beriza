@@ -1,5 +1,7 @@
 import os
 import sys
+
+import pytest
 import httpx
 
 # Add backend directory to sys.path so we can import from app
@@ -8,6 +10,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from app.infrastructure.storage import get_storage, StorageS3
 from app.core.config import settings
 
+# Chequeo de conectividad real contra Cloudflare R2, no un test unitario: necesita
+# credenciales y red. Se salta salvo que el entorno este configurado para S3, para
+# que la suite automatica no quede en rojo permanente por una dependencia externa.
+@pytest.mark.skipif(
+    settings.FILE_STORAGE != "s3",
+    reason="requiere FILE_STORAGE=s3 y credenciales de R2",
+)
 def test_r2():
     print("Testing Cloudflare R2 integration...")
     print(f"FILE_STORAGE: {settings.FILE_STORAGE}")

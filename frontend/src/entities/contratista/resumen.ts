@@ -38,9 +38,13 @@ export interface DocumentoContratista {
   requisito_id: string
   requisito_codigo: string
   requisito_nombre: string
+  /** Qué es el documento y qué debe contener, según el catálogo. */
+  requisito_descripcion: string
   entidad_tipo: "EMPRESA" | "TRABAJADOR"
   alcance: "ENTIDAD" | "SERVICIO"
   max_archivos: number
+  /** MIME aceptados, ya resueltos por el backend contra el default global. */
+  formatos_permitidos: string[]
   pilar_codigo: string | null
   pilar_nombre: string | null
   trabajador_id: string | null

@@ -53,6 +53,7 @@ export interface RequisitoAvance {
 export interface PilarAvance {
   codigo: string
   nombre: string
+  color: string
   total: number
   aprobados: number
   cumple: boolean

@@ -33,7 +33,7 @@ def procesar_documento_task(self, entrega_id: str) -> dict:
 
         entrega = db.get(Entrega, entrega_uuid)
         exp = entrega.expediente
-        contratista_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+        contratista_id = exp.empresa_duena_id
         acreditaciones = [
             a for a in exp.acreditaciones if a.entrega_id == entrega.id and a.eliminado_en is None
         ]

@@ -155,7 +155,7 @@ def notificar_documento_observado(
         return
 
     exp = doc.expediente
-    empresa_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+    empresa_id = exp.empresa_duena_id
     if not empresa_id:
         return
 
@@ -197,7 +197,7 @@ def notificar_excepcion_aprobada(
         return
 
     exp = doc.expediente
-    empresa_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+    empresa_id = exp.empresa_duena_id
     if not empresa_id:
         return
 

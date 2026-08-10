@@ -13,7 +13,9 @@ from app.api.schemas import (
     InvitarUsuarioMandanteRequest,
     UsuarioMandanteResponse,
     ActualizarMandanteRequest,
+    AplicarPlantillaRequest,
     ConfigurarRequisitoPerfilRequest,
+    DefinirCargosRequisitoRequest,
     CrearMandanteRequest,
     CrearPerfilRequest,
     InvitarContratistaRequest,
@@ -23,13 +25,14 @@ from app.api.schemas import (
 from app.core.config import settings
 from app.core.exceptions import PermisoInsuficiente
 from app.core.exceptions import PerfilNoEncontrado
-from app.domain import permiso_service, acreditacion_service, servicio_service
-from app.domain.estados import EstadoDocumento
+from app.domain import permiso_service, acreditacion_service, plantillas, servicio_service, usuario_service
+from app.domain.estados import EntidadTipo, EstadoDocumento
 from app.domain.reglas_service import VIGENCIA_DEFAULT_DIAS
-from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig
+from app.models.cargo import Cargo
+from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, PerfilRequisitoCargo
 from app.infrastructure.database import get_db
 from app.infrastructure.email import Email, get_email_cliente
-from app.middleware.auth import require_rol
+from app.middleware.auth import mandante_propio, require_rol
 from app.models.contratista import ContratistaMandante, EmpresaContratista
 from app.models.expediente import Acreditacion, AcreditacionEvento, Expediente
 from app.models.mandante import Mandante
@@ -42,7 +45,6 @@ logger = logging.getLogger("acredita")
 
 router = APIRouter()
 
-COLOR_PILAR = {"LEGAL": "blue", "HSE": "amber", "COMPLIANCE": "purple"}
 
 
 @router.post("/", response_model=MandanteResponse, status_code=status.HTTP_201_CREATED)
@@ -92,11 +94,22 @@ def actualizar_mandante(
     return mandante
 
 
+# Va declarada ANTES de /{mandante_id}: FastAPI resuelve por orden y la ruta
+# parametrica captura "plantillas" como si fuera un UUID (422).
+@router.get("/plantillas")
+def listar_plantillas(
+    db: Session = Depends(get_db),
+    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """Plantillas de exigencia disponibles, con cuántos requisitos activa cada una."""
+    return plantillas.resumen(db)
+
+
 @router.get("/{mandante_id}", response_model=MandanteResponse)
 def obtener_mandante(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     mandante = db.get(Mandante, mandante_id)
     if not mandante:
@@ -269,7 +282,7 @@ def invitar_contratista(
 def listar_contratistas(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """Lista todas las empresas contratistas vinculadas a este mandante con su estado global."""
     relaciones = (
@@ -292,7 +305,7 @@ def listar_contratistas(
 def dashboard_mandante(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """KPIs, estado por pilar y alertas de contratistas bloqueados."""
     rels = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id).all()
@@ -318,7 +331,7 @@ def dashboard_mandante(
         pilar_stats.append({
             "codigo": pilar.codigo,
             "nombre": pilar.nombre,
-            "color": COLOR_PILAR.get(pilar.codigo, "slate"),
+            "color": pilar.color,
             "ok": ok_count,
             "total": total,
             "cumplimiento": round(ok_count / total * 100) if total else 0,
@@ -398,7 +411,7 @@ def dashboard_mandante(
 def contratistas_detalle(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """
     Lista completa de contratistas con pilares, documentos y trabajadores,
@@ -434,7 +447,7 @@ def contratistas_detalle(
             pilares_data.append({
                 "codigo": pilar.pilar_codigo,
                 "nombre": pilar.pilar_nombre,
-                "color": COLOR_PILAR.get(pilar.pilar_codigo, "slate"),
+                "color": pilar.pilar_color,
                 "cumple": pilar.cumple,
                 "documentos": docs_pilar,
             })
@@ -475,7 +488,7 @@ def contratistas_detalle(
 def configuracion_mandante(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     mandante = db.get(Mandante, mandante_id)
     if not mandante:
@@ -509,7 +522,7 @@ def configuracion_mandante(
 def reportes_mandante(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """Datos agregados para la página de reportes."""
     rels = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id).all()
@@ -621,7 +634,7 @@ def listar_requisitos_mandante(
     mandante_id: uuid.UUID,
     perfil_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """
     Catálogo de pilares/requisitos con la config del perfil superpuesta.
@@ -657,8 +670,23 @@ def listar_requisitos_mandante(
                     "descripcion": req.descripcion or "",
                     "entidad": req.entidad_tipo,
                     "alcance": req.alcance,
+                    # El subpilar viaja en cada requisito y NO como un nivel más
+                    # de anidamiento: la lista plana por pilar la consumen ya
+                    # varias pantallas, y anidar habría obligado a tocarlas todas.
+                    # Con esto el cliente agrupa si quiere y sigue funcionando si
+                    # no lo hace.
+                    "subpilar_id": str(sp.id),
+                    "subpilar_codigo": sp.codigo,
+                    "subpilar_nombre": sp.nombre,
+                    "subpilar_orden": sp.orden,
+                    # BASE | AMPLIADO | OPCIONAL — por qué el mandante PUEDE
+                    # exigirlo. Distinto de es_obligatorio, que es si lo exige.
+                    "nivel": req.nivel,
                     "max_archivos": req.max_archivos,
                     "es_propio": req.mandante_id is not None,
+                    # A qué cargos aplica dentro de este perfil. Lista vacía =
+                    # aplica a todos los trabajadores, que es el default.
+                    "cargo_ids": [str(pc.cargo_id) for pc in cfg.cargos] if cfg else [],
                     # Sin config en el perfil = el requisito NO se exige en él
                     "es_obligatorio": cfg.es_obligatorio if cfg else False,
                     "vigencia_max_dias": cfg.vigencia_max_dias if cfg else VIGENCIA_DEFAULT_DIAS,
@@ -669,7 +697,7 @@ def listar_requisitos_mandante(
             "codigo": pilar.codigo,
             "nombre": pilar.nombre,
             "descripcion": "",
-            "color": COLOR_PILAR.get(pilar.codigo, "slate"),
+            "color": pilar.color,
             "requisitos": requisitos,
         })
     return {
@@ -686,7 +714,7 @@ def listar_requisitos_mandante(
 def listar_perfiles(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """Perfiles de requisitos del mandante (plantillas de exigencias por tipo de servicio)."""
     return servicio_service.listar_perfiles(db, mandante_id)
@@ -697,7 +725,7 @@ def crear_perfil(
     mandante_id: uuid.UUID,
     body: CrearPerfilRequest,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     if not db.get(Mandante, mandante_id):
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
@@ -710,7 +738,7 @@ def configurar_requisito_perfil(
     perfil_id: uuid.UUID,
     body: ConfigurarRequisitoPerfilRequest,
     db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """Agrega o actualiza la parametrización de un requisito dentro del perfil."""
     try:
@@ -730,6 +758,106 @@ def configurar_requisito_perfil(
         parametros_extra=body.parametros_extra,
     )
     return {"mensaje": "Requisito configurado en el perfil"}
+
+
+@router.put("/{mandante_id}/perfiles/{perfil_id}/requisitos/{requisito_id}/cargos")
+def definir_cargos_requisito(
+    mandante_id: uuid.UUID,
+    perfil_id: uuid.UUID,
+    requisito_id: uuid.UUID,
+    body: DefinirCargosRequisitoRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """
+    A qué cargos aplica este requisito dentro del perfil.
+
+    Lista COMPLETA, no incremental: mandar `cargo_ids` vacío devuelve el requisito
+    a "aplica a todos", que es el comportamiento por defecto. PUT y no POST
+    justamente por eso.
+
+    Solo tiene sentido en requisitos de entidad_tipo=TRABAJADOR: un documento de
+    la empresa no depende del cargo de nadie, y aceptarlo ahí crearía una
+    configuración que el dominio ignora en silencio.
+    """
+    try:
+        perfil = servicio_service.obtener_perfil(db, perfil_id)
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if perfil.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="El perfil no pertenece a este mandante")
+    if usuario.mandante_id and usuario.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede configurar perfiles de su propio mandante")
+
+    requisito = db.get(RequisitoDocumental, requisito_id)
+    if not requisito:
+        raise HTTPException(status_code=404, detail="Requisito no encontrado")
+    if requisito.entidad_tipo != EntidadTipo.TRABAJADOR:
+        raise HTTPException(
+            status_code=400,
+            detail="Solo los requisitos de trabajador se pueden restringir por cargo",
+        )
+
+    config = db.query(PerfilRequisitoConfig).filter_by(
+        perfil_id=perfil_id, requisito_documental_id=requisito_id
+    ).first()
+    if not config:
+        raise HTTPException(
+            status_code=404,
+            detail="El requisito no está configurado en este perfil. Actívalo primero.",
+        )
+
+    cargos_validos = {
+        c.id for c in db.query(Cargo).filter(Cargo.id.in_(body.cargo_ids)).all()
+        if c.mandante_id is None or c.mandante_id == mandante_id
+    } if body.cargo_ids else set()
+    desconocidos = set(body.cargo_ids) - cargos_validos
+    if desconocidos:
+        raise HTTPException(
+            status_code=400,
+            detail="Hay cargos que no existen o no pertenecen a tu organización",
+        )
+
+    db.query(PerfilRequisitoCargo).filter_by(perfil_requisito_config_id=config.id).delete()
+    for cargo_id in cargos_validos:
+        db.add(PerfilRequisitoCargo(perfil_requisito_config_id=config.id, cargo_id=cargo_id))
+    db.commit()
+
+    return {
+        "mensaje": "Aplicabilidad por cargo actualizada",
+        "cargos": len(cargos_validos),
+        "aplica_a_todos": len(cargos_validos) == 0,
+    }
+
+
+@router.post("/{mandante_id}/perfiles/{perfil_id}/plantilla")
+def aplicar_plantilla_perfil(
+    mandante_id: uuid.UUID,
+    perfil_id: uuid.UUID,
+    body: AplicarPlantillaRequest,
+    db: Session = Depends(get_db),
+    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Deja el perfil exigiendo lo que dice la plantilla, en un solo request.
+
+    Sin esto, poner en marcha un perfil sobre el catálogo de 44 requisitos son 44
+    POST desde la pantalla, uno por casilla. Es un SET: lo que la plantilla no
+    incluye queda apagado, con su parametrización intacta por si se reactiva.
+    """
+    try:
+        perfil = servicio_service.obtener_perfil(db, perfil_id)
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if perfil.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="El perfil no pertenece a este mandante")
+    if usuario.mandante_id and usuario.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="Solo puede configurar perfiles de su propio mandante")
+
+    try:
+        return servicio_service.aplicar_plantilla(db, perfil_id, body.plantilla.strip().upper())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 
@@ -754,6 +882,8 @@ def listar_usuarios_mandante(
             pilares=None if pilares is None else [p.nombre for p in pilares],
             pilar_ids=[] if pilares is None else [p.id for p in pilares],
             aprueba_todo=bool(u.aprueba_todo), cargo=u.cargo,
+            pendiente=usuario_service.nunca_activo(u),
+            es_uno_mismo=u.id == usuario.id,
         ))
     return resultado
 

@@ -6,6 +6,16 @@ import { cn } from "@/shared/lib/utils"
 import { getSession } from "@/shared/lib/auth"
 import { useApiData } from "@/shared/lib/use-api-data"
 import { UsuarioPermisosDialog, type UsuarioEquipo } from "@/features/mandante/usuario-permisos-dialog"
+import { CuentaDialog } from "@/features/equipo/cuenta-dialog"
+
+/**
+ * Lo que un mandante_admin puede otorgar. El backend lo revalida en
+ * usuario_service.ROLES_QUE_PUEDE_OTORGAR: acá es solo lo que se ofrece.
+ */
+const ROLES_MANDANTE = [
+  { v: "prevencionista", label: "Revisor", ayuda: "Revisa y aprueba según su alcance por pilar" },
+  { v: "mandante_admin", label: "Administrador", ayuda: "Además invita gente y configura los perfiles" },
+]
 
 /**
  * Etiqueta del perfil: cruce de las dos preguntas independientes —qué aprueba y
@@ -42,6 +52,9 @@ function iniciales(nombre: string) {
 export default function EquipoPage() {
   const [mandanteId, setMandanteId] = useState<string | null>(null)
   const [dialogo, setDialogo] = useState<{ usuario: UsuarioEquipo | null } | null>(null)
+  const [cuenta, setCuenta] = useState<UsuarioEquipo | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [errorAccion, setErrorAccion] = useState<string | null>(null)
 
   useEffect(() => {
     setMandanteId(getSession()?.mandante_id ?? null)
@@ -76,8 +89,11 @@ export default function EquipoPage() {
       </div>
 
       <div className="flex-1 px-6 sm:px-8 py-6">
-        {error && (
-          <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg mb-4">{error}</p>
+        {aviso && (
+          <p className="text-sm text-ok-ink bg-ok-soft border border-ok-line px-3 py-2 rounded-lg mb-4">{aviso}</p>
+        )}
+        {(error || errorAccion) && (
+          <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg mb-4">{error || errorAccion}</p>
         )}
 
         {loading ? (
@@ -133,12 +149,34 @@ export default function EquipoPage() {
                       Permisos
                     </button>
                   )}
+                  {/* Sobre uno mismo no se ofrece nada: el backend rechaza
+                      desactivarse y cambiarse el rol, y un botón que siempre
+                      falla es peor que no tenerlo. */}
+                  {!u.es_uno_mismo && (
+                    <button
+                      onClick={() => setCuenta(u)}
+                      className="text-xs text-ink-muted hover:text-ink border border-line px-2.5 py-1 rounded-lg hover:bg-surface-app transition-colors"
+                    >
+                      Cuenta
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {cuenta && (
+        <CuentaDialog
+          cuenta={{ ...cuenta, pendiente: cuenta.pendiente ?? false }}
+          roles={ROLES_MANDANTE}
+          onClose={() => setCuenta(null)}
+          onCambio={() => { setCuenta(null); refetch() }}
+          onAviso={setAviso}
+          onError={setErrorAccion}
+        />
+      )}
 
       {dialogo && mandanteId && (
         <UsuarioPermisosDialog

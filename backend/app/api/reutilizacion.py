@@ -26,7 +26,7 @@ def _acreditacion_del_contratista(db: Session, acreditacion_id: uuid.UUID, usuar
     if not acred:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
     exp = acred.expediente
-    empresa_id = exp.empresa_id or (exp.trabajador.empresa_id if exp.trabajador_id else None)
+    empresa_id = exp.empresa_duena_id
     if not usuario.contratista_id or empresa_id != usuario.contratista_id:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
     return acred
