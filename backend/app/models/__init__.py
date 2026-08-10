@@ -10,5 +10,6 @@ from app.models.servicio import (
 from app.models.trabajador import Trabajador
 from app.models.expediente import Expediente, Entrega, Archivo, Acreditacion, AcreditacionEvento
 from app.models.usuario import Usuario
+from app.models.token_recuperacion import TokenRecuperacion
 from app.models.permiso import UsuarioPilarPermiso
 from app.models.centro_trabajo import CentroTrabajo

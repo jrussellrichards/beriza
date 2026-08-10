@@ -12,13 +12,15 @@ from app.api.schemas import (
     InvitacionInfoResponse,
     InvitarMiembroEquipoRequest,
     LoginRequest,
+    RecuperarPasswordRequest,
+    RestablecerPasswordRequest,
     TokenResponse,
     UsuarioResponse,
 )
 from app.core.config import settings
-from app.core.exceptions import PermisoInsuficiente
+from app.core.exceptions import AcreditaError, PermisoInsuficiente
 from app.core.security import hash_password, verify_password
-from app.domain import usuario_service
+from app.domain import recuperacion_service, usuario_service
 from app.infrastructure.database import get_db
 from app.infrastructure.email import Email, get_email_cliente
 from app.middleware.auth import get_usuario_actual, require_rol
@@ -184,6 +186,79 @@ def _tipo_invitacion(db: Session, invitado: Usuario) -> str:
     else:
         return "ORGANIZACION"
     return "EQUIPO" if q.first() else "ORGANIZACION"
+
+
+# Respuesta única de /recuperar. Sale igual exista o no la cuenta: si dijera "no
+# hay ninguna cuenta con ese email", el formulario se convertiría en un oráculo
+# para averiguar quién está registrado en la plataforma.
+_RESPUESTA_RECUPERACION = {
+    "mensaje": "Si hay una cuenta activa con ese email, te enviamos un enlace para "
+               "restablecer tu contraseña. Revisa tu correo."
+}
+
+
+@router.post("/recuperar")
+def solicitar_recuperacion(body: RecuperarPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Pide el enlace para restablecer la contraseña.
+
+    Existe porque hasta ahora perder la clave era un callejón sin salida:
+    dependía de que OTRO administrador de la organización te la devolviera, y una
+    organización con un solo administrador —el caso normal al empezar— se quedaba
+    sin nadie que pudiera hacerlo.
+
+    Devuelve siempre lo mismo, incluso si el email no existe o la cuenta está
+    revocada. Quien no puede recuperar simplemente no recibe correo.
+    """
+    usuario = db.query(Usuario).filter_by(email=body.email.strip()).first()
+    if usuario and recuperacion_service.puede_recuperar(usuario):
+        token = recuperacion_service.emitir_token(db, usuario)
+        link = f"{settings.FRONTEND_URL}/restablecer?token={token}"
+        try:
+            get_email_cliente().enviar(Email(
+                destinatario=usuario.email,
+                asunto="Restablecer tu contraseña de Acredita",
+                cuerpo_html=f"""
+                <h2>Restablecer tu contraseña</h2>
+                <p>Pediste volver a entrar a Acredita. Para elegir una contraseña nueva:</p>
+                <a href="{link}">Restablecer contraseña</a>
+                <p>El enlace vence en una hora y sirve una sola vez.</p>
+                <p>Si no fuiste tú, ignora este correo: tu contraseña actual sigue funcionando.</p>
+                """,
+            ))
+        except Exception:
+            # No se filtra al que pide: sabría que la cuenta existe. Queda en el
+            # log del servidor, sin el token.
+            logger.exception("No se pudo enviar la recuperación a %s", usuario.email)
+    return _RESPUESTA_RECUPERACION
+
+
+@router.post("/restablecer", response_model=TokenResponse)
+def restablecer_password(body: RestablecerPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Consume el token y deja la contraseña nueva.
+
+    Devuelve un JWT: quien acaba de demostrar que controla el email y eligió una
+    contraseña queda dentro, sin un paso extra de login que sólo agregaría una
+    pantalla más a un momento ya incómodo.
+    """
+    try:
+        recuperacion_service.exigir_password_aceptable(body.password)
+        usuario = recuperacion_service.consumir_token(db, body.token)
+    except recuperacion_service.TokenRecuperacionInvalido as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except AcreditaError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    usuario.password_hash = hash_password(body.password)
+    db.commit()
+
+    return TokenResponse(
+        access_token=_crear_token(usuario, db),
+        rol=usuario.rol,
+        mandante_id=usuario.mandante_id,
+        contratista_id=usuario.contratista_id,
+    )
 
 
 @router.post("/activar", response_model=TokenResponse)
