@@ -15,6 +15,7 @@ from app.middleware.auth import require_rol
 from app.models.contratista import ContratistaMandante
 from app.models.expediente import Acreditacion
 from app.models.mandante import Mandante
+from app.models.servicio import PerfilRequisitoConfig, PerfilRequisitos
 from app.models.usuario import Usuario
 
 router = APIRouter()
@@ -63,6 +64,18 @@ def listar_mandantes(
             "total_contratistas": total,
             "acreditadas": acreditadas,
             "pct_acreditacion": round(acreditadas / total * 100) if total else 0,
+            # Cuántos requisitos exige de verdad este mandante, sumando sus
+            # perfiles. El panel de BERISA mostraba "Pilares activos: 3" escrito
+            # literal en el frontend para todos, incluido un mandante recién
+            # creado que no ha configurado nada.
+            "requisitos_exigidos": (
+                db.query(PerfilRequisitoConfig)
+                .join(PerfilRequisitos, PerfilRequisitos.id == PerfilRequisitoConfig.perfil_id)
+                .filter(PerfilRequisitos.mandante_id == m.id,
+                        PerfilRequisitoConfig.es_obligatorio.is_(True))
+                .count()
+            ),
+            "perfiles": db.query(PerfilRequisitos).filter_by(mandante_id=m.id).count(),
             "fecha_creacion": m.created_at.strftime("%Y-%m-%d"),
         })
     return resultado

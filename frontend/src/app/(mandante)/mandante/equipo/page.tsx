@@ -56,6 +56,7 @@ export default function EquipoPage() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [errorAccion, setErrorAccion] = useState<string | null>(null)
 
+
   useEffect(() => {
     setMandanteId(getSession()?.mandante_id ?? null)
   }, [])
@@ -64,6 +65,9 @@ export default function EquipoPage() {
     mandanteId ? `/api/v1/mandantes/${mandanteId}/usuarios` : null, []
   )
 
+  // Sólo las cuentas que hoy pueden entrar. Contar todo el equipo hacía que
+  // revocarle el acceso a alguien no moviera el número.
+  const conAcceso = equipo.filter(u => u.activo).length
   const sinPermisos = equipo.filter(u => u.pilares !== null && u.pilares.length === 0).length
 
   return (
@@ -76,7 +80,7 @@ export default function EquipoPage() {
               ? "Invita a quienes revisarán la documentación de tus contratistas"
               : sinPermisos > 0
                 ? `${sinPermisos} ${sinPermisos === 1 ? "persona" : "personas"} sin ningún pilar asignado: no puede${sinPermisos === 1 ? "" : "n"} aprobar nada`
-                : `${equipo.length} ${equipo.length === 1 ? "persona" : "personas"} con acceso`}
+                : `${conAcceso} ${conAcceso === 1 ? "persona" : "personas"} con acceso`}
           </p>
         </div>
         <button
@@ -117,7 +121,15 @@ export default function EquipoPage() {
                 <div className="flex-1 min-w-0">
                   <p className={cn("text-sm font-medium", u.activo ? "text-ink" : "text-ink-subtle")}>
                     {u.nombre}
-                    {!u.activo && <span className="ml-2 text-[10px] text-ink-subtle">invitación pendiente</span>}
+                    {!u.activo && (
+                      // "invitación pendiente" y "sin acceso" son estados opuestos y
+                      // ambos tienen activo=false. Rotular de la primera forma a quien
+                      // activó su cuenta y luego se la revocaron decía lo contrario de
+                      // lo que había pasado. El backend ya distingue con `pendiente`.
+                      <span className="ml-2 text-[10px] text-ink-subtle">
+                        {u.pendiente ? "invitación pendiente" : "sin acceso"}
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-ink-subtle font-mono">{u.email}</p>
                   {u.cargo && <p className="text-[11px] text-ink-muted mt-0.5">{u.cargo}</p>}

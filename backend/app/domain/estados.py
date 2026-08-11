@@ -82,6 +82,22 @@ class Alcance(StrEnum):
     SERVICIO = "SERVICIO"
 
 
+class NivelRequisito(StrEnum):
+    """
+    Naturaleza normativa de un requisito. Es un hecho sobre la ley chilena, y por
+    eso es distinto de `PerfilRequisitoConfig.es_obligatorio`, que dice qué exige
+    un mandante concreto. Mezclarlos obligaría a todos los mandantes al catálogo
+    completo, que con 44 requisitos es un producto inusable.
+
+    - BASE: obligación legal universal de todo empleador.
+    - AMPLIADO: exigible sólo bajo un supuesto (dotación, exposición, tipo de obra).
+    - OPCIONAL: práctica de mercado; ninguna norma la impone al contratista.
+    """
+    BASE = "BASE"
+    AMPLIADO = "AMPLIADO"
+    OPCIONAL = "OPCIONAL"
+
+
 class TipoEvento(StrEnum):
     """Tipos de evento en la bitácora append-only de documentos."""
     SUBIDA = "SUBIDA"

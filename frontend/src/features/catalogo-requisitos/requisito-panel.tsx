@@ -5,6 +5,15 @@ import { X, Lock } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 
+export type Nivel = "BASE" | "AMPLIADO" | "OPCIONAL"
+
+/** Qué dice cada nivel. Es la NATURALEZA NORMATIVA, no lo que exige un mandante. */
+const NIVELES: { v: Nivel; label: string; ayuda: string }[] = [
+  { v: "BASE", label: "Base", ayuda: "Obligación legal de todo empleador en Chile" },
+  { v: "AMPLIADO", label: "Ampliado", ayuda: "Exigible sólo si se cumple un supuesto" },
+  { v: "OPCIONAL", label: "Opcional", ayuda: "Práctica de mercado, ninguna norma la impone" },
+]
+
 export interface RequisitoCatalogo {
   id: string
   codigo: string
@@ -15,11 +24,15 @@ export interface RequisitoCatalogo {
   max_archivos: number
   sin_vencimiento?: boolean
   sensible?: boolean
+  nivel?: Nivel
+  subpilar_id?: string
 }
 
 interface PilarMinimo {
   id: string
   nombre: string
+  /** Para poder elegir dónde cae el requisito; sin esto siempre iba al primero. */
+  subpilares?: { id: string; nombre: string }[]
 }
 
 /**
@@ -44,6 +57,10 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
   const [maxArchivos, setMaxArchivos] = useState(requisito?.max_archivos ?? 1)
   const [sinVencimiento, setSinVencimiento] = useState(requisito?.sin_vencimiento ?? false)
   const [sensible, setSensible] = useState(requisito?.sensible ?? false)
+  const [nivel, setNivel] = useState<Nivel>(requisito?.nivel ?? "OPCIONAL")
+  const [subpilarId, setSubpilarId] = useState<string>(
+    requisito?.subpilar_id ?? pilar.subpilares?.[0]?.id ?? "",
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,6 +76,8 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           max_archivos: maxArchivos,
           sin_vencimiento: sinVencimiento,
           sensible,
+          nivel,
+          ...(subpilarId ? { subpilar_id: subpilarId } : {}),
         })
       } else {
         await api.post(`/api/v1/pilares/${pilar.id}/requisitos`, {
@@ -70,6 +89,8 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           max_archivos: maxArchivos,
           sin_vencimiento: sinVencimiento,
           sensible,
+          nivel,
+          ...(subpilarId ? { subpilar_id: subpilarId } : {}),
         })
       }
       onDone()
@@ -141,6 +162,45 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
             ))}
           </div>
         </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-ink-secondary">Naturaleza normativa</label>
+          <div className="grid grid-cols-3 gap-2">
+            {NIVELES.map(n => (
+              <button
+                key={n.v}
+                onClick={() => setNivel(n.v)}
+                title={n.ayuda}
+                className={cn(
+                  "py-2 rounded-lg border text-xs font-medium transition-colors",
+                  nivel === n.v ? "border-ink bg-surface-inverse text-white" : "border-line text-ink-muted hover:border-line-strong"
+                )}
+              >
+                {n.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-ink-subtle">
+            {NIVELES.find(n => n.v === nivel)?.ayuda}. Es distinto de exigirlo: qué pide
+            cada mandante se decide en su perfil.
+          </p>
+        </div>
+        {pilar.subpilares && pilar.subpilares.length > 1 && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-ink-secondary">Grupo dentro del pilar</label>
+            <select
+              value={subpilarId}
+              onChange={e => setSubpilarId(e.target.value)}
+              className={inputCls}
+            >
+              {pilar.subpilares.map(sp => (
+                <option key={sp.id} value={sp.id}>{sp.nombre}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-ink-subtle">
+              Sin elegirlo, el requisito caía siempre en el primer grupo del pilar.
+            </p>
+          </div>
+        )}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-ink-secondary">Alcance</label>
           <div className="grid grid-cols-2 gap-2">

@@ -39,6 +39,10 @@ services:
       # separación entre entornos esté versionada y no dependa de un archivo local.
       - FILE_STORAGE=local
       - LOCAL_STORAGE_PATH=uploads
+      # El frontend de este compose se publica en 3001, no en 3000. Sin esto los
+      # enlaces de invitación y de recuperación del email salían apuntando al
+      # puerto equivocado y había que corregirlos a mano en el navegador.
+      - FRONTEND_URL=http://localhost:3001
     depends_on:
       - db
       - redis
@@ -61,6 +65,15 @@ services:
     build: ./frontend
     ports:
       - "3001:3000"
+    volumes:
+      # Sin esto el código va HORNEADO en la imagen (el Dockerfile hace COPY . .),
+      # así que el contenedor seguía sirviendo lo que hubiera al construirla: los
+      # cambios del editor no llegaban, `next dev` no recargaba nada, y un
+      # `tsc --noEmit` adentro validaba código viejo dando falsa tranquilidad.
+      # El volumen anónimo de node_modules evita que el bind mount del host —que
+      # no las tiene— tape las dependencias instaladas en la imagen.
+      - ./frontend:/app
+      - /app/node_modules
     environment:
       # El proxy de app/api/[...path]/route.ts cae por defecto a
       # http://localhost:8000, que DENTRO de este contenedor es este mismo

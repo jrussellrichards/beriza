@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Eye, EyeOff, ArrowRight } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
+import { portalDe } from "@/shared/lib/auth"
 import { MarcaAcredita } from "@/shared/ui/logo"
 
 interface TokenResponse {
@@ -32,9 +33,7 @@ export default function LoginPage() {
       const data = await api.post<TokenResponse>("/api/v1/usuarios/login", { email, password })
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("rol", data.rol)
-      if (data.rol === "berisa_admin") router.push("/admin")
-      else if (data.rol === "mandante_admin") router.push("/mandante")
-      else router.push("/contratista")
+      router.push(portalDe(data.rol, data.mandante_id, data.contratista_id))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Credenciales incorrectas")
     } finally {

@@ -24,7 +24,8 @@ interface Mandante {
   activo: boolean
   contratistas: number
   acreditadas: number
-  pilares_activos: number
+  requisitos_exigidos: number
+  perfiles: number
   fecha_creacion: string
   contacto: string
 }
@@ -34,6 +35,7 @@ interface ApiMandante {
   id: string; razon_social: string; rut: string; plan: string; activo: boolean
   email_contacto: string | null; sitio_web: string | null; total_contratistas: number
   acreditadas: number; pct_acreditacion: number; fecha_creacion: string
+  requisitos_exigidos: number; perfiles: number
 }
 
 function mapMandante(a: ApiMandante): Mandante {
@@ -42,7 +44,21 @@ function mapMandante(a: ApiMandante): Mandante {
     email: a.email_contacto ?? "", sitio_web: a.sitio_web ?? "",
     plan: (a.plan as Plan) || "Pro", activo: a.activo,
     contratistas: a.total_contratistas, acreditadas: a.acreditadas,
-    pilares_activos: 3, fecha_creacion: a.fecha_creacion, contacto: "",
+    requisitos_exigidos: a.requisitos_exigidos, perfiles: a.perfiles,
+    fecha_creacion: a.fecha_creacion, contacto: "",
+  }
+}
+
+/**
+ * Un plan que no esté en esta tabla NO puede tumbar la pantalla. El backend no
+ * valida el valor contra una lista, así que cualquier plan nuevo —o creado por
+ * API— llegaba acá como una clave inexistente y `planCfg(m.plan).color`
+ * reventaba el render completo del panel de mandantes, no sólo esa fila.
+ */
+function planCfg(plan: string): { label: string; color: string } {
+  return PLAN_CFG[plan as Plan] ?? {
+    label: plan || "Sin plan",
+    color: "bg-surface-sunken text-ink-muted border-line",
   }
 }
 
@@ -199,8 +215,10 @@ function NuevoMandantePanel({ onClose, onCreado }: { onClose: () => void; onCrea
 // ── Panel detalle mandante ────────────────────────────────────────────────────
 
 function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
-  const pct = Math.round((m.acreditadas / m.contratistas) * 100)
-  const barColor = pct >= 75 ? "bg-ok-ink" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
+  // Sin contratistas no hay porcentaje: 0/0 daba NaN% con la barra en rojo,
+  // insinuando incumplimiento donde todavia no hay nada que cumplir.
+  const pct = m.contratistas > 0 ? Math.round((m.acreditadas / m.contratistas) * 100) : null
+  const barColor = pct === null ? "bg-line" : pct >= 75 ? "bg-ok-ink" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
 
   return (
     <div className="flex flex-col h-full">
@@ -220,8 +238,8 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
         {/* Badges */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", PLAN_CFG[m.plan].color)}>
-            {PLAN_CFG[m.plan].label}
+          <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", planCfg(m.plan).color)}>
+            {planCfg(m.plan).label}
           </span>
           <span className={cn(
             "text-[10px] font-medium px-2 py-0.5 rounded border",
@@ -236,7 +254,7 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
           {[
             { label: "Contratistas", value: m.contratistas, icon: Users },
             { label: "Acreditados", value: m.acreditadas, icon: CheckCircle2 },
-            { label: "Pilares activos", value: m.pilares_activos, icon: AlertCircle },
+            { label: "Requisitos exigidos", value: m.requisitos_exigidos, icon: AlertCircle },
           ].map(s => {
             const Icon = s.icon
             return (
@@ -253,10 +271,10 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-xs font-medium text-ink-muted">Tasa de acreditación</p>
-            <span className="text-xs font-semibold text-ink-secondary">{pct}%</span>
+            <span className="text-xs font-semibold text-ink-secondary">{pct === null ? "—" : `${pct}%`}</span>
           </div>
           <div className="h-2 bg-surface-sunken rounded-full overflow-hidden">
-            <div className={cn("h-full rounded-full", barColor)} style={{ width: `${pct}%` }} />
+            <div className={cn("h-full rounded-full", barColor)} style={{ width: `${pct ?? 0}%` }} />
           </div>
         </div>
 
@@ -407,8 +425,8 @@ export default function MandantesPage() {
               </thead>
               <tbody className="divide-y divide-line">
                 {filtrados.map(m => {
-                  const pct = Math.round((m.acreditadas / m.contratistas) * 100)
-                  const barColor = pct >= 75 ? "bg-ok-ink" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
+                  const pct = m.contratistas > 0 ? Math.round((m.acreditadas / m.contratistas) * 100) : null
+                  const barColor = pct === null ? "bg-line" : pct >= 75 ? "bg-ok-ink" : pct >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
                   const selected = seleccionado?.id === m.id
                   return (
                     <tr
@@ -426,7 +444,7 @@ export default function MandantesPage() {
                       </td>
                       <td className="px-4 py-4 text-ink-subtle font-mono text-xs">{m.rut}</td>
                       <td className="px-4 py-4">
-                        <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", PLAN_CFG[m.plan].color)}>
+                        <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", planCfg(m.plan).color)}>
                           {m.plan}
                         </span>
                       </td>
@@ -434,9 +452,9 @@ export default function MandantesPage() {
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-1.5 bg-surface-sunken rounded-full overflow-hidden">
-                            <div className={cn("h-full rounded-full", barColor)} style={{ width: `${pct}%` }} />
+                            <div className={cn("h-full rounded-full", barColor)} style={{ width: `${pct ?? 0}%` }} />
                           </div>
-                          <span className="text-xs text-ink-muted">{pct}%</span>
+                          <span className="text-xs text-ink-muted">{pct === null ? "—" : `${pct}%`}</span>
                         </div>
                       </td>
                       <td className="px-4 py-4">

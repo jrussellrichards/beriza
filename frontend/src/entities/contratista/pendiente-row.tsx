@@ -41,8 +41,20 @@ export function PendienteRow({ p, onResuelto }: {
   }
 
   function irA() {
-    if (p.tipo === "TRABAJADOR_INCOMPLETO") window.location.href = "/contratista/trabajadores"
-    else window.location.href = "/contratista/documentos"
+    if (p.tipo === "TRABAJADOR_INCOMPLETO") {
+      window.location.href = "/contratista/trabajadores"
+      return
+    }
+    // Llevar al documento exacto, no a la lista entera. "Subir corrección"
+    // dejaba al contratista en Documentos con todo su catálogo por delante y sin
+    // pista de cuál era el observado. El código del requisito alcanza: el
+    // buscador de esa pantalla ya filtra por él.
+    const params = new URLSearchParams()
+    if (p.requisito_codigo) params.set("buscar", p.requisito_codigo)
+    // La pestaña importa: un documento de una persona no aparece en "Empresa".
+    if (p.trabajador_id) params.set("ambito", "TRABAJADORES")
+    const q = params.toString()
+    window.location.href = `/contratista/documentos${q ? `?${q}` : ""}`
   }
 
   return (

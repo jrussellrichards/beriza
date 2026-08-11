@@ -216,14 +216,17 @@ def invitar_contratista(
     if not mandante:
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
 
-    if db.query(Usuario).filter_by(email=body.email).first():
-        raise HTTPException(
-            status_code=400,
-            detail=f"Ya existe un usuario con el email {body.email}. "
-                   "Si la empresa ya fue invitada, pídale que active su cuenta desde el email recibido.",
-        )
-
+    # El RUT se resuelve ANTES que el email a propósito. Al revés —que es como
+    # estaba— un mandante no podía sumar a su cartera a una empresa que ya
+    # trabajaba para otro cliente: el email de su administrador ya existía y el
+    # handler cortaba ahí, aconsejando "pídale que active su cuenta" a alguien
+    # que la tenía activa hace meses. Eso contradice la premisa del producto,
+    # que un documento se suba una vez y sirva para todos los mandantes que lo
+    # exijan: para eso el segundo mandante tiene que engancharse a la MISMA
+    # empresa, no a una copia.
     empresa_existente = db.query(EmpresaContratista).filter_by(rut=body.rut).first()
+    usuario_existente = db.query(Usuario).filter_by(email=body.email).first()
+
     if empresa_existente:
         empresa = empresa_existente
         if db.query(ContratistaMandante).filter_by(contratista_id=empresa.id, mandante_id=mandante_id).first():
@@ -231,7 +234,30 @@ def invitar_contratista(
                 status_code=400,
                 detail=f"{empresa.razon_social} ya está vinculada a este mandante.",
             )
-    else:
+        # La empresa ya está en la plataforma y quien figura como contacto ya es
+        # su administrador: no hay nada que invitar, sólo que vincular. Crear un
+        # segundo usuario acá dejaba a la empresa con un contratista_admin por
+        # cliente, cada uno con su propia clave que mantener.
+        if usuario_existente and usuario_existente.contratista_id == empresa.id:
+            db.add(ContratistaMandante(contratista_id=empresa.id, mandante_id=mandante_id))
+            db.commit()
+            return {
+                "mensaje": f"{empresa.razon_social} ya estaba en la plataforma y quedó vinculada a "
+                           f"{mandante.razon_social}. Verá tus exigencias con su cuenta actual; "
+                           "no hace falta que active nada.",
+                "empresa_existente": True,
+            }
+
+    # Un email que ya existe y NO es el administrador de esta empresa sí es un
+    # conflicto real: dos empresas distintas no pueden compartir cuenta.
+    if usuario_existente:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El email {body.email} ya pertenece a otra cuenta de la plataforma. "
+                   "Usa el correo del administrador de esta empresa, o uno distinto.",
+        )
+
+    if not empresa_existente:
         empresa = EmpresaContratista(rut=body.rut, razon_social=body.razon_social)
         db.add(empresa)
         db.flush()
@@ -301,111 +327,16 @@ def listar_contratistas(
     ]
 
 
-@router.get("/{mandante_id}/dashboard")
-def dashboard_mandante(
-    mandante_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
-):
-    """KPIs, estado por pilar y alertas de contratistas bloqueados."""
-    rels = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id).all()
-    total = len(rels)
-    acreditadas = sum(1 for r in rels if r.estado_acreditacion == "ACREDITADA")
-    en_proceso = sum(1 for r in rels if r.estado_acreditacion == "EN_PROCESO")
-    bloqueadas = sum(1 for r in rels if r.estado_acreditacion == "BLOQUEADA")
-
-    # Cumplimiento por pilar, evaluado desde los perfiles de servicios activos
-    pilares = db.query(Pilar).order_by(Pilar.orden).all()
-    cumplimiento_rels = [
-        acreditacion_service.cumple_por_pilar(
-            acreditacion_service.evaluar_relacion(db, rel.contratista_id, mandante_id)
-        )
-        for rel in rels
-    ]
-    pilar_stats = []
-    for pilar in pilares:
-        evaluados = [c for c in cumplimiento_rels if pilar.codigo in c]
-        if not evaluados:
-            continue
-        ok_count = sum(1 for c in evaluados if c[pilar.codigo])
-        pilar_stats.append({
-            "codigo": pilar.codigo,
-            "nombre": pilar.nombre,
-            "color": pilar.color,
-            "ok": ok_count,
-            "total": total,
-            "cumplimiento": round(ok_count / total * 100) if total else 0,
-        })
-
-    # Alertas de contratistas bloqueados
-    alertas = []
-    bloq_rels = [r for r in rels if r.estado_acreditacion == "BLOQUEADA"]
-    for rel in bloq_rels[:5]:
-        brechas = []
-        docs_obs = (
-            db.query(Acreditacion)
-            .join(Expediente, Acreditacion.expediente_id == Expediente.id)
-            .filter(
-                Expediente.empresa_id == rel.contratista_id,
-                Acreditacion.mandante_id == mandante_id,
-                Acreditacion.estado == 3,
-                Acreditacion.eliminado_en.is_(None),
-            )
-            .all()
-        )
-        for d in docs_obs:
-            brechas.append(d.mensaje_brecha or f"{d.expediente.requisito.codigo} observado")
-        alertas.append({
-            "contratista": rel.contratista.razon_social,
-            "rut": rel.contratista.rut,
-            "estado": rel.estado_acreditacion,
-            "brechas": brechas,
-        })
-
-    # Actividad reciente (últimos docs del mandante)
-    docs_recientes = (
-        db.query(Acreditacion)
-        .filter_by(mandante_id=mandante_id, eliminado_en=None)
-        .order_by(Acreditacion.created_at.desc())
-        .limit(5)
-        .all()
-    )
-    ahora = datetime.now(timezone.utc)
-    actividad = []
-    for doc in docs_recientes:
-        empresa = db.get(EmpresaContratista, doc.expediente.empresa_id) if doc.expediente.empresa_id else None
-        nombre = empresa.razon_social if empresa else "—"
-        codigo = doc.expediente.requisito.codigo
-        if doc.estado == 4:
-            accion = f"Documento {codigo} aprobado"
-            tipo = "ok"
-        elif doc.estado == 3:
-            accion = f"Documento {codigo} rechazado"
-            tipo = "warn"
-        else:
-            accion = f"Documento {codigo} enviado"
-            tipo = "info"
-        delta = ahora - doc.created_at.replace(tzinfo=timezone.utc)
-        if delta.seconds < 3600 and delta.days == 0:
-            tiempo = f"Hace {max(1, delta.seconds // 60)} min"
-        elif delta.days == 0:
-            tiempo = f"Hace {delta.seconds // 3600}h"
-        elif delta.days == 1:
-            tiempo = "Ayer"
-        else:
-            tiempo = f"Hace {delta.days} días"
-        actividad.append({"empresa": nombre, "accion": accion, "tiempo": tiempo, "tipo": tipo})
-
-    return {
-        "total_contratistas": total,
-        "acreditadas": acreditadas,
-        "en_proceso": en_proceso,
-        "bloqueadas": bloqueadas,
-        "pilares": pilar_stats,
-        "alertas": alertas,
-        "actividad": actividad,
-    }
-
+# Aqui vivian GET /{mandante_id}/dashboard y GET /{mandante_id}/reportes.
+#
+# Se eliminan en vez de arreglarse: ninguna pantalla los llamaba —el portal
+# del mandante se arma con /contratistas-detalle y /requisitos— y arrastraban
+# defectos propios que habria que mantener sin que nadie los mire. Una ruta
+# muerta con bugs es peor que ninguna: el dia que alguien la use va a creer
+# que lo que devuelve es cierto.
+#
+# Si vuelve a hacer falta un tablero, se escribe contra la evaluacion actual
+# de acreditacion_service, que es la unica fuente que hoy dice la verdad.
 
 @router.get("/{mandante_id}/contratistas-detalle")
 def contratistas_detalle(
@@ -433,6 +364,7 @@ def contratistas_detalle(
             "fecha_vigencia_hasta": item.fecha_vigencia_hasta.isoformat() if item.fecha_vigencia_hasta else None,
             "mensaje_brecha": item.mensaje_brecha,
             "documento_id": str(item.documento_id) if item.documento_id else None,
+            "aprobado_por_excepcion": item.aprobado_por_excepcion,
         }
 
     for rel in rels:
@@ -516,117 +448,6 @@ def configuracion_mandante(
         "activo": mandante.activo,
         "equipo": equipo_data,
     }
-
-
-@router.get("/{mandante_id}/reportes")
-def reportes_mandante(
-    mandante_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
-):
-    """Datos agregados para la página de reportes."""
-    rels = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id).all()
-    total = len(rels)
-    acreditadas = sum(1 for r in rels if r.estado_acreditacion == "ACREDITADA")
-
-    docs_todos = db.query(Acreditacion).filter_by(mandante_id=mandante_id, eliminado_en=None).all()
-    docs_procesados = sum(1 for d in docs_todos if d.estado in (3, 4))
-
-    pilares = db.query(Pilar).order_by(Pilar.orden).all()
-    cumplimiento_rels = [
-        acreditacion_service.cumple_por_pilar(
-            acreditacion_service.evaluar_relacion(db, rel.contratista_id, mandante_id)
-        )
-        for rel in rels
-    ]
-    pilar_stats = []
-    for pilar in pilares:
-        evaluados = [c for c in cumplimiento_rels if pilar.codigo in c]
-        if not evaluados:
-            continue
-        ok = sum(1 for c in evaluados if c[pilar.codigo])
-        pilar_stats.append({
-            "nombre": pilar.nombre,
-            "cumplimiento": round(ok / total * 100) if total else 0,
-        })
-
-    # Evolución mensual real: aprobaciones registradas en la bitácora de
-    # eventos (acreditacion_eventos) en los últimos 6 meses.
-    from datetime import date
-
-    hoy = date.today()
-    MESES_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
-    aprobaciones = (
-        db.query(AcreditacionEvento)
-        .join(Acreditacion, AcreditacionEvento.acreditacion_id == Acreditacion.id)
-        .filter(
-            Acreditacion.mandante_id == mandante_id,
-            AcreditacionEvento.estado_nuevo == EstadoDocumento.APROBADO,
-        )
-        .all()
-    )
-    por_mes: dict[tuple[int, int], int] = {}
-    for ev in aprobaciones:
-        clave = (ev.created_at.year, ev.created_at.month)
-        por_mes[clave] = por_mes.get(clave, 0) + 1
-    evolucion = []
-    for i in range(5, -1, -1):
-        año = hoy.year if hoy.month - i > 0 else hoy.year - 1
-        mes_num = (hoy.month - 1 - i) % 12 + 1
-        evolucion.append({
-            "mes": MESES_ES[mes_num - 1],
-            "aprobados": por_mes.get((año, mes_num), 0),
-        })
-
-    # Historial: últimos documentos procesados
-    docs_recientes = (
-        db.query(Acreditacion)
-        .filter_by(mandante_id=mandante_id, eliminado_en=None)
-        .filter(Acreditacion.estado.in_([3, 4]))
-        .order_by(Acreditacion.created_at.desc())
-        .limit(10)
-        .all()
-    )
-    historial = []
-    for doc in docs_recientes:
-        empresa = db.get(EmpresaContratista, doc.expediente.empresa_id) if doc.expediente.empresa_id else None
-        req = doc.expediente.requisito
-        historial.append({
-            "contratista": empresa.razon_social if empresa else "—",
-            "tipo": "Documento aprobado" if doc.estado == 4 else "Documento observado",
-            "descripcion": f"{req.codigo}: {req.nombre[:40]}",
-            "estado": "ok" if doc.estado == 4 else "warn",
-            "fecha": doc.created_at.strftime("%d/%m/%Y"),
-        })
-
-    contratistas_lista = [
-        {"id": str(r.contratista_id), "nombre": r.contratista.razon_social}
-        for r in rels
-    ]
-
-    return {
-        "cumplimiento_global": round(acreditadas / total * 100) if total else 0,
-        "total_contratistas": total,
-        "acreditadas": acreditadas,
-        "docs_procesados": docs_procesados,
-        "pilares": pilar_stats,
-        "evolucion": evolucion,
-        "historial": historial,
-        "contratistas_lista": contratistas_lista,
-    }
-
-
-def _perfil_por_defecto(db: Session, mandante_id: uuid.UUID) -> PerfilRequisitos:
-    """El perfil "General" del mandante, o el primero activo si no existe."""
-    perfil = db.query(PerfilRequisitos).filter_by(mandante_id=mandante_id, nombre="General").first()
-    if not perfil:
-        perfil = db.query(PerfilRequisitos).filter_by(mandante_id=mandante_id, activo=True).first()
-    if not perfil:
-        raise HTTPException(
-            status_code=404,
-            detail="El mandante no tiene perfiles de requisitos. Cree uno primero.",
-        )
-    return perfil
 
 
 @router.get("/{mandante_id}/requisitos")

@@ -4,6 +4,9 @@
 // desarrollo local, define NEXT_PUBLIC_API_URL en frontend/.env.local.
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ""
 
+// Rutas donde un 401 significa "credenciales incorrectas", no "sesión vencida".
+const ES_RUTA_DE_ACCESO = /\/usuarios\/(login|activar|recuperar|restablecer|invitacion)/
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
   const isFormData = init?.body instanceof FormData
@@ -16,6 +19,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   })
+
+  // Sesión caída a mitad de uso. Sin esto cada pantalla trataba el 401 como un
+  // error cualquiera y mostraba su estado vacío —"No hay trabajadores
+  // registrados"—, que le miente al usuario sobre sus propios datos.
+  //
+  // Se excluyen las rutas donde un 401 es una respuesta legítima y no una sesión
+  // vencida: en el login significa "credenciales incorrectas", y redirigir ahí
+  // recargaría la pantalla en la que ya estás, perdiendo el mensaje de error.
+  if (res.status === 401 && typeof window !== "undefined" && !ES_RUTA_DE_ACCESO.test(path)) {
+    localStorage.clear()
+    window.location.href = "/login?sesion=expirada"
+    // La promesa no se resuelve nunca: la navegación ya está en curso y lo que
+    // se quiere evitar es que la pantalla alcance a pintar su estado vacío.
+    return new Promise<T>(() => {})
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }))

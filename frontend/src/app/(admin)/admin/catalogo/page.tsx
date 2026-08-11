@@ -25,6 +25,29 @@ interface Pilar {
   subpilares: ApiSubpilar[]
 }
 
+/**
+ * Naturaleza normativa del requisito. No aparecía en ninguna parte del catálogo,
+ * y es lo que decide en qué plantilla del mandante entra y qué muestra su filtro
+ * "Base / Ampliado / Opcional".
+ */
+const NIVEL_CFG: Record<string, { label: string; ayuda: string; cls: string }> = {
+  BASE: {
+    label: "Base",
+    ayuda: "Obligación legal de todo empleador en Chile",
+    cls: "bg-bloqueo-soft text-bloqueo-ink border-bloqueo-line",
+  },
+  AMPLIADO: {
+    label: "Ampliado",
+    ayuda: "Exigible sólo si se cumple un supuesto (dotación, exposición, tipo de obra)",
+    cls: "bg-espera-soft text-espera-ink border-espera-line",
+  },
+  OPCIONAL: {
+    label: "Opcional",
+    ayuda: "Práctica de mercado; ninguna norma la impone al contratista",
+    cls: "bg-surface-sunken text-ink-muted border-line",
+  },
+}
+
 const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text: string }> = {
   blue:    { border: "border-brand-line",    bg: "bg-brand-soft",    dot: "bg-brand",    text: "text-brand-hover" },
   amber:   { border: "border-accion-line",   bg: "bg-accion-soft",   dot: "bg-accion-ink",   text: "text-accion-ink" },
@@ -42,6 +65,10 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
 }) {
   const [open, setOpen] = useState(true)
   const c = COLOR_MAP[pilar.color] ?? COLOR_MAP.slate
+  // Se conserva la agrupacion por subpilar en vez de aplanarla: los 11 grupos
+  // son la taxonomia con la que BERISA piensa el catalogo, y aplanados no se
+  // veian por ninguna parte.
+  const gruposConRequisitos = pilar.subpilares.filter(sp => sp.requisitos.length > 0)
   const requisitos = pilar.subpilares.flatMap(sp => sp.requisitos)
 
   return (
@@ -65,8 +92,17 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
 
       {open && (
         <div className="bg-surface">
-          <div className="divide-y divide-line">
-            {requisitos.map(req => (
+          {gruposConRequisitos.map(grupo => (
+          <div key={grupo.id} className="divide-y divide-line">
+            <div className="px-5 py-2 bg-surface-app/60 border-y border-line-subtle">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">
+                {grupo.nombre}
+                <span className="ml-2 font-normal normal-case tracking-normal">
+                  {grupo.requisitos.length}
+                </span>
+              </p>
+            </div>
+            {grupo.requisitos.map(req => (
               <div key={req.id} className="px-5 py-3.5 flex items-start gap-3 group hover:bg-surface-app/50 transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-0.5">
@@ -89,6 +125,13 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
                         : "bg-surface-sunken text-ink-muted border-line"
                     )}>
                       {req.alcance === "SERVICIO" ? "Por servicio" : "Una vez"}
+                    </span>
+                    <span
+                      title={NIVEL_CFG[req.nivel ?? "OPCIONAL"].ayuda}
+                      className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium",
+                                    NIVEL_CFG[req.nivel ?? "OPCIONAL"].cls)}
+                    >
+                      {NIVEL_CFG[req.nivel ?? "OPCIONAL"].label}
                     </span>
                     {req.max_archivos > 1 && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-surface-sunken text-ink-muted border-line">
@@ -117,6 +160,7 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
               </div>
             ))}
           </div>
+          ))}
 
           <div className="px-5 py-3 border-t border-line-subtle">
             <button

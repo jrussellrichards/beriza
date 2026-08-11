@@ -580,6 +580,7 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
 export default function PerfilesPage() {
   const [mandanteId, setMandanteId] = useState<string | null>(null)
   const [perfiles, setPerfiles] = useState<Perfil[]>([])
+  const [perfilesCargados, setPerfilesCargados] = useState(false)
   const [perfilId, setPerfilId] = useState<string | null>(null)
   const [pilares, setPilares] = useState<Pilar[]>([])
   const [dialogCargos, setDialogCargos] = useState(false)
@@ -602,6 +603,10 @@ export default function PerfilesPage() {
         setPerfilId((actual) => actual ?? ps[0]?.id ?? null)
       })
       .catch(() => setPerfiles([]))
+      // Distingue "todavia no pregunte" de "pregunte y no hay ninguno". Sin esa
+      // diferencia, un mandante recien creado se quedaba para siempre en
+      // "Cargando configuracion del perfil...".
+      .finally(() => setPerfilesCargados(true))
   }, [])
 
   useEffect(() => {
@@ -982,8 +987,24 @@ export default function PerfilesPage() {
           />
         ))}
         {pilares.length === 0 && (
-          <div className="py-14 text-center bg-surface rounded-xl border border-line">
-            <p className="text-sm text-ink-subtle">Cargando configuración del perfil...</p>
+          <div className="py-14 text-center bg-surface rounded-xl border border-line px-6">
+            {perfilesCargados && perfiles.length === 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-ink">Todavía no tienes perfiles de exigencias</p>
+                <p className="text-xs text-ink-subtle max-w-md mx-auto leading-relaxed">
+                  Un perfil define qué documentos exiges por tipo de servicio. Necesitas al
+                  menos uno para poder crear servicios y contratar empresas.
+                </p>
+                <button
+                  onClick={() => setDialogPerfil(true)}
+                  className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+                >
+                  <Plus size={13} /> Crear mi primer perfil
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-ink-subtle">Cargando configuración del perfil...</p>
+            )}
           </div>
         )}
       </div>

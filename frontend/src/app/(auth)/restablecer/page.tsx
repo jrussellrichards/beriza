@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
+import { portalDe } from "@/shared/lib/auth"
 import { MarcaAcredita } from "@/shared/ui/logo"
 
 const LARGO_MINIMO = 8
@@ -13,6 +14,8 @@ const LARGO_MINIMO = 8
 interface TokenResponse {
   access_token: string
   rol: string
+  mandante_id: string | null
+  contratista_id: string | null
 }
 
 function Formulario() {
@@ -44,9 +47,7 @@ function Formulario() {
       // elegida en una pantalla de login.
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("rol", data.rol)
-      if (data.rol === "berisa_admin") router.push("/admin")
-      else if (data.rol === "mandante_admin") router.push("/mandante")
-      else router.push("/contratista")
+      router.push(portalDe(data.rol, data.mandante_id, data.contratista_id))
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo restablecer la contraseña")
       setLoading(false)

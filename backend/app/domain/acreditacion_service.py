@@ -51,6 +51,11 @@ class RequisitoAvance:
     mensaje_brecha: str | None
     documento_id: uuid.UUID | None
     numero_version: int | None = None   # version que ESTE mandante revisa
+    # Aprobado saltandose una brecha, no por cumplirla. Viaja hasta la UI
+    # porque fuera del dialogo de historial se veia idéntico a una aprobación
+    # normal, y son cosas distintas: una dice que el documento cumple y la
+    # otra que alguien decidió dejarlo pasar igual, y quien lo decidió responde.
+    aprobado_por_excepcion: bool = False
     trabajador_id: uuid.UUID | None = None
     trabajador_nombre: str | None = None
     servicio_id: uuid.UUID | None = None
@@ -492,6 +497,7 @@ def _item_para(
         mensaje_brecha=acred.mensaje_brecha if acred else None,
         documento_id=acred.id if acred else None,
         numero_version=acred.numero_version if acred else None,
+        aprobado_por_excepcion=bool(acred.aprobado_por_excepcion) if acred else False,
         trabajador_id=trabajador.id if trabajador else None,
         trabajador_nombre=trabajador.nombre_completo if trabajador else None,
         servicio_id=servicio.id if es_por_servicio else None,
@@ -883,6 +889,9 @@ class Pendiente:
     trabajador_id: uuid.UUID | None = None
     servicio_id: uuid.UUID | None = None
     requisito_id: uuid.UUID | None = None
+    # Codigo del requisito, para que "Subir correccion" pueda llevar al
+    # documento exacto en vez de dejar al contratista en la lista completa.
+    requisito_codigo: str | None = None
 
 
 def pendientes_del_contratista(db: Session, contratista_id: uuid.UUID) -> list[Pendiente]:
@@ -903,9 +912,14 @@ def pendientes_del_contratista(db: Session, contratista_id: uuid.UUID) -> list[P
     #    cliente detenido esperando una decisión que solo el contratista puede tomar.
     for acred in reutilizacion_service.acreditaciones_pendientes_autorizacion(db, contratista_id):
         exp = acred.expediente
+        # De quién es el documento. Sin esto, dos solicitudes de dos personas
+        # distintas se leían idénticas —mismo cliente, mismo requisito— y había
+        # que autorizar o rechazar a ciegas. La rama OBSERVADO ya lo hacía.
+        de_quien = f" de {exp.trabajador.nombre_completo}" if exp.trabajador else ""
         pendientes.append(Pendiente(
             tipo="AUTORIZACION",
-            titulo=f"{acred.mandante.razon_social} quiere revisar tu {exp.requisito.nombre.lower()}",
+            titulo=(f"{acred.mandante.razon_social} quiere revisar "
+                    f"tu {exp.requisito.nombre.lower()}{de_quien}"),
             detalle="Lo marcaste como sensible",
             urgencia=0,
             documento_id=acred.id,
@@ -925,6 +939,7 @@ def pendientes_del_contratista(db: Session, contratista_id: uuid.UUID) -> list[P
                     documento_id=m.documento_id,
                     trabajador_id=doc.trabajador_id,
                     requisito_id=doc.requisito_id,
+                    requisito_codigo=doc.requisito_codigo,
                 ))
             # 3. Por vencer: se avisa por cliente porque cada uno puede estar
             #    anclado a una versión distinta, con vigencias distintas.
@@ -946,9 +961,35 @@ def pendientes_del_contratista(db: Session, contratista_id: uuid.UUID) -> list[P
                         documento_id=m.documento_id,
                         trabajador_id=doc.trabajador_id,
                         requisito_id=doc.requisito_id,
+                        requisito_codigo=doc.requisito_codigo,
                     ))
 
-    # 4. Trabajadores asignados a un servicio que no cumplen SUS requisitos.
+    # 4. Documentos DE LA EMPRESA que la faena exige y no están aprobados.
+    #
+    #    Faltaba, y su ausencia hacía que la aplicación mintiera. La pantalla de
+    #    inicio del contratista pinta una faena en rojo cuando tiene algún
+    #    pendiente con `servicio_id`, y hasta acá el único que lo llevaba era
+    #    TRABAJADOR_INCOMPLETO. Consecuencia: una faena a la que le faltaban los
+    #    seis documentos de empresa —o cualquiera sin dotación asignada todavía—
+    #    se mostraba en verde y "Lista para empezar", con 0 % de avance real.
+    #
+    #    Se agrupa por servicio, igual que el de trabajadores se agrupa por
+    #    persona: un pendiente por faena, no uno por documento.
+    for servicio, faltantes in _documentos_de_empresa_faltantes(db, contratista_id):
+        cliente = servicio.relacion.mandante.razon_social
+        if len(faltantes) == 1:
+            que_falta = f"falta {faltantes[0].lower()}"
+        else:
+            que_falta = f"faltan {len(faltantes)} documentos de la empresa"
+        pendientes.append(Pendiente(
+            tipo="EMPRESA_INCOMPLETA",
+            titulo=f"{servicio.nombre}: {que_falta} · {cliente}",
+            detalle="La faena no queda habilitada mientras siga pendiente",
+            urgencia=1,
+            servicio_id=servicio.id,
+        ))
+
+    # 5. Trabajadores asignados a un servicio que no cumplen SUS requisitos.
     #    Es el pendiente más operativo: esa persona no entra a la faena.
     for servicio, trabajador, faltantes in _trabajadores_no_habilitados(db, contratista_id):
         # El nombre del servicio se repite entre clientes ("General" en varios),
@@ -970,6 +1011,34 @@ def pendientes_del_contratista(db: Session, contratista_id: uuid.UUID) -> list[P
         ))
 
     return sorted(pendientes, key=lambda p: (p.urgencia, p.titulo))
+
+
+def _documentos_de_empresa_faltantes(db: Session, contratista_id: uuid.UUID):
+    """
+    (servicio, requisitos de EMPRESA que la faena exige y no están aprobados).
+
+    Mismo recorrido que `_trabajadores_no_habilitados` pero sobre los items sin
+    `trabajador_id`, que son los de la empresa. Un requisito exigido y nunca
+    subido no genera ninguna acreditación, así que no aparecía por ningún otro
+    camino: no basta con mirar los documentos existentes, hay que mirar lo que el
+    perfil del mandante exige.
+    """
+    resultado = []
+    relaciones = db.query(ContratistaMandante).filter_by(contratista_id=contratista_id).all()
+    for rel in relaciones:
+        for servicio in rel.servicios:
+            if servicio.estado != EstadoServicio.ACTIVO:
+                continue
+            avance = obtener_avance_servicio(db, servicio.id)
+            faltantes = [
+                item.requisito_nombre
+                for pilar in avance.pilares
+                for item in pilar.requisitos
+                if not item.trabajador_id and item.estado != EstadoDocumento.APROBADO
+            ]
+            if faltantes:
+                resultado.append((servicio, faltantes))
+    return resultado
 
 
 def _trabajadores_no_habilitados(db: Session, contratista_id: uuid.UUID):
