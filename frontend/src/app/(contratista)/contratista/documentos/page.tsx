@@ -5,7 +5,7 @@ import {
   Building2, ChevronDown, ChevronRight, FileText,
   Lock, LockOpen, Search, Upload, Users,
 } from "lucide-react"
-import { cn } from "@/shared/lib/utils"
+import { cn, siglaVisible } from "@/shared/lib/utils"
 import { SubirDocumentoDialog, type RequisitoSubida } from "@/features/subir-documento/subir-documento-dialog"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
 import { BadgesMandante } from "@/entities/documento/badges-mandante"
@@ -49,7 +49,9 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
                 <span className="text-brand"> — {doc.servicio_nombre}</span>
               )}
             </p>
-            <span className="text-[10px] font-mono text-ink-subtle">{doc.requisito_codigo}</span>
+            {siglaVisible(doc.requisito_codigo) && (
+              <span className="text-[10px] font-mono text-ink-subtle">{doc.requisito_codigo}</span>
+            )}
             {doc.sensible && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-excepcion-soft text-excepcion-ink border border-excepcion-line">
                 <Lock size={9} /> sensible
