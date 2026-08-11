@@ -36,6 +36,8 @@ interface DocDetalle {
   fecha_vigencia_hasta: string | null
   mensaje_brecha: string | null
   documento_id: string | null
+  /** Aprobado saltandose la brecha, no por cumplirla. */
+  aprobado_por_excepcion?: boolean
 }
 
 interface PilarDetalle {
@@ -172,6 +174,18 @@ function DocRow({ doc, onExcepcion, onVerArchivos }: {
             <p className="text-[10px] text-ink-subtle">Vence: {doc.fecha_vigencia_hasta}</p>
           )}
         </div>
+        {/* Aprobado por excepcion: alguien decidio dejarlo pasar con la brecha
+            abierta. Fuera del dialogo de historial se veia idéntico a una
+            aprobación normal, y no son lo mismo — una dice que el documento
+            cumple, la otra que se asumió el riesgo. */}
+        {doc.aprobado_por_excepcion && (
+          <span
+            title="Aprobado por excepción: se dejó pasar con la brecha abierta"
+            className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-excepcion-soft text-excepcion-ink border-excepcion-line shrink-0"
+          >
+            excepción
+          </span>
+        )}
         <EstadoBadge estado={estadoDocDe(doc.estado)} />
         {doc.documento_id && (
           <button
@@ -320,16 +334,27 @@ function DetailPanel({ c, onClose, onCambio }: {
         {tab === "estado" && (
           <div className="space-y-3">
             {c.pilares.map(pilar => {
-              const brechas = pilar.documentos
-                .filter(d => d.estado !== 4)
-                .map(d => d.estado === 3 && d.mensaje_brecha
-                  ? d.mensaje_brecha
-                  : `${d.requisito_nombre}${d.servicio_nombre ? ` (${d.servicio_nombre})` : ""}: ${LABEL_DOC[estadoDocDe(d.estado)].toLowerCase()}`)
+              // `pilar.documentos` trae SOLO los de la empresa; lo que se le exige
+              // a cada persona vive en `c.trabajadores`. Contar únicamente los
+              // primeros hacía que esta pestaña dijera 4 brechas donde la pestaña
+              // Documentos del mismo panel mostraba 7 — y justo la parte que
+              // decide si alguien puede entrar a faena era la que faltaba.
+              const delPilar = [
+                ...pilar.documentos.map(d => ({ d, quien: "" })),
+                ...docsTrabajadores
+                  .filter(d => d.pilar_codigo === pilar.codigo)
+                  .map(d => ({ d, quien: ` · ${d.trabajador}` })),
+              ]
+              const brechas = delPilar
+                .filter(({ d }) => d.estado !== 4)
+                .map(({ d, quien }) => d.estado === 3 && d.mensaje_brecha
+                  ? `${d.mensaje_brecha}${quien}`
+                  : `${d.requisito_nombre}${quien}${d.servicio_nombre ? ` (${d.servicio_nombre})` : ""}: ${LABEL_DOC[estadoDocDe(d.estado)].toLowerCase()}`)
               return (
                 <div key={pilar.codigo} className="rounded-lg border border-line-subtle bg-surface-app p-3">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-medium text-ink">{pilar.nombre}</p>
-                    {pilar.cumple
+                    {pilar.cumple && brechas.length === 0
                       ? <span className="flex items-center gap-1 text-xs font-medium text-ok-ink"><CheckCircle2 size={12} /> OK</span>
                       : <span className="flex items-center gap-1 text-xs font-medium text-bloqueo-ink"><AlertCircle size={12} /> {brechas.length} brecha{brechas.length !== 1 ? "s" : ""}</span>
                     }

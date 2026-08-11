@@ -229,6 +229,10 @@ class CrearRequisitoCatalogoRequest(BaseModel):
     # significa que todo requisito propio de HSE aterriza en "Gestión preventiva"
     # aunque sea de salud ocupacional.
     subpilar_id: uuid.UUID | None = None
+    # Naturaleza normativa: BASE | AMPLIADO | OPCIONAL. Por defecto OPCIONAL, que
+    # es lo más conservador —no afirma que la ley lo exija— y era lo que ponía el
+    # server_default cuando no había forma de elegirlo.
+    nivel: str = "OPCIONAL"
 
 
 class ActualizarRequisitoCatalogoRequest(BaseModel):
@@ -241,6 +245,10 @@ class ActualizarRequisitoCatalogoRequest(BaseModel):
     # Permite corregir un requisito mal clasificado sin borrarlo y recrearlo, que
     # es lo único que se podía hacer antes (y que pierde sus expedientes).
     subpilar_id: uuid.UUID | None = None
+    # Faltaba, y su ausencia era peor que un rechazo: el PATCH aceptaba `nivel`
+    # en el cuerpo, respondía 200 y lo descartaba en silencio, así que quien lo
+    # intentaba quedaba convencido de haberlo corregido.
+    nivel: str | None = None
 
 
 # ── Perfiles de requisitos ───────────────────────────────────────────────────
@@ -549,6 +557,21 @@ class DocumentoEventoResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ResolucionDocumentoResponse(BaseModel):
+    """
+    Quién resolvió el documento y cómo.
+
+    La base guardaba estos campos desde el principio y la API no los entregaba,
+    así que ninguna pantalla podía decir quién aprobó qué. Para un producto cuya
+    promesa es que cada aprobación quede con nombre, hora y el documento que la
+    respaldó, esa trazabilidad no puede vivir sólo en la tabla.
+    """
+    aprobado_por_nombre: str | None = None
+    aprobado_en: datetime | None = None
+    por_excepcion: bool = False
+    justificacion_excepcion: str | None = None
+
+
 class DocumentoResponse(BaseModel):
     id: uuid.UUID
     requisito_id: uuid.UUID
@@ -558,6 +581,7 @@ class DocumentoResponse(BaseModel):
     fecha_vigencia_hasta: date | None
     created_at: datetime
     version_vigente: DocumentoVersionResponse | None
+    resolucion: ResolucionDocumentoResponse | None = None
 
     model_config = {"from_attributes": True}
 
@@ -566,6 +590,7 @@ class HistorialDocumentoResponse(BaseModel):
     documento_id: uuid.UUID
     versiones: list[DocumentoVersionResponse]
     eventos: list[DocumentoEventoResponse]
+    resolucion: ResolucionDocumentoResponse | None = None
 
 
 class SubidaDocumentoResponse(BaseModel):

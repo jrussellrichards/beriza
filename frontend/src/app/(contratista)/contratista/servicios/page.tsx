@@ -119,7 +119,9 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           <select
             value={seleccion}
             onChange={(e) => setSeleccion(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
+            // min-w-0: un item flex no baja de su contenido por defecto (min-width:auto),
+            // asi que los nombres largos empujaban el boton "Asignar" fuera del panel.
+            className="flex-1 min-w-0 px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
           >
             <option value="" disabled>Agregar trabajador a la faena...</option>
             {disponibles.map((t) => (
@@ -129,7 +131,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           <button
             onClick={asignar}
             disabled={!seleccion || cargando}
-            className="flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors disabled:opacity-40"
+            className="shrink-0 flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors disabled:opacity-40"
           >
             <Plus size={13} /> Asignar
           </button>

@@ -14,6 +14,7 @@ from app.api.schemas import (
     DocumentoResponse,
     DocumentoVersionResponse,
     HistorialDocumentoResponse,
+    ResolucionDocumentoResponse,
     PendienteRevisionResponse,
     RevisarDocumentoRequest,
     SubidaDocumentoResponse,
@@ -59,10 +60,26 @@ def _version_response(entrega: Entrega, acred: Acreditacion) -> DocumentoVersion
     )
 
 
+def _resolucion(acred: Acreditacion) -> ResolucionDocumentoResponse | None:
+    """
+    Quién resolvió y cómo. None mientras nadie lo haya resuelto, para que la
+    interfaz distinga "todavía sin revisar" de "aprobado sin registro".
+    """
+    if not acred.aprobado_en and not acred.aprobado_por_usuario_id:
+        return None
+    return ResolucionDocumentoResponse(
+        aprobado_por_nombre=acred.aprobado_por.nombre if acred.aprobado_por else None,
+        aprobado_en=acred.aprobado_en,
+        por_excepcion=bool(acred.aprobado_por_excepcion),
+        justificacion_excepcion=acred.justificacion_excepcion,
+    )
+
+
 def _documento_response(acred: Acreditacion) -> DocumentoResponse:
     exp = acred.expediente
     entrega = acred.entrega
     return DocumentoResponse(
+        resolucion=_resolucion(acred),
         id=acred.id,
         requisito_id=exp.requisito_id,
         servicio_id=exp.servicio_id,
@@ -224,6 +241,7 @@ def historial_documento(
             if entrega_visible(acred, e, ve_todas)
         ],
         eventos=[DocumentoEventoResponse.model_validate(ev) for ev in acred.eventos],
+        resolucion=_resolucion(acred),
     )
 
 

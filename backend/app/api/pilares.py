@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.schemas import ActualizarRequisitoCatalogoRequest, CrearRequisitoCatalogoRequest
-from app.domain.estados import Alcance, EntidadTipo
+from app.domain.estados import Alcance, EntidadTipo, NivelRequisito
 from app.infrastructure.database import get_db
 from app.middleware.auth import require_rol
 from app.models.expediente import Expediente
@@ -137,6 +137,12 @@ def crear_requisito(
     else:
         subpilar = sorted(pilar.subpilares, key=lambda x: x.orden)[0]
 
+    if body.nivel not in tuple(NivelRequisito):
+        raise HTTPException(
+            status_code=400,
+            detail=f"nivel debe ser uno de: {', '.join(tuple(NivelRequisito))}",
+        )
+
     req = RequisitoDocumental(
         subpilar_id=subpilar.id,
         mandante_id=mandante_id,
@@ -148,6 +154,7 @@ def crear_requisito(
         max_archivos=body.max_archivos,
         sin_vencimiento=body.sin_vencimiento,
         sensible=body.sensible,
+        nivel=body.nivel,
     )
     db.add(req)
     db.commit()
@@ -186,6 +193,13 @@ def actualizar_requisito(
         req.sin_vencimiento = body.sin_vencimiento
     if body.sensible is not None:
         req.sensible = body.sensible
+    if body.nivel is not None:
+        if body.nivel not in tuple(NivelRequisito):
+            raise HTTPException(
+                status_code=400,
+                detail=f"nivel debe ser uno de: {', '.join(tuple(NivelRequisito))}",
+            )
+        req.nivel = body.nivel
     if body.subpilar_id is not None:
         # Reclasificar dentro del MISMO pilar. Cambiar de pilar movería el
         # requisito bajo otro permiso de aprobación: quien podía resolverlo

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Building2, Eye, EyeOff } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
+import { portalDe } from "@/shared/lib/auth"
 import { MarcaAcredita } from "@/shared/ui/logo"
 
 interface TokenResponse {
@@ -54,7 +55,10 @@ function ActivarForm() {
     api.get<InvitacionInfo>(`/api/v1/usuarios/invitacion/${token}`)
       .then((data) => {
         setInvitacion(data)
-        setNombre(data.nombre)
+        // Si el nombre guardado ES la razón social, el alta nunca preguntó por
+        // una persona: se deja en blanco en vez de proponerle a alguien que se
+        // llame como su empresa.
+        setNombre(data.nombre === data.razon_social ? "" : data.nombre)
         setRazonSocial(data.razon_social)
         setRut(data.rut)
         setGiro(data.giro ?? "")
@@ -83,20 +87,14 @@ function ActivarForm() {
       const data = await api.post<TokenResponse>("/api/v1/usuarios/activar", {
         token,
         password,
-        ...(esEquipo
-          ? { nombre }
-          : { razon_social: razonSocial, rut, giro: giro || null }),
+        nombre,
+        ...(esEquipo ? {} : { razon_social: razonSocial, rut, giro: giro || null }),
       })
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("rol", data.rol)
-      // El destino sale del ROL, no de un literal: antes siempre mandaba a
-      // /contratista, asi que un mandante recien activado caia en el portal
-      // equivocado.
-      router.push(
-        data.rol === "mandante_admin" ? "/mandante"
-        : data.rol === "berisa_admin" ? "/admin"
-        : "/contratista",
-      )
+      // El destino sale de a quién pertenece la cuenta, no de un literal ni sólo
+      // del rol: `prevencionista` existe en las dos organizaciones (ver portalDe).
+      router.push(portalDe(data.rol, data.mandante_id, data.contratista_id))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al activar la cuenta")
     } finally {
@@ -139,13 +137,21 @@ function ActivarForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* A un contratista lo invita un mandante; a un mandante lo invita BERISA
-          y no hay un tercero que nombrar. */}
+      {/* Quién invita: a un contratista lo invita un mandante; a un mandante lo
+          invita BERISA; y a un miembro del equipo lo invita SU PROPIA
+          organización, que es la que hay que nombrar. Decirle "Invitación de
+          BERISA" a alguien que sumó su colega del mandante era falso, y pedirle
+          que confirme los datos de una empresa cuyos campos ni siquiera se le
+          muestran, desconcertante. */}
       <p className="text-sm text-ink-muted bg-surface-app border border-line rounded-lg px-3 py-2">
-        {invitacion.mandante_razon_social
-          ? <>Invitación de <span className="font-medium text-ink-secondary">{invitacion.mandante_razon_social}</span> para{" "}</>
-          : <>Invitación de <span className="font-medium text-ink-secondary">BERISA</span> para{" "}</>}
-        <span className="font-medium text-ink-secondary">{invitacion.email}</span>. Confirma o corrige los datos de tu empresa.
+        Invitación de{" "}
+        <span className="font-medium text-ink-secondary">
+          {esEquipo
+            ? (invitacion.organizacion || invitacion.razon_social || "tu organización")
+            : (invitacion.mandante_razon_social || "BERISA")}
+        </span>{" "}
+        para <span className="font-medium text-ink-secondary">{invitacion.email}</span>.
+        {esEquipo ? " Elige tu contraseña para entrar." : " Confirma o corrige los datos de tu empresa."}
       </p>
 
       {esEquipo ? (
@@ -165,6 +171,20 @@ function ActivarForm() {
         </div>
       ) : (
         <>
+          {/* Tu nombre, no el de la empresa. El alta sólo pide razón social, así
+              que sin este campo el administrador quedaba llamándose "Minera del
+              Norte SpA" y en Equipo aparecía como si fuera una persona. */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-ink-secondary">Tu nombre</label>
+            <input
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
+              placeholder="Patricia Rojas"
+              required
+              className={inputCls}
+            />
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-ink-secondary">Razón social de tu empresa</label>
             <div className="relative">

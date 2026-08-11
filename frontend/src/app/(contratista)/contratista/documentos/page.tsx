@@ -205,8 +205,17 @@ export default function DocumentosPage() {
   const [contratistaId, setContratistaId] = useState<string | null>(null)
   const [docs, setDocs] = useState<DocumentoContratista[]>([])
   const [loading, setLoading] = useState(true)
-  const [ambito, setAmbito] = useState<Ambito>("EMPRESA")
-  const [busqueda, setBusqueda] = useState("")
+  // Se puede llegar apuntando a un documento concreto desde la bandeja de
+  // pendientes ("Subir corrección"), que manda el código del requisito y la
+  // pestaña donde vive. Sin esto, el botón dejaba al contratista en la lista
+  // completa sin pista de cuál era el documento observado.
+  const destino = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams()
+  const [ambito, setAmbito] = useState<Ambito>(
+    destino.get("ambito") === "TRABAJADORES" ? "TRABAJADORES" : "EMPRESA",
+  )
+  const [busqueda, setBusqueda] = useState(destino.get("buscar") ?? "")
   const [filtroMandante, setFiltroMandante] = useState("TODOS")
   const [filtroEstado, setFiltroEstado] = useState("TODOS")
   const [subirDoc, setSubirDoc] = useState<DocumentoContratista | null>(null)

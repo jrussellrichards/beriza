@@ -302,10 +302,16 @@ def activar_cuenta(body: ActivarCuentaRequest, db: Session = Depends(get_db)):
 
     es_equipo = _tipo_invitacion(db, usuario) == "EQUIPO"
 
+    # Su propio nombre lo puede fijar cualquiera al activar, sea invitación de
+    # equipo o de organización. Antes sólo se aceptaba en la de equipo, así que
+    # el administrador de un mandante quedaba llamándose como la empresa —el
+    # alta sólo pide razón social— y en Equipo aparecía "Minera del Norte SpA"
+    # como si fuera una persona.
+    if body.nombre:
+        usuario.nombre = body.nombre
+
     if es_equipo:
-        # Solo su propia cuenta. Nada de la organización.
-        if body.nombre:
-            usuario.nombre = body.nombre
+        pass  # Nada de la organización: sus datos no le corresponden.
     elif not body.razon_social or not body.rut:
         raise HTTPException(
             status_code=400,

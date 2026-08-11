@@ -88,6 +88,7 @@ export interface Pendiente {
   trabajador_id: string | null
   servicio_id: string | null
   requisito_id: string | null
+  requisito_codigo: string | null
 }
 
 export interface HabilitacionServicio {
