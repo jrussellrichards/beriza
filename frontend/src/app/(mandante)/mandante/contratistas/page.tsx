@@ -665,8 +665,33 @@ export default function ContratistasPage() {
             {error && !loading && (
               <div className="py-14 text-center"><p className="text-sm text-bloqueo-ink">No se pudieron cargar los contratistas: {error}</p></div>
             )}
+            {/* "No hay ninguno todavía" y "tu filtro no encontró nada" son cosas
+                distintas y estaban resueltas con el mismo mensaje de búsqueda
+                vacía. La primera vez que alguien entra acá ve justamente esta
+                pantalla: es la mejor oportunidad de explicar el producto, y se
+                estaba gastando en un mensaje de error. */}
             {!loading && !error && filtrados.length === 0 && (
-              <div className="py-14 text-center"><p className="text-sm text-ink-subtle">No se encontraron contratistas</p></div>
+              <div className="py-14 px-6 text-center">
+                {contratistas.length === 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-ink">Todavía no invitaste ninguna empresa</p>
+                    <p className="text-xs text-ink-subtle max-w-md mx-auto leading-relaxed">
+                      Al invitar a una contratista, recibe un correo y carga sus documentos por su
+                      cuenta. Tú defines qué se le exige en cada faena y revisas lo que entrega.
+                    </p>
+                    <button
+                      onClick={() => setDialogInvitar(true)}
+                      className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+                    >
+                      <Plus size={13} /> Invitar mi primera empresa
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-subtle">
+                    Ninguna empresa coincide con lo que buscas.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>
