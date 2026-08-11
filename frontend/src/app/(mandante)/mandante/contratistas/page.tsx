@@ -549,7 +549,12 @@ export default function ContratistasPage() {
 
         <div className="flex-1 px-6 sm:px-8 py-6 space-y-5">
 
-          {/* KPI */}
+          {/* KPI. No se muestran con la cuenta vacía: cuatro ceros grandes
+              ocupaban la franja más visible de la pantalla —lo primero que ve
+              alguien que entra por primera vez— mientras la única acción posible
+              quedaba en un botón chico del rincón. Aparecen cuando hay algo que
+              indicar. */}
+          {contratistas.length > 0 && (
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: "Total", value: contratistas.length, color: "text-ink" },
@@ -563,6 +568,7 @@ export default function ContratistasPage() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Filtros */}
           <div className="flex items-center gap-3">

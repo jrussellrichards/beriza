@@ -227,7 +227,9 @@ export default function ServiciosPage() {
 
         <div className="flex-1 px-6 sm:px-8 py-6 space-y-5">
 
-          {/* KPI */}
+          {/* Mismo criterio que en Contratistas: cuatro ceros no informan nada y
+              ocupan la franja más visible de la pantalla. */}
+          {servicios.length > 0 && (
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: "Total", value: servicios.length, color: "text-ink" },
@@ -241,6 +243,7 @@ export default function ServiciosPage() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Filtros */}
           <div className="flex items-center gap-3">
