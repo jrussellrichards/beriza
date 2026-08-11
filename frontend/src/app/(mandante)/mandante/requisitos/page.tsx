@@ -877,9 +877,9 @@ export default function PerfilesPage() {
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           <span className="text-xs text-ink-subtle">Aplicar plantilla</span>
           {[
-            { n: "ARRANQUE", label: "Arranque", ayuda: "Lo minimo, obtenible en linea" },
+            { n: "ARRANQUE", label: "Arranque", ayuda: "Lo mínimo, obtenible en línea" },
             { n: "COMPLETA", label: "Legal completa", ayuda: "Todo lo que exige la ley" },
-            { n: "OBRA", label: "Obra fisica", ayuda: "Legal + lo de faena" },
+            { n: "OBRA", label: "Obra física", ayuda: "Legal + lo de faena" },
           ].map(pl => (
             <button
               key={pl.n}
