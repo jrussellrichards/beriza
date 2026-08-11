@@ -49,6 +49,19 @@ function mapMandante(a: ApiMandante): Mandante {
   }
 }
 
+/**
+ * Un plan que no esté en esta tabla NO puede tumbar la pantalla. El backend no
+ * valida el valor contra una lista, así que cualquier plan nuevo —o creado por
+ * API— llegaba acá como una clave inexistente y `planCfg(m.plan).color`
+ * reventaba el render completo del panel de mandantes, no sólo esa fila.
+ */
+function planCfg(plan: string): { label: string; color: string } {
+  return PLAN_CFG[plan as Plan] ?? {
+    label: plan || "Sin plan",
+    color: "bg-surface-sunken text-ink-muted border-line",
+  }
+}
+
 const PLAN_CFG: Record<Plan, { label: string; color: string }> = {
   Enterprise: { label: "Enterprise", color: "bg-accion-soft text-accion-ink border-accion-line" },
   Pro:        { label: "Pro",        color: "bg-brand-soft text-brand-hover border-brand-line" },
@@ -225,8 +238,8 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
         {/* Badges */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", PLAN_CFG[m.plan].color)}>
-            {PLAN_CFG[m.plan].label}
+          <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", planCfg(m.plan).color)}>
+            {planCfg(m.plan).label}
           </span>
           <span className={cn(
             "text-[10px] font-medium px-2 py-0.5 rounded border",
@@ -431,7 +444,7 @@ export default function MandantesPage() {
                       </td>
                       <td className="px-4 py-4 text-ink-subtle font-mono text-xs">{m.rut}</td>
                       <td className="px-4 py-4">
-                        <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", PLAN_CFG[m.plan].color)}>
+                        <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded border", planCfg(m.plan).color)}>
                           {m.plan}
                         </span>
                       </td>
