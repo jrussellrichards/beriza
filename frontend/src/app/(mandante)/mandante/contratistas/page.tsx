@@ -549,7 +549,12 @@ export default function ContratistasPage() {
 
         <div className="flex-1 px-6 sm:px-8 py-6 space-y-5">
 
-          {/* KPI */}
+          {/* KPI. No se muestran con la cuenta vacía: cuatro ceros grandes
+              ocupaban la franja más visible de la pantalla —lo primero que ve
+              alguien que entra por primera vez— mientras la única acción posible
+              quedaba en un botón chico del rincón. Aparecen cuando hay algo que
+              indicar. */}
+          {contratistas.length > 0 && (
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: "Total", value: contratistas.length, color: "text-ink" },
@@ -563,6 +568,7 @@ export default function ContratistasPage() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Filtros */}
           <div className="flex items-center gap-3">
@@ -665,8 +671,33 @@ export default function ContratistasPage() {
             {error && !loading && (
               <div className="py-14 text-center"><p className="text-sm text-bloqueo-ink">No se pudieron cargar los contratistas: {error}</p></div>
             )}
+            {/* "No hay ninguno todavía" y "tu filtro no encontró nada" son cosas
+                distintas y estaban resueltas con el mismo mensaje de búsqueda
+                vacía. La primera vez que alguien entra acá ve justamente esta
+                pantalla: es la mejor oportunidad de explicar el producto, y se
+                estaba gastando en un mensaje de error. */}
             {!loading && !error && filtrados.length === 0 && (
-              <div className="py-14 text-center"><p className="text-sm text-ink-subtle">No se encontraron contratistas</p></div>
+              <div className="py-14 px-6 text-center">
+                {contratistas.length === 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-ink">Todavía no invitaste ninguna empresa</p>
+                    <p className="text-xs text-ink-subtle max-w-md mx-auto leading-relaxed">
+                      Al invitar a una contratista, recibe un correo y carga sus documentos por su
+                      cuenta. Tú defines qué se le exige en cada faena y revisas lo que entrega.
+                    </p>
+                    <button
+                      onClick={() => setDialogInvitar(true)}
+                      className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+                    >
+                      <Plus size={13} /> Invitar mi primera empresa
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-subtle">
+                    Ninguna empresa coincide con lo que buscas.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardCheck, UserX } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
+import { PuestaEnMarcha } from "@/features/mandante/puesta-en-marcha"
 import { type RiesgoMandante, type ServicioEnRiesgo } from "@/entities/contratista/resumen"
 
 function Skeleton({ className }: { className?: string }) {
@@ -126,6 +127,10 @@ export default function InicioMandantePage() {
       </div>
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-6">
+        {/* Va PRIMERO y desaparece sola al completarse: mientras falte un paso,
+            es lo único que este usuario necesita ver. */}
+        <PuestaEnMarcha tieneServicios={riesgo.total_servicios > 0} />
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className={cn(
             "rounded-xl border p-4",
@@ -172,7 +177,8 @@ export default function InicioMandantePage() {
               <ClipboardCheck size={24} className="text-ink-subtle mx-auto mb-3" />
               <p className="text-sm text-ink-muted">No tienes servicios activos</p>
               <p className="text-xs text-ink-subtle mt-1">
-                Crea uno desde Servicios para empezar a exigir documentos.
+                Cuando tengas una faena creada, acá vas a ver dónde hay gente sin
+                poder ingresar.
               </p>
             </div>
           ) : (

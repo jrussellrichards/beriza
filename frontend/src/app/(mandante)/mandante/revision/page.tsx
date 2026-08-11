@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { CheckCircle2, Download, Eye, FileText, Inbox, RefreshCw, XCircle } from "lucide-react"
-import { cn } from "@/shared/lib/utils"
+import { cn, siglaVisible } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -323,9 +323,11 @@ export default function RevisionPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-ink">{p.requisito_nombre}</p>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-surface-sunken text-ink-muted border-line">
-                        {p.requisito_codigo}
-                      </span>
+                      {siglaVisible(p.requisito_codigo) && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-surface-sunken text-ink-muted border-line">
+                          {p.requisito_codigo}
+                        </span>
+                      )}
                       {p.numero_version > 1 && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded border bg-brand-soft text-brand-hover border-brand-line">
                           v{p.numero_version}

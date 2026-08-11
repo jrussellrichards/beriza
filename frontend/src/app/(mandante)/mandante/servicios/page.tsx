@@ -227,7 +227,9 @@ export default function ServiciosPage() {
 
         <div className="flex-1 px-6 sm:px-8 py-6 space-y-5">
 
-          {/* KPI */}
+          {/* Mismo criterio que en Contratistas: cuatro ceros no informan nada y
+              ocupan la franja más visible de la pantalla. */}
+          {servicios.length > 0 && (
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: "Total", value: servicios.length, color: "text-ink" },
@@ -241,6 +243,7 @@ export default function ServiciosPage() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Filtros */}
           <div className="flex items-center gap-3">
@@ -348,9 +351,24 @@ export default function ServiciosPage() {
               </tbody>
             </table>
 
+            {/* Mismo criterio que en Contratistas: no es lo mismo "todavía no hay
+                ninguna" que "tu filtro no encontró nada". */}
             {filtrados.length === 0 && (
-              <div className="py-14 text-center">
-                <p className="text-sm text-ink-subtle">No se encontraron servicios</p>
+              <div className="py-14 px-6 text-center">
+                {servicios.length === 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-ink">Todavía no hay ninguna faena</p>
+                    <p className="text-xs text-ink-subtle max-w-md mx-auto leading-relaxed">
+                      Una faena une a una empresa contratista con un lugar de trabajo y un perfil
+                      de exigencias. Recién ahí empiezan a correr los documentos que le pides.
+                      Necesitas al menos un perfil, un centro y una empresa invitada.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-subtle">
+                    Ninguna faena coincide con lo que buscas.
+                  </p>
+                )}
               </div>
             )}
           </div>

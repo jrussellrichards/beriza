@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
-  Briefcase, Building2, ChevronDown, ChevronRight, FileText,
+  Building2, ChevronDown, ChevronRight, FileText,
   Lock, LockOpen, Search, Upload, Users,
 } from "lucide-react"
-import { cn } from "@/shared/lib/utils"
+import { cn, siglaVisible } from "@/shared/lib/utils"
 import { SubirDocumentoDialog, type RequisitoSubida } from "@/features/subir-documento/subir-documento-dialog"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
 import { BadgesMandante } from "@/entities/documento/badges-mandante"
@@ -37,12 +37,20 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="text-sm font-medium text-ink">{doc.requisito_nombre}</p>
-            <span className="text-[10px] font-mono text-ink-subtle">{doc.requisito_codigo}</span>
-            {doc.servicio_nombre && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-ink-muted">
-                <Briefcase size={10} /> {doc.servicio_nombre}
-              </span>
+            {/* La faena va EN el título, no como etiqueta chica al lado del
+                código. Un requisito por servicio aparece una vez por faena, así
+                que dos filas seguidas se leían con el mismo nombre y sólo se
+                distinguían en 10 px: parecía un error de la aplicación, y el
+                riesgo real era subir el archivo en la fila equivocada. El dato
+                que distingue tiene que estar donde el ojo compara. */}
+            <p className="text-sm font-medium text-ink">
+              {doc.requisito_nombre}
+              {doc.servicio_nombre && (
+                <span className="text-brand"> — {doc.servicio_nombre}</span>
+              )}
+            </p>
+            {siglaVisible(doc.requisito_codigo) && (
+              <span className="text-[10px] font-mono text-ink-subtle">{doc.requisito_codigo}</span>
             )}
             {doc.sensible && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-excepcion-soft text-excepcion-ink border border-excepcion-line">
