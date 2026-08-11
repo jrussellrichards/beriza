@@ -137,9 +137,15 @@ export function SubirDocumentoDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Qué debe contener el documento, según el catálogo. Es lo que evita
-              que el contratista suba lo que no era y le rechacen la entrega. */}
+              que el contratista suba lo que no era y le rechacen la entrega.
+
+              Va ABIERTO por defecto. Colapsado estaba a un clic que nadie tenía
+              motivo para dar —el título no promete nada urgente— y es justo el
+              texto que ahorra el ciclo de subir, esperar, que lo observen y
+              volver a subir. Para el contratista ese ciclo es gente sin poder
+              entrar a faena; el costo de leerlo de más es un párrafo. */}
           {requisito.descripcion && (
-            <details className="text-xs bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+            <details open className="text-xs bg-surface-app border border-line-subtle rounded-md px-3 py-2">
               <summary className="cursor-pointer text-ink-secondary font-medium">
                 Qué debe contener este documento
               </summary>

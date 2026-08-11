@@ -300,6 +300,10 @@ class PerfilResponse(BaseModel):
     nombre: str
     descripcion: str | None
     activo: bool
+    # Cuántos documentos exige. Viaja para que la interfaz pueda advertir antes
+    # de asignar a un servicio un perfil vacío: con cero, el contratista figura
+    # en regla sin haber entregado nada.
+    requisitos_exigidos: int = 0
 
     model_config = {"from_attributes": True}
 

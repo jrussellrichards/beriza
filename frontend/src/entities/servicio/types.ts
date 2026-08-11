@@ -33,6 +33,8 @@ export interface Perfil {
   nombre: string
   descripcion: string | null
   activo: boolean
+  /** Cuántos documentos exige. Con 0, el contratista figura en regla sin entregar nada. */
+  requisitos_exigidos: number
 }
 
 // Estados de documento: 1=Enviado | 2=En Análisis | 3=Observado | 4=Aprobado | null=no subido

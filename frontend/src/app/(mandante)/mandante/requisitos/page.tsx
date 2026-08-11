@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  Briefcase, ChevronDown, ChevronRight, CheckCircle2,
+  AlertCircle, Briefcase, ChevronDown, ChevronRight, CheckCircle2,
   Circle, Edit2, Layers, Lock, Plus, Save, Star, Trash2,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
@@ -952,7 +952,24 @@ export default function PerfilesPage() {
           </div>
         </div>
 
-        {perfilActivo && (
+        {/* Un perfil sin requisitos es el estado mas peligroso que puede tener
+            este producto: cualquier contratista que lo use aparece cumpliendo
+            sin haber entregado un solo documento. Antes se informaba "0
+            requisitos exigidos" con la misma neutralidad con que se informaria
+            12, en el mismo recuadro azul. Ahora se dice en voz alta. */}
+        {perfilActivo && totalExigidos === 0 && (
+          <div className="mt-3 flex items-start gap-2 bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-3">
+            <AlertCircle size={14} className="text-bloqueo-ink mt-0.5 shrink-0" />
+            <p className="text-xs text-bloqueo-ink">
+              <strong>{perfilActivo.nombre} no exige ningún documento.</strong> Cualquier
+              contratista con un servicio que use este perfil va a figurar en regla sin
+              haber entregado nada. Activa los requisitos que necesitas, o aplica una
+              plantilla para partir.
+            </p>
+          </div>
+        )}
+
+        {perfilActivo && totalExigidos > 0 && (
           <div className="mt-3 flex items-start gap-2 bg-brand-soft border border-brand-line rounded-lg px-4 py-3">
             <Briefcase size={14} className="text-brand mt-0.5 shrink-0" />
             <p className="text-xs text-brand-hover">

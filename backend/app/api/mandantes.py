@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.schemas import (
@@ -538,7 +539,21 @@ def listar_perfiles(
     usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """Perfiles de requisitos del mandante (plantillas de exigencias por tipo de servicio)."""
-    return servicio_service.listar_perfiles(db, mandante_id)
+    perfiles = servicio_service.listar_perfiles(db, mandante_id)
+    exigidos = dict(
+        db.query(PerfilRequisitoConfig.perfil_id, func.count(PerfilRequisitoConfig.id))
+        .filter(PerfilRequisitoConfig.es_obligatorio.is_(True))
+        .group_by(PerfilRequisitoConfig.perfil_id)
+        .all()
+    )
+    return [
+        PerfilResponse(
+            id=p.id, mandante_id=p.mandante_id, nombre=p.nombre,
+            descripcion=p.descripcion, activo=p.activo,
+            requisitos_exigidos=exigidos.get(p.id, 0),
+        )
+        for p in perfiles
+    ]
 
 
 @router.post("/{mandante_id}/perfiles", response_model=PerfilResponse, status_code=status.HTTP_201_CREATED)

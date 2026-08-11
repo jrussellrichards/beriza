@@ -40,6 +40,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
   const [centroId, setCentroId] = useState("")
   const [contratistaId, setContratistaId] = useState("")
   const [perfilId, setPerfilId] = useState("")
+  const perfilVacio = perfiles.find(p => p.id === perfilId)?.requisitos_exigidos === 0
   const [nombre, setNombre] = useState("")
   const [codigoRef, setCodigoRef] = useState("")
   const [fechaInicio, setFechaInicio] = useState("")
@@ -154,9 +155,23 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
             >
               <option value="" disabled>Selecciona un perfil...</option>
               {perfiles.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
+                <option key={p.id} value={p.id}>
+                  {p.nombre} — {p.requisitos_exigidos === 0
+                    ? "no exige nada"
+                    : `${p.requisitos_exigidos} documento${p.requisitos_exigidos === 1 ? "" : "s"}`}
+                </option>
               ))}
             </select>
+            {/* Un perfil vacío deja al contratista figurando en regla sin haber
+                entregado un documento. Se avisa ACÁ, que es donde se toma la
+                decisión, y no sólo en la pantalla de perfiles. */}
+            {perfilVacio && (
+              <p className="text-xs text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-md px-3 py-2">
+                Ese perfil no exige ningún documento: el contratista de esta faena va a
+                figurar en regla sin entregar nada. Puedes crear el servicio igual y
+                configurarlo después en Perfiles.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="nombre">Nombre del servicio</Label>
