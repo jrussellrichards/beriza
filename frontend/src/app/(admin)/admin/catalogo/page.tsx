@@ -245,7 +245,7 @@ export default function CatalogoPage() {
 
       {/* Panel lateral */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-full sm:w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         panel ? "translate-x-0" : "translate-x-full"
       )}>
         {panel && (

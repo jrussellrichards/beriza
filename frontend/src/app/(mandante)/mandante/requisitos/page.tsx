@@ -145,20 +145,42 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
 
 // ── Fila de requisito ─────────────────────────────────────────────────────────
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+/**
+ * Interruptor de "se exige o no".
+ *
+ * `etiqueta` no es opcional a propósito. Sin ella, esta pantalla presentaba 41
+ * conmutadores idénticos y sin nombre a quien usa un lector de pantalla — y son
+ * los que deciden qué documentos se le exigen a un contratista, con consecuencia
+ * legal. El dato ya estaba en la fila; sólo había que pasarlo.
+ *
+ * El área de toque va en un envoltorio con padding transparente: el interruptor
+ * sigue midiendo 20 px, que es lo que pide el diseño denso, pero se puede tocar
+ * en 44 px, que es lo que pide un dedo. WCAG 2.5.8 exige 24 como mínimo.
+ */
+function Toggle({ checked, onChange, etiqueta }: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  etiqueta: string
+}) {
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={`Exigir ${etiqueta}`}
+      title={`Exigir ${etiqueta}`}
       onClick={() => onChange(!checked)}
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-        checked ? "bg-surface-inverse" : "bg-line"
-      )}
+      className="inline-flex items-center justify-center p-3 -m-3 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
     >
       <span className={cn(
-        "pointer-events-none inline-block h-4 w-4 rounded-full bg-surface shadow-sm transition-transform",
-        checked ? "translate-x-4" : "translate-x-0"
-      )} />
+        "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+        checked ? "bg-surface-inverse" : "bg-line"
+      )}>
+        <span className={cn(
+          "pointer-events-none inline-block h-4 w-4 rounded-full bg-surface shadow-sm transition-transform",
+          checked ? "translate-x-4" : "translate-x-0"
+        )} />
+      </span>
     </button>
   )
 }
@@ -184,6 +206,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
           <Toggle
             checked={req.es_obligatorio}
             onChange={(v) => onChange(req.id, { es_obligatorio: v })}
+            etiqueta={req.nombre}
           />
         </div>
 
@@ -1022,7 +1045,7 @@ export default function PerfilesPage() {
 
       {/* Panel lateral — crear/editar requisito propio */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-full sm:w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         panel ? "translate-x-0" : "translate-x-full"
       )}>
         {panel && (

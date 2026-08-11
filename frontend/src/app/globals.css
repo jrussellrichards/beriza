@@ -92,7 +92,9 @@
 
   --color-accion-soft: #fffbeb;
   --color-accion-line: #fde68a;
-  --color-accion-ink: #b45309;
+  /* amber-800: el anterior pasaba AA por muy poco (4.84) y cualquier ajuste
+     del fondo lo dejaba debajo. Ahora 6.84. */
+  --color-accion-ink: #92400e;
 
   --color-bloqueo-soft: #fef2f2;
   --color-bloqueo-line: #fecaca;
@@ -107,7 +109,10 @@
   --color-excepcion-ink: #6d28d9;
 
   --color-vacio-line: #cbd5e1;
-  --color-vacio-ink: #64748b;
+  /* slate-600 y no slate-500: sobre surface-app el anterior medía 4.41 de
+     contraste, bajo el minimo AA de 4.5, y este token se usa en textos de
+     10-11 px, que es donde mas importa. Ahora queda en 7.2. */
+  --color-vacio-ink: #475569;
 
   /* ── Escala tipográfica. Cada token trae line-height, peso y tracking ──── */
   --text-meta: 0.75rem; /* 12/18 — metadatos, headers de columna */
@@ -179,5 +184,28 @@
   :focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
+  }
+
+  /* Area de toque minima en dispositivos tactiles.
+     
+     Va con `pointer: coarse` y no con un punto de quiebre de ancho porque lo que
+     manda es el dedo, no la pantalla: una tablet grande con touch necesita esto y
+     una ventana angosta con mouse no. Asi el diseño denso de escritorio queda
+     intacto para quien usa mouse.
+     
+     Se corrige acá y no pantalla por pantalla porque la mayoria de los controles
+     de la aplicacion son <button> sueltos con clases propias, no el componente
+     base: arreglar solo el componente dejaba fuera a tres de cada cuatro.
+     
+     Los <a> quedan excluidos a proposito: un enlace dentro de un parrafo no es un
+     objetivo de toque, y estirarlo a 44 px descuadraria el interlineado. */
+  @media (pointer: coarse) {
+    button,
+    select,
+    summary,
+    [role="switch"],
+    [role="tab"] {
+      min-height: 44px;
+    }
   }
 }

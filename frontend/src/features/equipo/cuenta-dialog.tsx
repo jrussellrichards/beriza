@@ -52,6 +52,7 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
   const [cargo, setCargo] = useState(cuenta.cargo ?? "")
   const [rol, setRol] = useState(cuenta.rol)
   const [cargando, setCargando] = useState(false)
+  const [enlace, setEnlace] = useState<string | null>(null)
 
   async function correr(fn: () => Promise<{ mensaje?: string }>) {
     setCargando(true)
@@ -97,6 +98,42 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
                 className="text-espera-ink underline shrink-0 disabled:opacity-40">
                 Reenviar invitación
               </button>
+            </div>
+          )}
+
+          {/* Perdió la contraseña. Sin esto, la única vía era que la propia
+              persona usara "¿La olvidaste?" desde el login, que depende de que
+              reciba el correo: si rebota, si cambió de trabajo o si llama por
+              teléfono, no había NADA que ofrecerle. El enlace vuelve también en
+              la respuesta para poder dictárselo. */}
+          {cuenta.activo && !cuenta.pendiente && (
+            <div className="flex items-center justify-between gap-3 text-xs bg-surface-app border border-line rounded-md px-3 py-2">
+              <span className="text-ink-muted">¿No puede entrar?</span>
+              <button type="button" disabled={cargando}
+                onClick={() => correr(async () => {
+                  const r = await api.post<{ mensaje: string; link_recuperacion?: string }>(
+                    `/api/v1/usuarios/${cuenta.id}/enviar-recuperacion`, {})
+                  if (r.link_recuperacion) setEnlace(r.link_recuperacion)
+                  return r
+                })}
+                className="text-ink-secondary underline shrink-0 disabled:opacity-40">
+                Enviar enlace para cambiar la contraseña
+              </button>
+            </div>
+          )}
+
+          {enlace && (
+            <div className="space-y-1.5 text-xs bg-espera-soft border border-espera-line rounded-md px-3 py-2">
+              <p className="text-espera-ink">
+                Enlace personal, vence en una hora y sirve una sola vez. Si el correo
+                no llega, pásaselo por otro medio.
+              </p>
+              <input
+                readOnly
+                value={enlace}
+                onFocus={e => e.currentTarget.select()}
+                className="w-full font-mono text-[10px] bg-surface border border-line rounded px-2 py-1 text-ink-secondary"
+              />
             </div>
           )}
 
