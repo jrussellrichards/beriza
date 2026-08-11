@@ -26,7 +26,7 @@ import app.models  # noqa: F401 — registra los modelos
 from app.models.base import Base
 from app.models.mandante import Mandante
 from app.models.usuario import Usuario
-from app.middleware.auth import exigir_mandante_propio
+from app.middleware.auth import exigir_acceso_a_contratista, exigir_mandante_propio
 from app.domain import usuario_service
 
 
@@ -145,6 +145,103 @@ def test_no_se_otorgan_roles_por_encima_del_propio():
     with pytest.raises(Exception):
         usuario_service.exigir_rol_otorgable(_usuario("contratista_admin"), "mandante_admin")
     usuario_service.exigir_rol_otorgable(_usuario("mandante_admin"), "prevencionista")
+
+
+# ── 4. La nómina de un contratista no es pública entre clientes ──────────────
+# Encontrado por la prueba end-to-end, no por esta suite: GET
+# /trabajadores/empresa/{id} devolvía RUT y nombre completo de cualquier empresa
+# a cualquier usuario autenticado. Los tests de arriba probaban la guarda; nadie
+# probaba que los endpoints la LLAMARAN. De ahí el test estructural del bloque 5.
+
+def _empresa(db, mandante_id=None):
+    from app.models.contratista import ContratistaMandante, EmpresaContratista
+    e = EmpresaContratista(id=uuid.uuid4(), razon_social="C", rut=f"{uuid.uuid4().int % 10**8}-1")
+    db.add(e)
+    if mandante_id:
+        db.add(ContratistaMandante(id=uuid.uuid4(), contratista_id=e.id, mandante_id=mandante_id))
+    db.commit()
+    return e
+
+
+def test_la_empresa_ve_su_propia_nomina():
+    db = _db()
+    e = _empresa(db)
+    exigir_acceso_a_contratista(db, _usuario("contratista_admin", contratista_id=e.id), e.id)
+
+
+def test_un_contratista_no_ve_la_nomina_de_otro():
+    db = _db()
+    mia, ajena = _empresa(db), _empresa(db)
+    with pytest.raises(HTTPException) as ex:
+        exigir_acceso_a_contratista(db, _usuario("contratista_admin", contratista_id=mia.id), ajena.id)
+    assert ex.value.status_code == 403
+
+
+def test_el_mandante_que_la_contrato_si_ve_su_nomina():
+    db = _db()
+    mid = uuid.uuid4()
+    db.add(Mandante(id=mid, razon_social="M", rut="1-9", slug="m", activo=True))
+    db.commit()
+    e = _empresa(db, mandante_id=mid)
+    exigir_acceso_a_contratista(db, _usuario("mandante_admin", mandante_id=mid), e.id)
+
+
+def test_un_mandante_sin_vinculo_no_ve_la_nomina():
+    """El caso reproducido en producción-listo: cambiar el UUID de la URL."""
+    db = _db()
+    e = _empresa(db)   # sin ningún vínculo
+    with pytest.raises(HTTPException) as ex:
+        exigir_acceso_a_contratista(db, _usuario("mandante_admin", mandante_id=uuid.uuid4()), e.id)
+    assert ex.value.status_code == 403
+
+
+def test_berisa_ve_cualquier_nomina():
+    db = _db()
+    exigir_acceso_a_contratista(db, _usuario("berisa_admin"), _empresa(db).id)
+
+
+# ── 5. Ningún endpoint con id de otro tenant puede saltarse la comprobación ───
+
+def test_todo_endpoint_con_id_ajeno_valida_pertenencia():
+    """
+    El test que faltaba, y el único que habría atrapado la fuga de nóminas.
+
+    Los demás prueban que las guardas funcionan. Este prueba que se USEN: recorre
+    las rutas reales de la aplicación y exige que toda la que reciba el id de una
+    entidad de otro tenant contenga alguna comprobación de pertenencia. Un
+    endpoint nuevo que sólo ponga `require_rol` —que valida el rol, no de quién
+    son los datos— pone este test en rojo.
+    """
+    import inspect
+    from main import app
+
+    IDS = ("{empresa_id}", "{mandante_id}", "{trabajador_id}",
+           "{servicio_id}", "{contratista_id}")
+    COMPROBACIONES = (
+        "exigir_acceso_a_contratista", "exigir_mandante_propio", "mandante_propio",
+        "verificar_acceso_relacion", "_validar_acceso_al_servicio",
+        "_validar_servicio_del_contratista", "_resolver_mandante_id",
+        "exigir_puede_gestionar", "puede_gestionar",
+        "usuario.contratista_id", "usuario.mandante_id",
+    )
+
+    sin_guarda = []
+    for ruta in app.routes:
+        path = getattr(ruta, "path", "")
+        fn = getattr(ruta, "endpoint", None)
+        if fn is None or not any(t in path for t in IDS):
+            continue
+        try:
+            fuente = inspect.getsource(fn)
+        except (OSError, TypeError):
+            continue
+        if not any(c in fuente for c in COMPROBACIONES):
+            sin_guarda.append(f"{','.join(sorted(ruta.methods))} {path}")
+
+    assert not sin_guarda, (
+        "Estos endpoints reciben el id de una entidad que puede ser de otro "
+        "cliente y no comprueban pertenencia:\n  " + "\n  ".join(sin_guarda)
+    )
 
 
 def run():

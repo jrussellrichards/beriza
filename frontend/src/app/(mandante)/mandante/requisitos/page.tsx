@@ -719,6 +719,15 @@ export default function PerfilesPage() {
     }))
     .filter(p => p.requisitos.length > 0)
 
+  // La matriz NO se filtra por nivel a proposito. "Mostrar" es una preferencia de
+  // lectura sobre la lista de abajo, pero aplicada aca escondia filas y un cargo
+  // parecia no tener exigido un documento que en realidad si tiene: la matriz
+  // dejaba de describir la configuracion y pasaba a describir el filtro. Se
+  // muestra todo lo exigido a personas, que es lo que las reglas evaluan.
+  const requisitosMatriz = pilares
+    .flatMap(p => p.requisitos)
+    .filter(r => r.entidad === "TRABAJADOR" && r.es_obligatorio)
+
   const cuentaEntidad = (e: "EMPRESA" | "TRABAJADOR") =>
     pilares.flatMap(p => p.requisitos).filter(r => r.entidad === e).length
   const exigidosEntidad = (e: "EMPRESA" | "TRABAJADOR") =>
@@ -935,7 +944,7 @@ export default function PerfilesPage() {
       {entidad === "TRABAJADOR" && (
         <div className="px-6 sm:px-8 pt-6">
           <MatrizCargos
-            requisitos={pilaresVisibles.flatMap(p => p.requisitos).filter(r => r.es_obligatorio)}
+            requisitos={requisitosMatriz}
             cargos={cargos}
             guardando={guardandoCargo}
             onCambiar={guardarCargos}

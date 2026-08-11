@@ -32,6 +32,13 @@ services:
       # Los datos de demo son opt-in: en producción no se cargan ni con esto
       # puesto, pero en local es lo que hace que las pantallas no salgan vacías.
       - SEED_DEMO=true
+      # Los archivos de desarrollo van a disco, NUNCA al bucket real. El .env de
+      # esta máquina trae FILE_STORAGE=s3 con las credenciales de producción, así
+      # que sin esta línea cada documento subido en local aterrizaba en el bucket
+      # `berisa` de producción. Se declara acá —y no sólo en el .env— para que la
+      # separación entre entornos esté versionada y no dependa de un archivo local.
+      - FILE_STORAGE=local
+      - LOCAL_STORAGE_PATH=uploads
     depends_on:
       - db
       - redis
@@ -54,6 +61,13 @@ services:
     build: ./frontend
     ports:
       - "3001:3000"
+    environment:
+      # El proxy de app/api/[...path]/route.ts cae por defecto a
+      # http://localhost:8000, que DENTRO de este contenedor es este mismo
+      # contenedor: sin esta variable toda llamada a la API respondia 500 y el
+      # frontend en :3001 se veia en blanco. El backend se alcanza por el nombre
+      # del servicio en la red de compose.
+      - BACKEND_URL=http://backend:8000
     depends_on:
       - backend
 

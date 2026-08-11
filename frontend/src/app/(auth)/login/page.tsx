@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, ArrowRight } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
@@ -123,9 +124,17 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink-secondary" htmlFor="password">
-                Contraseña
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-ink-secondary" htmlFor="password">
+                  Contraseña
+                </label>
+                <Link
+                  href="/recuperar"
+                  className="text-xs text-ink-muted hover:text-ink transition-colors"
+                >
+                  ¿La olvidaste?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   id="password"

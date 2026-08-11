@@ -32,6 +32,15 @@ class ActivarCuentaRequest(BaseModel):
     nombre: str | None = None
 
 
+class RecuperarPasswordRequest(BaseModel):
+    email: str
+
+
+class RestablecerPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+
 class InvitacionInfoResponse(BaseModel):
     email: str
     nombre: str
