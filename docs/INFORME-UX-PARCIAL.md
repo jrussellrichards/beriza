@@ -12,6 +12,17 @@ quedan pendientes y son la mitad más valiosa del encargo.
 
 Todo lo que sigue está medido en pantalla, no estimado.
 
+Orden sugerido de trabajo, por relación entre daño y esfuerzo:
+
+| # | Hallazgo | Impacto | Esfuerzo |
+|---|---|---|---|
+| 1 | Columnas inalcanzables en la tabla de contratistas | Alto | Bajo |
+| 2 | 41 interruptores sin nombre accesible | Alto | Bajo |
+| 3 | BERISA no puede ayudar a quien perdió su contraseña | Alto | Bajo |
+| 4 | Objetivos de toque bajo 44 px | Medio | Medio |
+| 5 | El panel lateral no cabe en un teléfono | Bajo | Bajo |
+| 6 | Dos familias de color al límite de contraste | Bajo | Bajo |
+
 ---
 
 ## [ALTO] En la tabla de contratistas, las columnas que dicen si la empresa cumple son inalcanzables en pantalla chica
@@ -102,6 +113,37 @@ Todo lo que sigue está medido en pantalla, no estimado.
 - Qué propongo: `w-full sm:w-96`, para que en móvil ocupe la pantalla completa
   —que es el patrón esperado— y conserve los 384 px desde tablet.
 - Esfuerzo: bajo
+
+## [ALTO] BERISA no puede ayudar a alguien que perdió su contraseña
+
+- Usuario: BERISA (y, por reflejo, el mandante y el contratista sobre su equipo)
+- Pantalla: `/admin/usuarios` → botón "Editar" → diálogo de cuenta
+- Qué observé: el diálogo sí permite editar nombre, cargo y rol, quitar acceso,
+  devolverlo, y **reenviar la invitación a quien nunca la activó**. Lo que no
+  existe por ningún lado es una forma de que un administrador ayude a alguien
+  que **ya activó su cuenta y perdió la contraseña**: no hay "enviar enlace de
+  recuperación" ni "restablecer clave". El único camino es que la propia persona
+  use "¿La olvidaste?" desde el login.
+- Por qué es un problema: ese camino depende de que reciba el correo. Si el
+  correo rebota, si cambió de trabajo y su casilla ya no existe, si el dominio
+  del cliente filtra a Resend, o simplemente si la persona no da con el enlace y
+  llama por teléfono, el operador de la plataforma no tiene **ninguna** acción
+  que ofrecerle. Hoy la única salida es entrar por SSH al servidor de producción
+  y correr un script: eso no es una función de producto, es una emergencia.
+  Y es el reclamo más común que recibe cualquier plataforma con cuentas.
+- Qué propongo: un botón **"Enviar enlace para restablecer contraseña"** en el
+  mismo diálogo, visible sobre cualquier cuenta activa. El mecanismo ya está
+  construido —`recuperacion_service.emitir_token` con vencimiento de una hora y
+  un solo uso— así que es exponerlo desde el panel: un endpoint que lo emita a
+  nombre de otro usuario y devuelva el enlace en la respuesta autenticada, igual
+  que ya hace "Reenviar invitación" cuando el correo falla. Que el enlace vuelva
+  en pantalla resuelve además el caso del correo que no llega: el administrador
+  se lo dicta por teléfono.
+- Esfuerzo: bajo — la parte difícil, el ciclo de vida del token, ya existe
+- Ojo con no reabrir un agujero: ese endpoint debe respetar la misma regla que
+  `/recuperar`, es decir, **no emitir nada para una cuenta desactivada**. Si un
+  administrador quiere devolverle el acceso a alguien, para eso está "Devolver
+  acceso", que es una decisión distinta y explícita.
 
 ---
 

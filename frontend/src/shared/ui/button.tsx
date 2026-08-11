@@ -19,11 +19,17 @@ const buttonVariants = cva(
         ghost: "hover:bg-surface-app hover:text-ink",
         link: "text-brand underline-offset-4 hover:underline",
       },
+      // En telefono todos los tamaños suben a 44 px de alto, que es el minimo
+      // comodo para un dedo —y el usuario tipico del portal del contratista esta
+      // en faena, con el telefono en una mano y a veces con guantes—. Desde `sm`
+      // vuelven a su altura original, que es la que pide el diseño denso de
+      // escritorio. Se corrige acá y no pantalla por pantalla para que valga en
+      // todas de una vez.
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        default: "min-h-11 h-11 sm:min-h-10 sm:h-10 px-4 py-2",
+        sm: "min-h-11 h-11 sm:min-h-9 sm:h-9 rounded-md px-3",
+        lg: "min-h-11 h-11 rounded-md px-8",
+        icon: "min-h-11 h-11 w-11 sm:min-h-10 sm:h-10 sm:w-10",
       },
     },
     defaultVariants: {

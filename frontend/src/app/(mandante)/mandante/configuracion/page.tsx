@@ -38,19 +38,31 @@ const ROL_CFG: Record<string, { label: string; color: string }> = {
   prevencionista: { label: "Prevencionista", color: "bg-brand-soft text-brand-hover border-brand-line" },
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+// Mismo criterio que el Toggle de /mandante/requisitos: nombre accesible
+// obligatorio y area de toque de 44 px sin agrandar el control visual.
+function Toggle({ checked, onChange, etiqueta }: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  etiqueta: string
+}) {
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={etiqueta}
       onClick={() => onChange(!checked)}
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-        checked ? "bg-surface-inverse" : "bg-line"
-      )}
+      className="inline-flex items-center justify-center p-3 -m-3 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
     >
       <span className={cn(
-        "pointer-events-none inline-block h-4 w-4 rounded-full bg-surface shadow-sm transition-transform",
-        checked ? "translate-x-4" : "translate-x-0"
-      )} />
+        "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+        checked ? "bg-surface-inverse" : "bg-line"
+      )}>
+        <span className={cn(
+          "pointer-events-none inline-block h-4 w-4 rounded-full bg-surface shadow-sm transition-transform",
+          checked ? "translate-x-4" : "translate-x-0"
+        )} />
+      </span>
     </button>
   )
 }
@@ -272,7 +284,7 @@ export default function ConfiguracionPage() {
                       <p className="text-sm font-medium text-ink">{n.label}</p>
                       <p className="text-xs text-ink-subtle mt-0.5">{n.desc}</p>
                     </div>
-                    <Toggle checked={n.value} onChange={n.set} />
+                    <Toggle checked={n.value} onChange={n.set} etiqueta={n.label} />
                   </div>
                 ))}
               </div>
@@ -296,7 +308,7 @@ export default function ConfiguracionPage() {
                     <p className="text-sm font-medium text-ink">Doble factor de autenticación (2FA)</p>
                     <p className="text-xs text-ink-subtle mt-0.5">Requiere código adicional al iniciar sesión</p>
                   </div>
-                  <Toggle checked={sesion2fa} onChange={setSesion2fa} />
+                  <Toggle checked={sesion2fa} onChange={setSesion2fa} etiqueta="Doble factor de autenticación" />
                 </div>
                 <div className="px-5 py-4">
                   <p className="text-sm font-medium text-ink mb-1">Duración de sesión</p>

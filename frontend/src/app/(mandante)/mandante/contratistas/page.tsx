@@ -594,7 +594,7 @@ export default function ContratistasPage() {
           </div>
 
           {/* Tabla */}
-          <div className="bg-surface border border-line rounded-xl overflow-hidden">
+          <div className="bg-surface border border-line rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line-subtle bg-surface-app/60">
@@ -674,7 +674,7 @@ export default function ContratistasPage() {
 
       {/* Panel lateral */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
+        "fixed right-0 top-0 h-full w-full sm:w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         seleccionado ? "translate-x-0" : "translate-x-full"
       )}>
         {seleccionado && mandanteId && (

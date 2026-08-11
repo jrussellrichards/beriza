@@ -647,10 +647,94 @@ def reenviar_invitacion(
         ))
     except Exception:
         logger.exception("No se pudo reenviar la invitación a %s", objetivo.email)
-        # El link vuelve solo en la respuesta autenticada de quien lo pidió, para
-        # que pueda pasarlo por otro medio. Nunca se loguea.
         return {
-            "mensaje": f"No se pudo enviar el correo a {objetivo.email}.",
+            "mensaje": f"No se pudo enviar el correo a {objetivo.email}. "
+                       "Pásale el enlace por otro medio.",
             "link_activacion": link,
         }
-    return {"mensaje": f"Invitación reenviada a {objetivo.email}"}
+    # El link vuelve SIEMPRE, no sólo cuando el envío falla.
+    #
+    # Devolverlo únicamente en la rama de error suponía que un envío exitoso
+    # significa que la persona lo recibió, y no es lo mismo: el correo puede caer
+    # en spam, la casilla puede estar mal escrita, o quien administra puede tener
+    # a la persona al teléfono y querer dictárselo en el momento. Y en desarrollo
+    # el envío nunca falla —el cliente imprime en el log— así que el enlace no
+    # aparecía nunca por ninguna parte.
+    #
+    # Es una respuesta autenticada a quien ya tiene permiso de administrar esta
+    # cuenta, así que no expone nada que no pudiera obtener igual. Nunca se loguea.
+    return {
+        "mensaje": f"Invitación reenviada a {objetivo.email}",
+        "link_activacion": link,
+    }
+
+
+@router.post("/{usuario_id}/enviar-recuperacion")
+def enviar_recuperacion(
+    usuario_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    actor: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin"])),
+):
+    """
+    Un administrador le manda a otra persona el enlace para elegir contraseña nueva.
+
+    Existe porque `/recuperar` —que la persona usa por sí misma— depende de que
+    reciba el correo, y eso falla más de lo que parece: casillas que rebotan,
+    gente que cambió de trabajo, dominios que filtran al proveedor de envío, o
+    simplemente alguien que llama por teléfono en vez de buscar el email. Sin
+    esto, la única salida era entrar por SSH al servidor y correr un script.
+
+    El enlace vuelve TAMBIÉN en la respuesta, igual que en reenviar-invitacion:
+    es una respuesta autenticada a quien tiene permiso de administrar esta
+    cuenta, y es lo que permite dictarlo por teléfono cuando el correo no llega.
+    Nunca se loguea.
+
+    La cuenta desactivada queda fuera a propósito. Restablecer la contraseña no
+    puede ser un rodeo para devolver un acceso revocado —ese fue exactamente el
+    agujero que se cerró en `activar_cuenta`—; para eso está reactivarla, que es
+    una decisión distinta, explícita y con su propio botón.
+    """
+    objetivo = db.get(Usuario, usuario_id)
+    if not objetivo:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    try:
+        usuario_service.exigir_puede_gestionar(actor, objetivo)
+    except PermisoInsuficiente as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    if usuario_service.nunca_activo(objetivo):
+        raise HTTPException(
+            status_code=400,
+            detail="Esta persona todavía no activó su cuenta. Reenvíale la invitación.",
+        )
+    if not recuperacion_service.puede_recuperar(objetivo):
+        raise HTTPException(
+            status_code=400,
+            detail="Esta cuenta no tiene acceso. Devuélveselo primero si corresponde.",
+        )
+
+    token = recuperacion_service.emitir_token(db, objetivo)
+    link = f"{settings.FRONTEND_URL}/restablecer?token={token}"
+    try:
+        get_email_cliente().enviar(Email(
+            destinatario=objetivo.email,
+            asunto="Restablecer tu contraseña de Acredita",
+            cuerpo_html=f"""
+            <h2>Restablecer tu contraseña</h2>
+            <p>Un administrador de tu organización pidió este enlace para que
+            puedas elegir una contraseña nueva:</p>
+            <a href="{link}">Restablecer contraseña</a>
+            <p>Vence en una hora y sirve una sola vez.</p>
+            """,
+        ))
+    except Exception:
+        logger.exception("No se pudo enviar la recuperación a %s", objetivo.email)
+        return {
+            "mensaje": f"No se pudo enviar el correo a {objetivo.email}. "
+                       "Pásale el enlace por otro medio.",
+            "link_recuperacion": link,
+        }
+    return {
+        "mensaje": f"Enlace enviado a {objetivo.email}. Vence en una hora.",
+        "link_recuperacion": link,
+    }
