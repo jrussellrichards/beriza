@@ -646,6 +646,12 @@ export default function PerfilesPage() {
 
   useEffect(() => { cargarRequisitos() }, [cargarRequisitos])
 
+  useEffect(() => {
+    api.get<{ nombre: string; requisitos: number; descripcion: string }[]>("/api/v1/mandantes/plantillas")
+      .then(setPlantillas)
+      .catch(() => setPlantillas([]))
+  }, [])
+
   const cargarCargos = useCallback(() => {
     api.get<Cargo[]>("/api/v1/cargos/")
       .then(setCargos)
@@ -720,6 +726,10 @@ export default function PerfilesPage() {
   // ambas a la vez: son 38 requisitos de empresa contra 6 de persona, y esa
   // asimetria hace inutil la lista mezclada.
   const [cargos, setCargos] = useState<Cargo[]>([])
+  // Cuántos requisitos activa cada plantilla y qué contiene. El backend ya lo
+  // sabía; la pantalla lo tenía escrito a mano y sin el conteo, así que se
+  // aplicaba a ciegas una acción que REEMPLAZA la configuración.
+  const [plantillas, setPlantillas] = useState<{ nombre: string; requisitos: number; descripcion: string }[]>([])
   const [guardandoCargo, setGuardandoCargo] = useState<string | null>(null)
 
   const [entidad, setEntidad] = useState<"EMPRESA" | "TRABAJADOR">("EMPRESA")
@@ -763,6 +773,22 @@ export default function PerfilesPage() {
 
   async function handlePlantilla(nombre: string) {
     if (!mandanteId || !perfilId) return
+    // Reemplaza lo exigido en el perfil, y de eso depende qué se le pide a cada
+    // contratista. Se aplicaba con un clic y sin decir qué iba a pasar; el aviso
+    // estaba en letra chica debajo de los botones.
+    const info = plantillas.find(x => x.nombre === nombre)
+    const aviso = info
+      ? `Vas a exigir ${info.requisitos} documento${info.requisitos === 1 ? "" : "s"} en `
+        + `${perfilActivo?.nombre ?? "este perfil"}.
+
+${info.descripcion}
+
+`
+        + `Reemplaza lo que el perfil exige hoy (${totalExigidos}). `
+        + "Las vigencias que ya configuraste se conservan."
+      : "Esto reemplaza lo que el perfil exige hoy. ¿Continuar?"
+    if (!window.confirm(aviso)) return
+
     setAplicando(nombre)
     setError(null)
     try {
@@ -877,13 +903,15 @@ export default function PerfilesPage() {
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           <span className="text-xs text-ink-subtle">Aplicar plantilla</span>
           {[
-            { n: "ARRANQUE", label: "Arranque", ayuda: "Lo mínimo, obtenible en línea" },
-            { n: "COMPLETA", label: "Legal completa", ayuda: "Todo lo que exige la ley" },
-            { n: "OBRA", label: "Obra física", ayuda: "Legal + lo de faena" },
-          ].map(pl => (
+            { n: "ARRANQUE", label: "Arranque" },
+            { n: "COMPLETA", label: "Legal completa" },
+            { n: "OBRA", label: "Obra física" },
+          ].map(pl => {
+            const info = plantillas.find(x => x.nombre === pl.n)
+            return (
             <button
               key={pl.n}
-              title={pl.ayuda}
+              title={info?.descripcion}
               disabled={!perfilId || aplicando !== null}
               onClick={() => handlePlantilla(pl.n)}
               className={cn(
@@ -894,9 +922,11 @@ export default function PerfilesPage() {
                 (!perfilId || aplicando !== null) && "opacity-60 cursor-not-allowed",
               )}
             >
-              {aplicando === pl.n ? "Aplicando..." : pl.label}
+              {aplicando === pl.n
+                ? "Aplicando..."
+                : info ? `${pl.label} · ${info.requisitos}` : pl.label}
             </button>
-          ))}
+          )})}
           <span className="text-[10px] text-ink-subtle">
             Reemplaza lo exigido en este perfil; conserva vigencias ya configuradas
           </span>
