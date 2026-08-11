@@ -90,6 +90,53 @@ def exigir_mandante_propio(usuario: Usuario, mandante_id) -> None:
         )
 
 
+def exigir_acceso_a_contratista(db: Session, usuario: Usuario, empresa_id) -> None:
+    """
+    Quién puede leer los datos de una empresa contratista, incluida su nómina.
+
+    Son exactamente tres: BERISA, la propia empresa, y un mandante que la haya
+    contratado. Nadie más — y en particular NO cualquier usuario autenticado.
+
+    Existe porque `require_rol` valida sólo el string del rol, igual que en
+    `exigir_mandante_propio`, y acá el descuido costaba más caro: la nómina son
+    datos personales. `GET /trabajadores/empresa/{empresa_id}` era literalmente
+    `filter_by(empresa_id=...)`, así que un mandante leía la dotación completa
+    —RUT, nombre y cargo— de un contratista de la competencia con sólo cambiar
+    el UUID.
+
+    Y ese UUID no es secreto: viaja al navegador del contratista y el mandante lo
+    ve en su propio listado de contratistas. Basta haber trabajado una vez con la
+    empresa para conservarlo y seguir leyendo su gente para siempre, aun terminado
+    el contrato. Por eso el vínculo se comprueba contra la tabla en cada llamada
+    en vez de confiar en que quien tiene el id tenía derecho a tenerlo.
+    """
+    from app.models.contratista import ContratistaMandante
+
+    if usuario.rol == "berisa_admin":
+        return
+
+    # La propia empresa.
+    if usuario.contratista_id is not None and usuario.contratista_id == empresa_id:
+        return
+
+    # Un mandante que la contrató. Se exige mandante_id no nulo antes de
+    # consultar: con NULL, filter_by devolvería la relación equivocada o ninguna,
+    # y la intención —"pertenece a mi organización"— dejaría de estar expresada.
+    if usuario.mandante_id is not None:
+        vinculo = (
+            db.query(ContratistaMandante)
+            .filter_by(mandante_id=usuario.mandante_id, contratista_id=empresa_id)
+            .first()
+        )
+        if vinculo is not None:
+            return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="No puedes ver los datos de esta empresa contratista.",
+    )
+
+
 def mandante_propio(roles: list[str]) -> Callable:
     """
     Dependencia para rutas con {mandante_id}: valida rol Y pertenencia.

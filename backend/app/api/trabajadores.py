@@ -10,7 +10,7 @@ from app.api.schemas import (
 )
 from app.domain import acreditacion_service, nomina_service
 from app.infrastructure.database import get_db
-from app.middleware.auth import require_rol
+from app.middleware.auth import exigir_acceso_a_contratista, require_rol
 from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
 
@@ -131,6 +131,9 @@ def obtener_trabajador(
     t = db.get(Trabajador, trabajador_id)
     if not t:
         raise HTTPException(status_code=404, detail="Trabajador no encontrado")
+    # Devuelve RUT y nombre completo de una persona: sin esta guarda cualquier
+    # usuario autenticado leía la ficha de cualquier trabajador de la plataforma.
+    exigir_acceso_a_contratista(db, usuario, t.empresa_id)
     return t
 
 
@@ -146,6 +149,7 @@ def listar_trabajadores_empresa(
     inactivos, un trabajador desactivado desaparecería sin forma de
     reactivarlo desde la UI).
     """
+    exigir_acceso_a_contratista(db, usuario, empresa_id)
     return db.query(Trabajador).filter_by(empresa_id=empresa_id).all()
 
 
