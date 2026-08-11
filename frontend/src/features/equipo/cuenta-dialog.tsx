@@ -54,12 +54,21 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
   const [cargando, setCargando] = useState(false)
   const [enlace, setEnlace] = useState<string | null>(null)
 
-  async function correr(fn: () => Promise<{ mensaje?: string }>) {
+  /**
+   * `cerrar` distingue las acciones que terminan de las que producen algo que
+   * hay que leer.
+   *
+   * `onCambio` cierra el diálogo en todos los consumidores, así que las acciones
+   * que devuelven un enlace —reenviar invitación, mandar recuperación— lo
+   * mostraban durante un instante y desaparecían con él. Que es exactamente lo
+   * que las hace inútiles: el enlace es el resultado, no un efecto secundario.
+   */
+  async function correr(fn: () => Promise<{ mensaje?: string }>, cerrar = true) {
     setCargando(true)
     try {
       const r = await fn()
       if (r?.mensaje) onAviso(r.mensaje)
-      onCambio()
+      if (cerrar) onCambio()
     } catch (e) {
       onError(e instanceof Error ? e.message : "No se pudo completar la acción")
     } finally {
@@ -94,7 +103,12 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
             <div className="flex items-center justify-between gap-3 text-xs bg-espera-soft border border-espera-line rounded-md px-3 py-2">
               <span className="text-espera-ink">Todavía no activa su cuenta.</span>
               <button type="button" disabled={cargando}
-                onClick={() => correr(() => api.post(`/api/v1/usuarios/${cuenta.id}/reenviar-invitacion`, {}))}
+                onClick={() => correr(async () => {
+                  const r = await api.post<{ mensaje: string; link_activacion?: string }>(
+                    `/api/v1/usuarios/${cuenta.id}/reenviar-invitacion`, {})
+                  if (r.link_activacion) setEnlace(r.link_activacion)
+                  return r
+                }, false)}
                 className="text-espera-ink underline shrink-0 disabled:opacity-40">
                 Reenviar invitación
               </button>
@@ -115,7 +129,7 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
                     `/api/v1/usuarios/${cuenta.id}/enviar-recuperacion`, {})
                   if (r.link_recuperacion) setEnlace(r.link_recuperacion)
                   return r
-                })}
+                }, false)}
                 className="text-ink-secondary underline shrink-0 disabled:opacity-40">
                 Enviar enlace para cambiar la contraseña
               </button>
@@ -125,8 +139,8 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
           {enlace && (
             <div className="space-y-1.5 text-xs bg-espera-soft border border-espera-line rounded-md px-3 py-2">
               <p className="text-espera-ink">
-                Enlace personal, vence en una hora y sirve una sola vez. Si el correo
-                no llega, pásaselo por otro medio.
+                Enlace personal y de un solo uso. Si el correo no llega —spam, casilla
+                mal escrita, o la persona te tiene al teléfono— pásaselo por acá.
               </p>
               <input
                 readOnly

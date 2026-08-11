@@ -647,13 +647,26 @@ def reenviar_invitacion(
         ))
     except Exception:
         logger.exception("No se pudo reenviar la invitación a %s", objetivo.email)
-        # El link vuelve solo en la respuesta autenticada de quien lo pidió, para
-        # que pueda pasarlo por otro medio. Nunca se loguea.
         return {
-            "mensaje": f"No se pudo enviar el correo a {objetivo.email}.",
+            "mensaje": f"No se pudo enviar el correo a {objetivo.email}. "
+                       "Pásale el enlace por otro medio.",
             "link_activacion": link,
         }
-    return {"mensaje": f"Invitación reenviada a {objetivo.email}"}
+    # El link vuelve SIEMPRE, no sólo cuando el envío falla.
+    #
+    # Devolverlo únicamente en la rama de error suponía que un envío exitoso
+    # significa que la persona lo recibió, y no es lo mismo: el correo puede caer
+    # en spam, la casilla puede estar mal escrita, o quien administra puede tener
+    # a la persona al teléfono y querer dictárselo en el momento. Y en desarrollo
+    # el envío nunca falla —el cliente imprime en el log— así que el enlace no
+    # aparecía nunca por ninguna parte.
+    #
+    # Es una respuesta autenticada a quien ya tiene permiso de administrar esta
+    # cuenta, así que no expone nada que no pudiera obtener igual. Nunca se loguea.
+    return {
+        "mensaje": f"Invitación reenviada a {objetivo.email}",
+        "link_activacion": link,
+    }
 
 
 @router.post("/{usuario_id}/enviar-recuperacion")
