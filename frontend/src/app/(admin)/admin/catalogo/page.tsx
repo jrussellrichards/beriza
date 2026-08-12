@@ -80,7 +80,7 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
         <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <p className={cn("text-sm font-bold", c.text)}>{pilar.nombre}</p>
+            <p className={cn("text-sm font-semibold", c.text)}>{pilar.nombre}</p>
             <span className="text-xs text-ink-muted font-mono">{pilar.codigo}</span>
           </div>
         </div>

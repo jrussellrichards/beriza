@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
                 const color = m.pct_acreditacion >= 75 ? "bg-ok-ink" : m.pct_acreditacion >= 50 ? "bg-accion-line" : "bg-bloqueo-ink"
                 return (
                   <div key={m.id} className="px-5 py-4 flex items-center gap-4 hover:bg-surface-app/60 transition-colors cursor-pointer">
-                    <div className="w-8 h-8 rounded-lg bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-surface-sunken text-ink-muted text-[10px] font-semibold flex items-center justify-center shrink-0">
                       {initials(m.razon_social)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -166,7 +166,7 @@ export default function AdminDashboardPage() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-3xl font-bold text-ink">{pct}%</p>
+                  <p className="text-3xl font-semibold text-ink">{pct}%</p>
                   <p className="text-[10px] text-ink-subtle mt-0.5">acreditados</p>
                 </div>
               </div>

@@ -100,7 +100,7 @@ export default function LoginPage() {
 
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-bold text-ink">Iniciar sesión</h2>
+            <h2 className="text-2xl font-semibold text-ink">Iniciar sesión</h2>
             <p className="text-sm text-ink-muted mt-1">Ingresa tus credenciales para continuar</p>
           </div>
 

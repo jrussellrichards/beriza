@@ -74,7 +74,7 @@ function Formulario() {
   return (
     <>
       <div>
-        <h2 className="text-2xl font-bold text-ink">Elige tu contraseña</h2>
+        <h2 className="text-2xl font-semibold text-ink">Elige tu contraseña</h2>
         <p className="text-sm text-ink-muted mt-1">
           Al guardarla entras directamente a la plataforma.
         </p>

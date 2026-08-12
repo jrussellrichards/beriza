@@ -231,7 +231,7 @@ export default function UsuariosPage() {
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2.5">
                         <div className={cn(
-                          "w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0",
+                          "w-7 h-7 rounded-full text-[10px] font-semibold flex items-center justify-center shrink-0",
                           u.activo ? "bg-surface-sunken text-ink-muted" : "bg-surface-app text-ink-subtle"
                         )}>
                           {initials(u.nombre)}

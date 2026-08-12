@@ -224,7 +224,7 @@ function DetalleMandante({ m, onClose }: { m: Mandante; onClose: () => void }) {
     <div className="flex flex-col h-full">
       <div className="px-6 py-5 border-b border-line-subtle flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-surface-sunken text-ink-muted text-xs font-bold flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-surface-sunken text-ink-muted text-xs font-semibold flex items-center justify-center shrink-0">
             {initials(m.nombre)}
           </div>
           <div>
@@ -436,7 +436,7 @@ export default function MandantesPage() {
                     >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-md bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">
+                          <div className="w-7 h-7 rounded-md bg-surface-sunken text-ink-muted text-[10px] font-semibold flex items-center justify-center shrink-0">
                             {initials(m.nombre)}
                           </div>
                           <span className="font-medium text-ink">{m.nombre}</span>

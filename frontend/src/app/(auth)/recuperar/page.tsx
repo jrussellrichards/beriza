@@ -62,7 +62,7 @@ export default function RecuperarPage() {
         ) : (
           <>
             <div>
-              <h2 className="text-2xl font-bold text-ink">Recuperar contraseña</h2>
+              <h2 className="text-2xl font-semibold text-ink">Recuperar contraseña</h2>
               <p className="text-sm text-ink-muted mt-1">
                 Te enviamos un enlace para elegir una nueva.
               </p>

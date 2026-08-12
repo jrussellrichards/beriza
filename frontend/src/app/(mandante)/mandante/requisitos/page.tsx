@@ -553,7 +553,7 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
         className={cn("w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:opacity-90", c.bg)}
       >
         <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
-        <p className={cn("text-sm font-bold flex-1", c.text)}>{pilar.nombre}</p>
+        <p className={cn("text-sm font-semibold flex-1", c.text)}>{pilar.nombre}</p>
         <span className="text-xs text-ink-muted">{obligatorios}/{pilar.requisitos.length} exigidos</span>
         {open ? <ChevronDown size={15} className="text-ink-subtle" /> : <ChevronRight size={15} className="text-ink-subtle" />}
       </button>
