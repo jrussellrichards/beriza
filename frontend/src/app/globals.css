@@ -320,3 +320,78 @@
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Modo faena ───────────────────────────────────────────────────────────────
+   Para mirar el teléfono al aire libre. Se activa con [data-modo="faena"] en el
+   <html> y se recuerda por dispositivo.
+
+   Por qué existe: al sol el reflejo ambiental agrega un velo que se suma a los
+   dos lados del contraste, y ahí deja de mandar el ratio nominal y manda la
+   DIFERENCIA ABSOLUTA de luminancia. A 80 000 lux del mediodía no hay diseño
+   posible —negro puro sobre blanco puro da 1.52— pero sí se puede subir el techo:
+   de 12 000 a 18 400 lux de rango útil, +53 %. Eso cubre la sombra de un
+   contenedor, un día nublado y buena parte de la mañana, que es cuando de verdad
+   se mira el teléfono en obra.
+
+   Los estados pierden el tinte: dejan de ser chip pastel y pasan a relleno
+   sólido oscuro con texto blanco. Un pastel nunca llega a 3:1 contra la página,
+   ni bajo techo.
+
+   El brillo de pantalla lo fija el sistema operativo, no el CSS. Lo único que
+   puede hacer el producto es que el interruptor esté a un toque. */
+[data-modo="faena"] {
+  --color-surface: #ffffff;
+  --color-surface-app: #ffffff;
+  --color-surface-sunken: #ffffff;
+
+  --color-ink: #000000;
+  --color-ink-secondary: #000000;
+  --color-ink-muted: #3d3d3d;   /* 10.86:1 */
+  --color-ink-subtle: #3d3d3d;
+  --color-focus: #000000;
+
+  --color-line-subtle: #868686;
+  --color-line: #636363;        /* 6.01:1 — antes 1.35 */
+  --color-line-strong: #2e2e2e;
+
+  /* Cada familia colapsa a un solo sólido oscuro: soft blanco, e ink = line =
+     solid, con blanco encima. La separación bajo daltonismo de estos sólidos es
+     0.129 para ok/bloqueo — pero ok/accion queda en 0.029, así que al sol
+     "cumple" y "falta un papel" se distinguen por el ICONO, no por el color. */
+  --color-bloqueo-soft: #ffffff;
+  --color-bloqueo-line: #780008;
+  --color-bloqueo-ink: #780008;
+  --color-bloqueo-solid: #780008;   /* blanco encima: 11.65 */
+
+  --color-accion-soft: #ffffff;
+  --color-accion-line: #804e00;
+  --color-accion-ink: #804e00;
+  --color-accion-solid: #804e00;    /* 6.98 */
+  --color-accion-on-solid: #ffffff;
+
+  --color-ok-soft: #ffffff;
+  --color-ok-line: #006e5a;
+  --color-ok-ink: #006e5a;
+  --color-ok-solid: #006e5a;        /* 6.22 */
+
+  --color-excepcion-soft: #ffffff;
+  --color-excepcion-line: #5f3298;
+  --color-excepcion-ink: #5f3298;
+  --color-excepcion-solid: #5f3298; /* 8.76 */
+
+  --color-proceso-soft: #ffffff;
+  --color-proceso-line: #006387;
+  --color-proceso-ink: #006387;
+  --color-proceso-solid: #006387;   /* 6.70 */
+
+  --color-brand: #004885;
+  --color-brand-ink: #004885;
+  --color-brand-soft: #ffffff;
+  --color-brand-line: #004885;
+  --color-brand-solid: #004885;     /* 9.27 */
+
+  --color-neutro-soft: #ffffff;
+  --color-neutro-line: #434852;
+  --color-neutro-ink: #434852;
+  --color-neutro-solid: #434852;    /* 9.18 */
+}

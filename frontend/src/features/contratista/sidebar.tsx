@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { cn } from "@/shared/lib/utils"
+import { ModoFaena } from "@/shared/ui/modo-faena"
 import { LogoAcredita, MarcaAcredita } from "@/shared/ui/logo"
 import { api } from "@/shared/lib/api"
 import { Briefcase, FileText, Users, LayoutDashboard, LogOut, UserCog } from "lucide-react"
@@ -99,13 +100,18 @@ export function SidebarContratista() {
           <LogoAcredita size={20} className="text-brand-on-dark" />
           <p className="text-section text-ink-inverse">Acredita</p>
         </div>
-        <button
-          onClick={() => { localStorage.clear(); window.location.href = "/login" }}
-          className="text-ink-inverse-muted p-1"
-          aria-label="Cerrar sesión"
-        >
-          <LogOut size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* A un toque y en la cabecera: quien lo necesita está afuera, con el
+              teléfono en una mano, y no va a buscarlo en Configuración. */}
+          <ModoFaena contexto="oscuro" />
+          <button
+            onClick={() => { localStorage.clear(); window.location.href = "/login" }}
+            className="text-ink-inverse-muted p-1"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
       </header>
 
       {/* Cinco destinos en cuatro columnas: "Equipo" caía solo a una segunda

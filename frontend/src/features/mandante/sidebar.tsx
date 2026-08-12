@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { cn } from "@/shared/lib/utils"
+import { ModoFaena } from "@/shared/ui/modo-faena"
 import { LogoAcredita, MarcaAcredita } from "@/shared/ui/logo"
 import { api } from "@/shared/lib/api"
 import {
@@ -132,6 +133,9 @@ export function SidebarMandante() {
           <Link href="/mandante/configuracion" className="text-ink-inverse-muted p-1" aria-label="Configuración">
             <Settings size={16} />
           </Link>
+          {/* A un toque: el prevencionista que revisa desde la obra lo necesita
+              donde está mirando, no en Configuración. */}
+          <ModoFaena contexto="oscuro" />
           <button
             onClick={() => { localStorage.clear(); window.location.href = "/login" }}
             className="text-ink-inverse-muted p-1"
