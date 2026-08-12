@@ -135,7 +135,7 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
             <Button
               type="submit"
               disabled={loading || (accion === "observar" && !motivo.trim())}
-              className={accion === "aprobar" ? "bg-ok-ink hover:bg-ok-ink" : "bg-bloqueo-ink hover:bg-bloqueo-ink"}
+              className={accion === "aprobar" ? "bg-ok-ink hover:brightness-110" : "bg-bloqueo-ink hover:brightness-110"}
             >
               {loading ? "Guardando..." : accion === "aprobar" ? "Aprobar" : "Observar"}
             </Button>
@@ -375,15 +375,21 @@ export default function RevisionPage() {
                     que el servidor va a rechazar es peor que no ofrecerla. */}
                 {p.puede_aprobar ? (
                   <div className="flex items-center gap-2 shrink-0">
+                    {/* Los dos con el MISMO peso visual, y los dos con hover
+                        real. Antes "Aprobar" era relleno sólido y "Observar" un
+                        contorno —5 a 1 de peso— en un producto donde aprobar de
+                        más mete gente sin habilitar a una faena: el peso estaba
+                        invertido respecto de la consecuencia. Y ninguno respondía
+                        al puntero, porque el hover repetía el color del fondo. */}
                     <button
                       onClick={() => setDialogo({ pendiente: p, accion: "observar" })}
-                      className="flex items-center gap-1.5 text-xs font-medium text-bloqueo-ink border border-bloqueo-line bg-bloqueo-soft hover:bg-bloqueo-soft px-3 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 text-xs font-medium text-bloqueo-ink border border-bloqueo-line bg-bloqueo-soft hover:bg-bloqueo-line hover:border-bloqueo-ink px-3 py-2 rounded-lg transition-colors"
                     >
                       <XCircle size={13} /> Observar
                     </button>
                     <button
                       onClick={() => setDialogo({ pendiente: p, accion: "aprobar" })}
-                      className="flex items-center gap-1.5 text-xs font-medium text-white bg-ok-ink hover:bg-ok-ink px-3 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 text-xs font-medium text-ok-ink border border-ok-line bg-ok-soft hover:bg-ok-line hover:border-ok-ink px-3 py-2 rounded-lg transition-colors"
                     >
                       <CheckCircle2 size={13} /> Aprobar
                     </button>
