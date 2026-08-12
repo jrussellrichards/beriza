@@ -45,74 +45,121 @@
 
 @theme {
   /* ── Superficies ───────────────────────────────────────────────────────── */
+  /* Neutro levemente más cálido que el slate azulado anterior: es hacia donde se
+     movió el producto B2B en 2025-2026, y el ámbar de `accion` gana separación
+     contra él. */
   --color-surface: #ffffff;
-  --color-surface-app: #f8fafc;
-  --color-surface-sunken: #f1f5f9;
-  --color-surface-inverse: #0f172a;
-  --color-surface-inverse-hover: #1e293b;
+  --color-surface-app: #f8fafd;
+  --color-surface-sunken: #f1f3f7;
+  --color-surface-inverse: #19202d;
+  --color-surface-inverse-hover: #272e3d;
 
   /* ── Texto. El comentario declara el contraste sobre blanco ───────────── */
-  --color-ink: #0f172a; /* 17.85:1 */
-  --color-ink-secondary: #334155; /* 10.35:1 */
-  --color-ink-muted: #475569; /*  7.58:1 */
-  --color-ink-subtle: #64748b; /*  4.76:1 — PISO. Nada más claro lleva texto. */
-  --color-ink-inverse: #f8fafc;
-  --color-ink-inverse-muted: #94a3b8; /* solo sobre surface-inverse (6.96:1) */
+  --color-ink: #171f2d;           /* 16.53:1 */
+  --color-ink-secondary: #414856; /*  9.19:1 */
+  --color-ink-muted: #5d636e;     /*  6.04:1 · 5.78 sobre app */
+  --color-ink-subtle: #6c717b;    /*  4.90:1 · 4.41 sobre sunken — PISO */
+  --color-ink-inverse: #f0f2f4;   /* 14.55:1 sobre inverse */
+  --color-ink-inverse-muted: #adb1b9; /* 7.60:1 sobre inverse */
 
   /* ── Bordes. No portan significado: el estado lo lleva el punto ────────── */
-  --color-line: #e2e8f0;
-  --color-line-subtle: #f1f5f9;
-  --color-line-strong: #cbd5e1;
-  --color-line-inverse: #1e293b;
+  --color-line-subtle: #ebedf0;
+  --color-line: #dbdee3;
+  --color-line-strong: #c3c7cf;
+  --color-line-inverse: #272e3d;
 
   /* ── Marca e interacción ───────────────────────────────────────────────── */
-  /* Azul acero desaturado: se lee como infraestructura, no como plantilla.
-     Es el único matiz libre en un vocabulario rojo/ámbar/verde. */
-  --color-brand: #245b93; /* blanco encima: 7.02:1 */
-  --color-brand-hover: #1b4877; /* links sobre blanco: 9.38:1 */
-  --color-brand-soft: #eff5fb;
-  --color-brand-line: #bbd3ec;
-  --color-brand-on-dark: #93c0ee; /* sobre sidebar: 9.36:1 */
+  --color-brand: #1f5a96;
+  --color-brand-hover: #064883;   /* 9.28:1 sobre blanco */
+  --color-brand-active: #003a6c;  /* 11.53:1 */
+  --color-brand-soft: #e8f2ff;
+  --color-brand-line: #5598e2;
+  --color-brand-on-dark: #8bbcf3; /* 8.23:1 sobre inverse */
+  --color-focus: #1a71c4;         /* anillo de foco, ≥3:1 */
+  --color-brand-ink: #1f5a96;   /* alias uniforme con el resto de las familias */
+  --color-brand-solid: #1f5a96;
+  --color-brand-on-solid: #ffffff; /* 7.09 */
 
   /* Cobre. Mineral y chileno. PROHIBIDO dentro de la app: es adyacente al ámbar
-     y competiría con "advertencia". Vive solo donde no hay estados — logo,
-     login y certificado PDF. */
-  --color-brand-mark: #a6552c; /* 5.31:1 sobre blanco */
+     de `accion` y confundirlos cuesta caro. Sólo marca, fuera del producto. */
+  --color-brand-mark: #a24d21;    /* 5.80:1 sobre blanco */
 
-  /* ── Estados: soft = fondo, line = borde, ink = punto Y texto ──────────── */
-  /* Se usan tonos -700 a propósito: aguantan AA sobre blanco y sobre su propio
-     fondo suave, y son más legibles bajo sol directo que los -500. */
-  --color-espera-soft: #f1f5f9;
-  --color-espera-line: #e2e8f0;
-  --color-espera-ink: #475569;
+  /* ── Estados ───────────────────────────────────────────────────────────────
+     `soft` fondo · `line` borde · `ink` texto y punto · `solid` relleno ·
+     `on-solid` texto encima del relleno.
 
-  --color-proceso-soft: #eff5fb;
-  --color-proceso-line: #bbd3ec;
-  --color-proceso-ink: #1b4877;
+     `solid` y `on-solid` son nuevos: había 49 lugares usando `bg-*-ink` con
+     blanco implícito encima sin que nadie hubiera verificado ese contraste.
+     Ahora es explícito y medido.
 
-  --color-accion-soft: #fffbeb;
-  --color-accion-line: #fde68a;
-  /* amber-800: el anterior pasaba AA por muy poco (4.84) y cualquier ajuste
-     del fondo lo dejaba debajo. Ahora 6.84. */
-  --color-accion-ink: #92400e;
+     Tres reglas gobiernan estos valores, y se pueden auditar:
 
-  --color-bloqueo-soft: #fef2f2;
-  --color-bloqueo-line: #fecaca;
-  --color-bloqueo-ink: #b91c1c;
+     1. La LUMINOSIDAD codifica la distancia al fondo, y esa distancia codifica
+        la urgencia. `bloqueo` es el más oscuro, al menos 0.10 de L por debajo
+        del resto.
+     2. El CROMA se ordena con la urgencia: bloqueo 0.168 > excepcion 0.149 >
+        accion 0.117 > brand 0.115 > proceso 0.105 > ok 0.101 > neutro 0.019.
+        Antes estaba invertido: el violeta gritaba más fuerte que el rojo.
+     3. El MATIZ codifica la categoría y sigue la señalética de faena (NCh 1410),
+        que es la que estos usuarios ya leen todos los días.
 
-  --color-ok-soft: #ecfdf5;
-  --color-ok-line: #a7f3d0;
-  --color-ok-ink: #047857;
+     Por qué se rehízo: 17 de los 20 tokens anteriores eran literales de Tailwind
+     v2/v3, y para una deuteranopía `ok-soft` y `bloqueo-soft` daban ΔE 0.009 —
+     el mismo color, en un producto donde confundirlos manda a alguien a una
+     faena. Correr el verde a H 174 lleva ese par a 0.133.
 
-  --color-excepcion-soft: #f5f3ff;
-  --color-excepcion-line: #ddd6fe;
-  --color-excepcion-ink: #6d28d9;
+     AUN ASÍ, ningún estado puede comunicarse sólo con color: `ok` y `accion`
+     colisionan en acromatopsia por un límite estructural del espacio. Cada
+     estado necesita además una forma distinta. */
 
-  --color-vacio-line: #cbd5e1;
-  /* slate-600 y no slate-500: sobre surface-app el anterior medía 4.41 de
-     contraste, bajo el minimo AA de 4.5, y este token se usa en textos de
-     10-11 px, que es donde mas importa. Ahora queda en 7.2. */
-  --color-vacio-ink: #475569;
+  --color-bloqueo-soft: #ffe3df;
+  --color-bloqueo-line: #f26a5f;
+  --color-bloqueo-ink: #90000b;      /* 7.90 sobre soft · 9.59 sobre blanco */
+  --color-bloqueo-solid: #90000b;
+  --color-bloqueo-on-solid: #ffffff; /* 9.59 */
+
+  /* El único relleno claro. `accion-solid` mide 1.83 contra la página, así que
+     DEBE ir siempre con `accion-line` de borde: es lo que delimita el chip. Es
+     además lo que pide NCh 1410 — el amarillo se combina con oscuro. */
+  --color-accion-soft: #ffefde;
+  --color-accion-line: #d28300;
+  --color-accion-ink: #995e00;       /* 4.72 sobre soft · 5.31 sobre blanco */
+  --color-accion-solid: #ffaf50;
+  --color-accion-on-solid: #2c1a04;  /* 9.15 */
+
+  --color-ok-soft: #defcf3;
+  --color-ok-line: #28a78c;
+  --color-ok-ink: #007e67;           /* 4.62 sobre soft · 5.02 sobre blanco */
+  --color-ok-solid: #007e67;
+  --color-ok-on-solid: #ffffff;      /* 5.02 */
+
+  --color-excepcion-soft: #f4efff;
+  --color-excepcion-line: #a97fed;
+  --color-excepcion-ink: #6f47a7;    /* 5.94 sobre soft · 6.70 sobre blanco */
+  --color-excepcion-solid: #6f47a7;
+  --color-excepcion-on-solid: #ffffff;
+
+  /* `proceso` deja de compartir hex con `brand`: se corre a cian (H 232). Antes
+     un badge "En Análisis" era idéntico a un enlace en hover. */
+  --color-proceso-soft: #e2f5ff;
+  --color-proceso-line: #379ecd;
+  --color-proceso-ink: #0b759d;      /* 4.63 sobre soft · 5.19 sobre blanco */
+  --color-proceso-solid: #0b759d;
+  --color-proceso-on-solid: #ffffff;
+
+  /* `neutro` fusiona lo que antes eran `espera` y `vacio`, que ya compartían
+     hex. Los nombres viejos quedan como alias para no tocar 496 usos. */
+  --color-neutro-soft: #f1f3f7;
+  --color-neutro-line: #8f95a2;
+  --color-neutro-ink: #5d636e;       /* 5.44 sobre soft · 6.04 sobre blanco */
+  --color-neutro-solid: #5d636e;
+  --color-neutro-on-solid: #ffffff;
+
+  --color-espera-soft: var(--color-neutro-soft);
+  --color-espera-line: var(--color-neutro-line);
+  --color-espera-ink: var(--color-neutro-ink);
+  --color-vacio-line: var(--color-neutro-line);
+  --color-vacio-ink: var(--color-neutro-ink);
 
   /* ── Escala tipográfica. Cada token trae line-height, peso y tracking ──── */
   --text-meta: 0.75rem; /* 12/18 — metadatos, headers de columna */
