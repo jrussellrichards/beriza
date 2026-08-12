@@ -24,12 +24,25 @@
 /* El escalón de `micro` es responsive y @theme no acepta media queries, así que
    el valor vive en una variable. 12px en teléfono es el piso legible real. */
 :root {
-  --acr-micro-size: 0.75rem;
-  --acr-micro-lh: 1rem;
+  /* Telefono primero, y mas grande que escritorio: el usuario de faena lee al
+     sol, con prisa y a veces con casco. En escritorio se densifica.
+     @theme no acepta media queries, por eso los valores viven en variables. */
+  --acr-micro-size: 0.75rem;   --acr-micro-lh: 1rem;        /* 12/16 */
+  --acr-meta-size: 0.8125rem;  --acr-meta-lh: 1.125rem;     /* 13/18 */
+  --acr-body-size: 0.9375rem;  --acr-body-lh: 1.375rem;     /* 15/22 */
+  --acr-section-size: 1rem;    --acr-section-lh: 1.375rem;  /* 16/22 */
+  --acr-metric-size: 1.75rem;  --acr-metric-lh: 2rem;       /* 28/32 */
+  --acr-input-size: 1rem;      --acr-input-lh: 1.5rem;      /* 16 — bajo eso iOS hace zoom */
 }
 @media (min-width: 48rem) {
   :root {
-    --acr-micro-size: 0.6875rem;
+    --acr-micro-size: 0.6875rem;                            /* 11/15 */
+    --acr-micro-lh: 0.9375rem;
+    --acr-meta-size: 0.75rem;    --acr-meta-lh: 1rem;       /* 12/16 */
+    --acr-body-size: 0.875rem;   --acr-body-lh: 1.25rem;    /* 14/20 */
+    --acr-section-size: 0.9375rem; --acr-section-lh: 1.25rem; /* 15/20 */
+    --acr-metric-size: 1.5rem;   --acr-metric-lh: 1.75rem;  /* 24/28 */
+    --acr-input-size: 0.875rem;  --acr-input-lh: 1.25rem;   /* 14 */
   }
 }
 
@@ -162,21 +175,28 @@
   --color-vacio-ink: var(--color-neutro-ink);
 
   /* ── Escala tipográfica. Cada token trae line-height, peso y tracking ──── */
-  --text-meta: 0.75rem; /* 12/18 — metadatos, headers de columna */
-  --text-meta--line-height: 1.125rem;
+  --text-meta: var(--acr-meta-size); /* 13 movil / 12 escritorio */
+  --text-meta--line-height: var(--acr-meta-lh);
   --text-meta--font-weight: 400;
 
-  --text-body: 0.875rem; /* 14/20 — default de la app */
-  --text-body--line-height: 1.25rem;
+  --text-body: var(--acr-body-size); /* 15 movil / 14 escritorio */
+  --text-body--line-height: var(--acr-body-lh);
   --text-body--font-weight: 400;
 
-  --text-section: 0.875rem; /* 14/20 semibold — la sección se marca con PESO */
-  --text-section--line-height: 1.25rem;
+  /* El NOMBRE de la cosa: fila, documento, requisito. Mismo tamaño que el
+     cuerpo, distinto peso: la jerarquia la hace el peso, no el tamaño. */
+  --text-strong: var(--acr-body-size);
+  --text-strong--line-height: var(--acr-body-lh);
+  --text-strong--font-weight: 600;
+  --text-strong--letter-spacing: -0.005em;
+
+  --text-section: var(--acr-section-size); /* 16 movil / 15 escritorio */
+  --text-section--line-height: var(--acr-section-lh);
   --text-section--font-weight: 600;
   --text-section--letter-spacing: -0.005em;
 
-  --text-input: 1rem; /* 16/24 — bajo 16px iOS hace zoom al enfocar */
-  --text-input--line-height: 1.5rem;
+  --text-input: var(--acr-input-size); /* 16 movil: bajo eso iOS hace zoom */
+  --text-input--line-height: var(--acr-input-lh);
   --text-input--font-weight: 400;
 
   --text-title: 1.25rem; /* 20/28 */
@@ -188,8 +208,8 @@
      comentario: `tabular-nums` aparecía 3 veces en toda la aplicación, así que
      los contadores bailaban al cambiar de valor y las columnas de RUT, fechas y
      porcentajes no alineaban dígitos. Ahora la regla vive en el token. */
-  --text-metric: 1.5rem; /* 24/28 */
-  --text-metric--line-height: 1.75rem;
+  --text-metric: var(--acr-metric-size); /* 28 movil / 24 escritorio */
+  --text-metric--line-height: var(--acr-metric-lh);
   --text-metric--font-weight: 600;
   --text-metric--letter-spacing: -0.02em;
 
