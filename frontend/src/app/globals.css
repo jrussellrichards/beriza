@@ -144,6 +144,24 @@
 
   /* ── Movimiento. Corto y solo en cambio de estado ──────────────────────── */
   --ease-salida: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Movimiento ────────────────────────────────────────────────────────────
+     Tokens del set *productive* de IBM Carbon, pensado para tareas repetidas y
+     no para momentos de marca: quien revisa cuarenta documentos seguidos no
+     quiere que cada uno celebre.
+
+     Se definen acá y no con `tailwindcss-animate` porque ese plugin nunca se
+     registraba —Tailwind v4 es CSS-first y exige `@plugin`—, así que las clases
+     `animate-in` de TODOS los diálogos no generaban una sola regla. Se resolvió
+     con CSS propio en vez de conectar el plugin: son cuatro keyframes contra un
+     paquete entero. */
+  --acr-dur-toque: 80ms;      /* respuesta inmediata: hover, active */
+  --acr-dur-cambio: 160ms;    /* algo cambia de estado en su lugar */
+  --acr-dur-recorrido: 240ms; /* algo entra o recorre distancia */
+  --acr-dur-salida: 120ms;    /* salir es más rápido que entrar */
+  --acr-ease-entrada: cubic-bezier(0, 0, 0.38, 0.9);
+  --acr-ease-salida: cubic-bezier(0.2, 0, 1, 0.9);
+  --acr-ease-estandar: cubic-bezier(0.2, 0, 0.38, 0.9);
 }
 
 @layer base {
@@ -208,4 +226,38 @@
       min-height: 44px;
     }
   }
+}
+
+/* ── Entrada y salida de capas ────────────────────────────────────────────────
+   Diálogos y hojas. El desplazamiento es corto a propósito: comunica de dónde
+   viene la capa sin hacer esperar a nadie. */
+@keyframes acr-capa-entra {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(0.97); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes acr-capa-sale {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(0.97); }
+}
+@keyframes acr-velo-entra { from { opacity: 0 } to { opacity: 1 } }
+@keyframes acr-velo-sale  { from { opacity: 1 } to { opacity: 0 } }
+
+[data-state="open"].acr-capa   { animation: acr-capa-entra var(--acr-dur-recorrido) var(--acr-ease-entrada); }
+[data-state="closed"].acr-capa { animation: acr-capa-sale  var(--acr-dur-salida)    var(--acr-ease-salida); }
+[data-state="open"].acr-velo   { animation: acr-velo-entra var(--acr-dur-cambio)    var(--acr-ease-entrada); }
+[data-state="closed"].acr-velo { animation: acr-velo-sale  var(--acr-dur-salida)    var(--acr-ease-salida); }
+
+/* Se conserva el TIEMPO y se elimina el DESPLAZAMIENTO, en vez del `0.01ms`
+   habitual. Apagar el movimiento por completo apaga también la señal de causa y
+   efecto: quien activó esta preferencia se quedaría sin la única pista de que su
+   aprobación surtió efecto. WCAG 2.3.3 pide reducir o reemplazar, no eliminar. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes acr-capa-entra { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes acr-capa-sale  { from { opacity: 1 } to { opacity: 0 } }
+
+  *, *::before, *::after {
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--acr-dur-cambio) !important;
+  }
+  .animate-pulse, .animate-spin { animation: none !important; }
 }
