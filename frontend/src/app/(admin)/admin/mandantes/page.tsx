@@ -484,7 +484,11 @@ export default function MandantesPage() {
       </div>
 
       {/* Panel lateral */}
-      <div className={cn(
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Panel de detalle"
+ className={cn(
         "fixed right-0 top-0 h-full w-full sm:w-96 bg-surface border-l border-line shadow-xl z-20 transition-transform duration-300",
         panelAbierto ? "translate-x-0" : "translate-x-full"
       )}>
