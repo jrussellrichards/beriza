@@ -1,4 +1,4 @@
-import { AlertTriangle, Ban } from "lucide-react"
+import { AlertTriangle, Ban, Check, Clock, Lock } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 
 /**
@@ -36,7 +36,7 @@ export const ESTADO_NUM: Record<number, EstadoDoc> = {
  * y el rojo convergen a marrón. En un producto de seguridad eso no es un
  * residual aceptable.
  */
-type Glifo = "punto" | "alerta" | "bloqueo"
+type Glifo = "punto" | "alerta" | "bloqueo" | "cumplido" | "espera" | "autorizar"
 
 interface Estilo {
   label: string
@@ -67,7 +67,7 @@ const ESTILO: Record<EstadoDoc, Estilo> = {
     line: "border-vacio-line border-dashed",
     ink: "text-vacio-ink",
     dot: "bg-vacio-ink",
-    glifo: "punto",
+    glifo: "autorizar",
   },
   // El contratista ya hizo su parte: es cola, no urgencia ni logro. Gastar color
   // aquí sería gastarlo en el estado más frecuente.
@@ -77,7 +77,7 @@ const ESTILO: Record<EstadoDoc, Estilo> = {
     line: "border-espera-line",
     ink: "text-espera-ink",
     dot: "bg-espera-ink",
-    glifo: "punto",
+    glifo: "espera",
   },
   EN_ANALISIS: {
     label: "En análisis",
@@ -100,13 +100,18 @@ const ESTILO: Record<EstadoDoc, Estilo> = {
     dot: "bg-accion-ink",
     glifo: "alerta",
   },
+  // Visto, no punto. Era el hueco que dejaba la paleta: aprobado compartía
+  // forma con "falta subir" y "en revisión", así que quien no distingue verde de
+  // gris tenía que leer la palabra para saber si podía trabajar. Medido, los
+  // fondos -soft de aprobado y bloqueado colisionan bajo deuteranopía (ΔE 0.030,
+  // umbral 0.05): el color no alcanza y la forma no es decorativa.
   APROBADO: {
     label: "Aprobado",
     soft: "bg-ok-soft",
     line: "border-ok-line",
     ink: "text-ok-ink",
     dot: "bg-ok-ink",
-    glifo: "punto",
+    glifo: "cumplido",
   },
   // El único estado a nivel documento que merece rojo: la persona no puede
   // entrar a faena hoy.
@@ -152,6 +157,18 @@ const ESTILO_SERVICIO: Record<EstadoServicio, Estilo> = {
 function Marca({ estilo }: { estilo: Estilo }) {
   if (estilo.glifo === "alerta") {
     return <AlertTriangle size={11} className="shrink-0" strokeWidth={2.5} />
+  }
+  if (estilo.glifo === "autorizar") {
+    // Candado: el documento es sensible y espera que el contratista decida
+    // compartirlo. Es el único estado donde la pelota está en su cancha por una
+    // decisión y no por un trámite.
+    return <Lock size={11} className="shrink-0" strokeWidth={2.5} />
+  }
+  if (estilo.glifo === "cumplido") {
+    return <Check size={11} className="shrink-0" strokeWidth={3} />
+  }
+  if (estilo.glifo === "espera") {
+    return <Clock size={11} className="shrink-0" strokeWidth={2.5} />
   }
   if (estilo.glifo === "bloqueo") {
     return <Ban size={11} className="shrink-0" strokeWidth={2.5} />
