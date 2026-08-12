@@ -88,7 +88,7 @@ export default function AdminDashboardPage() {
                     <Icon size={13} className="text-ink-muted" />
                   </div>
                 </div>
-                <p className={cn("text-3xl font-semibold", k.color)}>{k.value}</p>
+                <p className={cn("text-3xl font-semibold tabular", k.color)}>{k.value}</p>
                 <p className="text-xs text-ink-subtle mt-1">{k.sub}</p>
               </div>
             )
