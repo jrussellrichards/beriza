@@ -80,12 +80,12 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
         <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <p className={cn("text-sm font-semibold", c.text)}>{pilar.nombre}</p>
-            <span className="text-xs text-ink-muted font-mono">{pilar.codigo}</span>
+            <p className={cn("text-strong font-semibold", c.text)}>{pilar.nombre}</p>
+            <span className="text-meta text-ink-muted font-mono">{pilar.codigo}</span>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-ink-muted">{requisitos.length} requisitos</span>
+          <span className="text-meta text-ink-muted">{requisitos.length} requisitos</span>
           {open ? <ChevronDown size={15} className="text-ink-subtle" /> : <ChevronRight size={15} className="text-ink-subtle" />}
         </div>
       </button>
@@ -106,7 +106,7 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
               <div key={req.id} className="px-5 py-3.5 flex items-start gap-3 group hover:bg-surface-app/50 transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <p className="text-sm font-medium text-ink">{req.nombre}</p>
+                    <p className="text-strong font-medium text-ink">{req.nombre}</p>
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-surface-sunken text-ink-muted border-line">
                       {req.codigo}
                     </span>
@@ -139,7 +139,7 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
                       </span>
                     )}
                   </div>
-                  {req.descripcion && <p className="text-xs text-ink-subtle">{req.descripcion}</p>}
+                  {req.descripcion && <p className="text-meta text-ink-subtle">{req.descripcion}</p>}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
                   <button
@@ -165,7 +165,7 @@ function PilarSection({ pilar, onAdd, onEdit, onDelete }: {
           <div className="px-5 py-3 border-t border-line-subtle">
             <button
               onClick={onAdd}
-              className="flex items-center gap-2 text-xs font-medium text-ink-muted hover:text-ink transition-colors"
+              className="flex items-center gap-2 text-micro font-medium text-ink-muted hover:text-ink transition-colors"
             >
               <Plus size={13} />
               Agregar requisito a {pilar.nombre}
@@ -214,14 +214,14 @@ export default function CatalogoPage() {
         <div className="px-8 py-6 border-b border-line bg-surface shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-ink">Catálogo global</h1>
-              <p className="text-sm text-ink-muted mt-0.5">
+              <h1 className="text-title font-semibold text-ink">Catálogo global</h1>
+              <p className="text-body text-ink-muted mt-0.5">
                 {totalRequisitos} requisitos en {pilares.length} pilares — los mandantes los activan en sus perfiles
               </p>
             </div>
           </div>
           {error && (
-            <p className="mt-3 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{error}</p>
+            <p className="mt-3 text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{error}</p>
           )}
         </div>
 
@@ -237,7 +237,7 @@ export default function CatalogoPage() {
           ))}
           {loading && pilares.length === 0 && (
             <div className="py-14 text-center bg-surface rounded-xl border border-line">
-              <p className="text-sm text-ink-subtle">Cargando catálogo...</p>
+              <p className="text-body text-ink-subtle">Cargando catálogo...</p>
             </div>
           )}
         </div>

@@ -86,18 +86,18 @@ function InvitarDialog({ onClose, onCreado }: { onClose: () => void; onCreado: (
                   "w-full text-left px-3 py-2 rounded-lg border transition-colors",
                   rol === r.v ? "border-ink bg-surface-app" : "border-line hover:border-line-strong",
                 )}>
-                <span className={cn("text-sm font-medium", rol === r.v ? "text-ink" : "text-ink-muted")}>
+                <span className={cn("text-strong font-medium", rol === r.v ? "text-ink" : "text-ink-muted")}>
                   {r.label}
                 </span>
                 <span className="block text-[10px] text-ink-subtle mt-0.5">{r.ayuda}</span>
               </button>
             ))}
           </div>
-          <p className="text-xs text-ink-muted bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+          <p className="text-meta text-ink-muted bg-surface-app border border-line-subtle rounded-md px-3 py-2">
             Le llega un correo para definir su propia contraseña. Hasta que lo haga, aparece
             como invitación pendiente.
           </p>
-          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={cargando}>Cancelar</Button>
             <Button type="submit" disabled={cargando || !email.trim() || !nombre.trim()}>
@@ -152,15 +152,15 @@ export default function EquipoContratistaPage() {
     <div className="flex flex-col min-h-screen">
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-semibold text-ink">Equipo</h1>
-          <p className="text-sm text-ink-muted mt-0.5">
+          <h1 className="text-title sm:text-title font-semibold text-ink">Equipo</h1>
+          <p className="text-body text-ink-muted mt-0.5">
             Quién de tu empresa entra a Acredita
             {pendientes > 0 && ` · ${pendientes} invitación${pendientes > 1 ? "es" : ""} pendiente${pendientes > 1 ? "s" : ""}`}
           </p>
         </div>
         <button
           onClick={() => setInvitando(true)}
-          className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-colors"
+          className="flex items-center gap-2 text-strong font-medium px-4 py-2 rounded-lg bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-colors"
         >
           <UserPlus size={14} /> Sumar a alguien
         </button>
@@ -168,18 +168,18 @@ export default function EquipoContratistaPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-3">
         {aviso && (
-          <p className="text-sm text-ok-ink bg-ok-soft border border-ok-line rounded-lg px-4 py-2">{aviso}</p>
+          <p className="text-body text-ok-ink bg-ok-soft border border-ok-line rounded-lg px-4 py-2">{aviso}</p>
         )}
         {error && (
-          <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{error}</p>
+          <p className="text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{error}</p>
         )}
 
-        {cargando && <p className="text-sm text-ink-muted">Cargando equipo...</p>}
+        {cargando && <p className="text-body text-ink-muted">Cargando equipo...</p>}
 
         {!cargando && equipo.length === 0 && (
           <div className="flex flex-col items-center py-16 text-center">
             <Users size={28} className="text-ink-subtle mb-3" />
-            <p className="text-sm text-ink-secondary">Todavía estás solo en Acredita.</p>
+            <p className="text-body text-ink-secondary">Todavía estás solo en Acredita.</p>
           </div>
         )}
 
@@ -189,13 +189,13 @@ export default function EquipoContratistaPage() {
                  "flex items-center gap-4 px-4 py-3 rounded-xl border bg-surface",
                  u.activo ? "border-line" : "border-line-subtle opacity-70",
                )}>
-            <div className="w-9 h-9 rounded-full bg-surface-app border border-line flex items-center justify-center text-xs font-medium text-ink-secondary shrink-0">
+            <div className="w-9 h-9 rounded-full bg-surface-app border border-line flex items-center justify-center text-micro font-medium text-ink-secondary shrink-0">
               {iniciales(u.nombre)}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-medium text-ink truncate">{u.nombre}</p>
+                <p className="text-strong font-medium text-ink truncate">{u.nombre}</p>
                 {u.es_uno_mismo && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded border bg-surface-app text-ink-muted border-line">
                     tú
@@ -212,12 +212,12 @@ export default function EquipoContratistaPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-ink-subtle truncate">
+              <p className="text-meta text-ink-subtle truncate">
                 {u.email}{u.cargo ? ` · ${u.cargo}` : ""}
               </p>
             </div>
 
-            <span className="text-xs text-ink-muted shrink-0">{etiquetaRol(u.rol)}</span>
+            <span className="text-meta text-ink-muted shrink-0">{etiquetaRol(u.rol)}</span>
 
             {/* Nunca se ofrecen acciones sobre uno mismo: el backend las rechaza
                 con 403 y un botón que siempre falla es peor que no tenerlo. */}

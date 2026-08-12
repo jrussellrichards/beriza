@@ -57,20 +57,20 @@ export function AsignarCentroDialog({ servicioId, servicioNombre, centroActualId
       <div className="bg-surface rounded-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-strong font-semibold text-ink">
               {centroActualId ? "Cambiar centro de trabajo" : "Asignar centro de trabajo"}
             </p>
-            <p className="text-xs text-ink-subtle mt-0.5 truncate">{servicioNombre}</p>
+            <p className="text-meta text-ink-subtle mt-0.5 truncate">{servicioNombre}</p>
           </div>
           <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted shrink-0"><X size={16} /></button>
         </div>
 
         <div className="px-6 py-5 space-y-3">
-          <label className="text-sm font-medium text-ink-secondary">¿Dónde se ejecuta?</label>
+          <label className="text-strong font-medium text-ink-secondary">¿Dónde se ejecuta?</label>
           <select
             value={centroId}
             onChange={e => setCentroId(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+            className="w-full px-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
           >
             <option value="" disabled>Selecciona un centro...</option>
             {centros.map(c => (
@@ -85,7 +85,7 @@ export function AsignarCentroDialog({ servicioId, servicioNombre, centroActualId
               No hay centros en operación. Créalos primero en la sección Centros.
             </p>
           )}
-          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
         </div>
 
         <div className="px-6 py-4 border-t border-line-subtle">
@@ -93,7 +93,7 @@ export function AsignarCentroDialog({ servicioId, servicioNombre, centroActualId
             onClick={guardar}
             disabled={!centroId || centroId === centroActualId || guardando}
             className={cn(
-              "w-full py-2.5 rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-2",
+              "w-full py-2.5 rounded-lg text-strong font-medium transition-all inline-flex items-center justify-center gap-2",
               !centroId || centroId === centroActualId || guardando
                 ? "bg-line text-ink-subtle cursor-not-allowed"
                 : "bg-surface-inverse text-white hover:bg-surface-inverse-hover",

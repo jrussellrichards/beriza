@@ -57,13 +57,13 @@ function Formulario() {
   if (!token) {
     return (
       <div className="space-y-5">
-        <div className="flex items-center gap-2 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3.5 py-2.5 rounded-lg">
+        <div className="flex items-center gap-2 text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3.5 py-2.5 rounded-lg">
           <span className="w-1.5 h-1.5 rounded-full bg-bloqueo-ink shrink-0" />
           Este enlace está incompleto. Pide uno nuevo.
         </div>
         <Link
           href="/recuperar"
-          className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors"
+          className="inline-flex items-center gap-1.5 text-body text-ink-muted hover:text-ink transition-colors"
         >
           <ArrowLeft size={14} /> Pedir un enlace nuevo
         </Link>
@@ -74,15 +74,15 @@ function Formulario() {
   return (
     <>
       <div>
-        <h2 className="text-2xl font-semibold text-ink">Elige tu contraseña</h2>
-        <p className="text-sm text-ink-muted mt-1">
+        <h2 className="text-title font-semibold text-ink">Elige tu contraseña</h2>
+        <p className="text-body text-ink-muted mt-1">
           Al guardarla entras directamente a la plataforma.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary" htmlFor="password">
+          <label className="text-strong font-medium text-ink-secondary" htmlFor="password">
             Contraseña nueva
           </label>
           <div className="relative">
@@ -94,7 +94,7 @@ function Formulario() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              className="w-full px-3.5 py-2.5 pr-10 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong transition-colors"
+              className="w-full px-3.5 py-2.5 pr-10 text-body border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong transition-colors"
             />
             <button
               type="button"
@@ -104,13 +104,13 @@ function Formulario() {
               {ver ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
-          <p className={cn("text-xs", corta ? "text-bloqueo-ink" : "text-ink-subtle")}>
+          <p className={cn("text-meta", corta ? "text-bloqueo-ink" : "text-ink-subtle")}>
             Al menos {LARGO_MINIMO} caracteres.
           </p>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary" htmlFor="repetida">
+          <label className="text-strong font-medium text-ink-secondary" htmlFor="repetida">
             Repítela
           </label>
           <input
@@ -121,15 +121,15 @@ function Formulario() {
             value={repetida}
             onChange={e => setRepetida(e.target.value)}
             required
-            className="w-full px-3.5 py-2.5 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong transition-colors"
+            className="w-full px-3.5 py-2.5 text-body border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong transition-colors"
           />
           {noCoincide && (
-            <p className="text-xs text-bloqueo-ink">Las dos contraseñas no coinciden.</p>
+            <p className="text-meta text-bloqueo-ink">Las dos contraseñas no coinciden.</p>
           )}
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3.5 py-2.5 rounded-lg">
+          <div className="flex items-center gap-2 text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3.5 py-2.5 rounded-lg">
             <span className="w-1.5 h-1.5 rounded-full bg-bloqueo-ink shrink-0" />
             {error}
           </div>
@@ -139,7 +139,7 @@ function Formulario() {
           type="submit"
           disabled={!puedeEnviar}
           className={cn(
-            "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all",
+            "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-strong font-semibold transition-all",
             !puedeEnviar
               ? "bg-line text-ink-subtle cursor-not-allowed"
               : "bg-surface-inverse text-ink-inverse hover:bg-surface-inverse-hover active:scale-[0.98]",
@@ -151,7 +151,7 @@ function Formulario() {
 
       <Link
         href="/login"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors"
+        className="inline-flex items-center gap-1.5 text-body text-ink-muted hover:text-ink transition-colors"
       >
         <ArrowLeft size={14} /> Volver a iniciar sesión
       </Link>
@@ -164,7 +164,7 @@ export default function RestablecerPage() {
     <div className="min-h-screen flex items-center justify-center p-8 bg-surface-app">
       <div className="w-full max-w-sm space-y-8">
         <MarcaAcredita />
-        <Suspense fallback={<p className="text-sm text-ink-subtle">Cargando...</p>}>
+        <Suspense fallback={<p className="text-body text-ink-subtle">Cargando...</p>}>
           <Formulario />
         </Suspense>
       </div>

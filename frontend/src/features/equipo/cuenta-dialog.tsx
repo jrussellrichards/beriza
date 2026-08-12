@@ -97,10 +97,10 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
         <form onSubmit={guardar} className="space-y-4">
           {/* El correo no se edita: es la identidad con la que se activó la
               cuenta y con la que se resuelve el enlace de invitación. */}
-          <p className="text-xs text-ink-muted font-mono">{cuenta.email}</p>
+          <p className="text-meta text-ink-muted font-mono">{cuenta.email}</p>
 
           {cuenta.pendiente && (
-            <div className="flex items-center justify-between gap-3 text-xs bg-espera-soft border border-espera-line rounded-md px-3 py-2">
+            <div className="flex items-center justify-between gap-3 text-meta bg-espera-soft border border-espera-line rounded-md px-3 py-2">
               <span className="text-espera-ink">Todavía no activa su cuenta.</span>
               <button type="button" disabled={cargando}
                 onClick={() => correr(async () => {
@@ -121,7 +121,7 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
               teléfono, no había NADA que ofrecerle. El enlace vuelve también en
               la respuesta para poder dictárselo. */}
           {cuenta.activo && !cuenta.pendiente && (
-            <div className="flex items-center justify-between gap-3 text-xs bg-surface-app border border-line rounded-md px-3 py-2">
+            <div className="flex items-center justify-between gap-3 text-meta bg-surface-app border border-line rounded-md px-3 py-2">
               <span className="text-ink-muted">¿No puede entrar?</span>
               <button type="button" disabled={cargando}
                 onClick={() => correr(async () => {
@@ -137,7 +137,7 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
           )}
 
           {enlace && (
-            <div className="space-y-1.5 text-xs bg-espera-soft border border-espera-line rounded-md px-3 py-2">
+            <div className="space-y-1.5 text-meta bg-espera-soft border border-espera-line rounded-md px-3 py-2">
               <p className="text-espera-ink">
                 Enlace personal y de un solo uso. Si el correo no llega —spam, casilla
                 mal escrita, o la persona te tiene al teléfono— pásaselo por acá.
@@ -152,7 +152,7 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
           )}
 
           {!cuenta.activo && !cuenta.pendiente && (
-            <div className="flex items-center justify-between gap-3 text-xs bg-surface-app border border-line rounded-md px-3 py-2">
+            <div className="flex items-center justify-between gap-3 text-meta bg-surface-app border border-line rounded-md px-3 py-2">
               <span className="text-ink-muted">Esta cuenta no tiene acceso.</span>
               <button type="button" disabled={cargando}
                 onClick={() => correr(() => api.patch(`/api/v1/usuarios/${cuenta.id}`, { activo: true }))}
@@ -181,7 +181,7 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
                     "w-full text-left px-3 py-2 rounded-lg border transition-colors",
                     rol === r.v ? "border-ink bg-surface-app" : "border-line hover:border-line-strong",
                   )}>
-                  <span className={cn("text-sm font-medium", rol === r.v ? "text-ink" : "text-ink-muted")}>
+                  <span className={cn("text-strong font-medium", rol === r.v ? "text-ink" : "text-ink-muted")}>
                     {r.label}
                   </span>
                   <span className="block text-[10px] text-ink-subtle mt-0.5">{r.ayuda}</span>
@@ -193,7 +193,7 @@ export function CuentaDialog({ cuenta, roles, onClose, onCambio, onAviso, onErro
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {cuenta.activo || cuenta.pendiente ? (
               <button type="button" onClick={quitarAcceso} disabled={cargando}
-                className="text-xs text-bloqueo-ink hover:underline mr-auto disabled:opacity-40">
+                className="text-meta text-bloqueo-ink hover:underline mr-auto disabled:opacity-40">
                 {cuenta.pendiente ? "Cancelar invitación" : "Quitar acceso"}
               </button>
             ) : <span className="mr-auto" />}

@@ -17,7 +17,7 @@ export default function ReportesRedirect() {
   useEffect(() => { window.location.replace("/mandante") }, [])
   return (
     <div className="p-8">
-      <p className="text-sm text-ink-muted">El estado de tus faenas está ahora en Inicio. Redirigiendo...</p>
+      <p className="text-body text-ink-muted">El estado de tus faenas está ahora en Inicio. Redirigiendo...</p>
     </div>
   )
 }

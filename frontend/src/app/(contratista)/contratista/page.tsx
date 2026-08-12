@@ -20,9 +20,9 @@ function ServicioRow({ s, motivo }: { s: ServicioContratista; motivo: string | n
         motivo ? "bg-bloqueo-ink" : "bg-ok-ink"
       )} />
       <div className="flex-1 min-w-0">
-        <span className="text-sm text-ink">{s.nombre}</span>
+        <span className="text-body text-ink">{s.nombre}</span>
       </div>
-      <span className={cn("text-xs shrink-0", motivo ? "text-bloqueo-ink" : "text-ok-ink")}>
+      <span className={cn("text-meta shrink-0", motivo ? "text-bloqueo-ink" : "text-ok-ink")}>
         {motivo ?? "Lista para empezar"}
       </span>
     </div>
@@ -84,8 +84,8 @@ export default function InicioContratistaPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
-        <h1 className="text-lg sm:text-xl font-semibold text-ink">Mi acreditación</h1>
-        <p className="text-sm text-ink-muted mt-0.5">
+        <h1 className="text-title sm:text-title font-semibold text-ink">Mi acreditación</h1>
+        <p className="text-body text-ink-muted mt-0.5">
           {error
             ? "No pudimos cargar tu estado"
             : servicios.length === 0
@@ -98,11 +98,11 @@ export default function InicioContratistaPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-6">
         {error && (
-          <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg">{error}</p>
         )}
 
         <section>
-          <p className="text-xs text-ink-muted mb-2">
+          <p className="text-meta text-ink-muted mb-2">
             Pendientes{pendientes.length > 0 && ` · ${pendientes.length}`}
           </p>
           {error ? (
@@ -111,8 +111,8 @@ export default function InicioContratistaPage() {
             <div className="bg-surface border border-line rounded-xl px-5 py-6 flex items-center gap-3">
               <AlertTriangle size={20} className="text-accion-ink shrink-0" />
               <div>
-                <p className="text-sm font-medium text-ink">No pudimos revisar tus pendientes</p>
-                <p className="text-xs text-ink-muted mt-0.5">
+                <p className="text-strong font-medium text-ink">No pudimos revisar tus pendientes</p>
+                <p className="text-meta text-ink-muted mt-0.5">
                   Vuelve a cargar la página. Si sigue fallando, puede haber documentos esperando tu acción.
                 </p>
               </div>
@@ -121,8 +121,8 @@ export default function InicioContratistaPage() {
             <div className="bg-surface border border-line rounded-xl px-5 py-6 flex items-center gap-3">
               <CheckCircle2 size={20} className="text-ok-ink shrink-0" />
               <div>
-                <p className="text-sm font-medium text-ink">Estás al día</p>
-                <p className="text-xs text-ink-muted mt-0.5">
+                <p className="text-strong font-medium text-ink">Estás al día</p>
+                <p className="text-meta text-ink-muted mt-0.5">
                   No hay nada esperando una acción tuya.
                 </p>
               </div>
@@ -138,10 +138,10 @@ export default function InicioContratistaPage() {
 
         <section>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-ink-muted">Mis servicios</p>
+            <p className="text-meta text-ink-muted">Mis servicios</p>
             <button
               onClick={() => window.location.href = "/contratista/servicios"}
-              className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors"
+              className="flex items-center gap-1 text-meta text-ink-muted hover:text-ink transition-colors"
             >
               Ver detalle <ArrowRight size={12} />
             </button>
@@ -149,8 +149,8 @@ export default function InicioContratistaPage() {
 
           {servicios.length === 0 ? (
             <div className="rounded-xl border border-dashed border-line py-10 text-center">
-              <p className="text-sm text-ink-muted">Todavía ningún cliente te ha contratado</p>
-              <p className="text-xs text-ink-subtle mt-1">
+              <p className="text-body text-ink-muted">Todavía ningún cliente te ha contratado</p>
+              <p className="text-meta text-ink-subtle mt-1">
                 Cuando creen un servicio para tu empresa, aparecerá aquí.
               </p>
             </div>
@@ -158,7 +158,7 @@ export default function InicioContratistaPage() {
             <div className="space-y-4">
               {[...porCliente.entries()].map(([cliente, ss]) => (
                 <div key={cliente}>
-                  <p className="text-sm font-medium text-ink mb-1.5">{cliente}</p>
+                  <p className="text-strong font-medium text-ink mb-1.5">{cliente}</p>
                   <div className="space-y-1.5">
                     {ss.map(s => (
                       <ServicioRow key={s.id} s={s} motivo={motivoPorServicio.get(s.id) ?? null} />

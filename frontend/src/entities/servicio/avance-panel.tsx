@@ -36,7 +36,7 @@ function RequisitoRow({ r, onVerArchivos }: { r: RequisitoAvance; onVerArchivos:
     <div className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-surface border border-line-subtle">
       <FileText size={13} className="text-ink-subtle shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-ink truncate">
+        <p className="text-micro font-medium text-ink truncate">
           {r.requisito_nombre}
           {r.trabajador_nombre && <span className="text-ink-subtle font-normal"> — {r.trabajador_nombre}</span>}
         </p>
@@ -78,7 +78,7 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
   }, [servicioId])
 
   if (error) {
-    return <p className="text-xs text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
+    return <p className="text-meta text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
   }
   if (!avance) {
     return (
@@ -94,8 +94,8 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
       {/* Barra de progreso */}
       <div>
         <div className="flex items-baseline justify-between mb-1.5">
-          <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">Avance de acreditación</p>
-          <p className="text-lg font-semibold text-ink">{r.porcentaje_avance}%</p>
+          <p className="text-micro font-medium text-ink-muted uppercase tracking-wider">Avance de acreditación</p>
+          <p className="text-title font-semibold text-ink">{r.porcentaje_avance}%</p>
         </div>
         <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
           <div
@@ -149,24 +149,24 @@ export function AvancePanel({ servicioId }: { servicioId: string }) {
           </div>
         ))}
         {avance.pilares.length === 0 && (
-          <p className="text-xs text-ink-subtle italic">El perfil de este servicio no tiene requisitos configurados</p>
+          <p className="text-meta text-ink-subtle italic">El perfil de este servicio no tiene requisitos configurados</p>
         )}
       </div>
 
       {/* Trabajadores */}
       {avance.trabajadores.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-ink-muted uppercase tracking-wider mb-2">
+          <p className="text-micro font-medium text-ink-muted uppercase tracking-wider mb-2">
             Dotación ({avance.trabajadores.filter((t) => t.cumple).length}/{avance.trabajadores.length} puede ingresar)
           </p>
           <div className="space-y-1.5">
             {avance.trabajadores.map((t) => (
               <div key={t.trabajador_id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-app border border-line-subtle">
                 <div>
-                  <p className="text-xs font-medium text-ink">{t.nombre}</p>
+                  <p className="text-micro font-medium text-ink">{t.nombre}</p>
                   <p className="text-[10px] text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
                 </div>
-                <span className={cn("text-xs font-medium", t.cumple ? "text-ok-ink" : "text-bloqueo-ink")}>
+                <span className={cn("text-micro font-medium", t.cumple ? "text-ok-ink" : "text-bloqueo-ink")}>
                   {t.aprobados}/{t.total}
                 </span>
               </div>

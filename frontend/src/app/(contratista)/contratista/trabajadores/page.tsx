@@ -47,23 +47,23 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-ink">
+          <p className="text-strong font-medium text-ink">
             {t.nombre_completo}
             {!t.activo && <span className="ml-2 text-[10px] text-ink-subtle">inactivo</span>}
           </p>
-          <p className="text-xs text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
+          <p className="text-meta text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           {sinAsignar ? (
-            <span className="text-xs text-ink-subtle">Sin asignar a ningún servicio</span>
+            <span className="text-meta text-ink-subtle">Sin asignar a ningún servicio</span>
           ) : bloqueados.length === 0 ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-ok-ink">
+            <span className="inline-flex items-center gap-1.5 text-meta text-ok-ink">
               <CheckCircle2 size={13} />
               Habilitado en {t.servicios.length === 1 ? "su servicio" : `sus ${t.servicios.length} servicios`}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-xs text-bloqueo-ink">
+            <span className="inline-flex items-center gap-1.5 text-meta text-bloqueo-ink">
               <UserX size={13} />
               No puede ingresar a {bloqueados.length === 1 ? bloqueados[0].servicio_nombre : `${bloqueados.length} servicios`}
             </span>
@@ -75,14 +75,14 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
       {abierto && (
         <div className="px-4 pb-4 pt-1 border-t border-line-subtle bg-surface-app/50 space-y-2">
           {sinAsignar ? (
-            <p className="text-xs text-ink-muted py-2">
+            <p className="text-meta text-ink-muted py-2">
               No está asignado a ningún servicio. Asígnalo desde la pantalla de Servicios.
             </p>
           ) : (
             t.servicios.map(s => (
               <div key={s.servicio_id} className="bg-surface border border-line-subtle rounded-lg px-3 py-2.5">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="text-sm text-ink">{s.servicio_nombre}</span>
+                  <span className="text-body text-ink">{s.servicio_nombre}</span>
                   <span className="text-[10px] text-ink-subtle">{s.mandante_razon_social}</span>
                   {/* Dos servicios del mismo cliente pueden llamarse igual en
                       faenas distintas; sin el centro no se sabe a cuál va. */}
@@ -111,14 +111,14 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
           <div className="flex flex-wrap gap-2 pt-1">
             <button
               onClick={() => window.location.href = "/contratista/documentos"}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-ink-muted hover:bg-surface transition-colors"
+              className="px-3 py-1.5 rounded-lg text-micro font-medium border border-line text-ink-muted hover:bg-surface transition-colors"
             >
               Subir sus documentos
             </button>
             <button
               onClick={alternarActivo}
               disabled={ocupado}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-ink-muted hover:bg-surface disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-micro font-medium border border-line text-ink-muted hover:bg-surface disabled:opacity-50 transition-colors"
             >
               {t.activo ? "Desactivar" : "Reactivar"}
             </button>
@@ -163,8 +163,8 @@ export default function TrabajadoresPage() {
     <div className="flex flex-col min-h-screen">
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-semibold text-ink">Trabajadores</h1>
-          <p className="text-sm text-ink-muted mt-0.5">
+          <h1 className="text-title sm:text-title font-semibold text-ink">Trabajadores</h1>
+          <p className="text-body text-ink-muted mt-0.5">
             {trabajadores.length === 0
               ? "Aún no has registrado trabajadores"
               : bloqueados === 0
@@ -178,13 +178,13 @@ export default function TrabajadoresPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setCargandoNomina(true)}
-            className="inline-flex items-center justify-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+            className="inline-flex items-center justify-center gap-2 bg-surface-inverse text-white text-strong font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
           >
             <FileSpreadsheet size={14} /> Cargar nómina
           </button>
           <button
             onClick={() => setAgregando(true)}
-            className="inline-flex items-center justify-center gap-2 border border-line text-ink-secondary text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-app transition-colors"
+            className="inline-flex items-center justify-center gap-2 border border-line text-ink-secondary text-strong font-medium px-4 py-2 rounded-lg hover:bg-surface-app transition-colors"
           >
             <Plus size={14} /> Agregar uno
           </button>
@@ -198,13 +198,13 @@ export default function TrabajadoresPage() {
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre o RUT..."
-            className="w-full pl-8 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+            className="w-full pl-8 pr-3 py-2 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
           />
         </div>
         <button
           onClick={() => setSoloBloqueados(!soloBloqueados)}
           className={cn(
-            "px-3 py-2 rounded-lg text-xs font-medium border transition-colors",
+            "px-3 py-2 rounded-lg text-micro font-medium border transition-colors",
             soloBloqueados
               ? "border-bloqueo-line bg-bloqueo-soft text-bloqueo-ink"
               : "border-line text-ink-muted hover:bg-surface-app"
@@ -216,10 +216,10 @@ export default function TrabajadoresPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-2">
         {cargando ? (
-          <p className="text-sm text-ink-subtle py-14 text-center">Cargando trabajadores...</p>
+          <p className="text-body text-ink-subtle py-14 text-center">Cargando trabajadores...</p>
         ) : visibles.length === 0 ? (
           <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
-            <p className="text-sm text-ink-muted">
+            <p className="text-body text-ink-muted">
               {trabajadores.length === 0 ? "No hay trabajadores registrados" : "Ninguno coincide con el filtro"}
             </p>
           </div>

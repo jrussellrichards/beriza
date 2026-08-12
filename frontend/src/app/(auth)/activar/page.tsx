@@ -102,13 +102,13 @@ function ActivarForm() {
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+  const inputCls = "w-full px-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
 
   if (!token) {
     return (
       <div className="text-center space-y-3">
-        <p className="text-sm font-medium text-ink">Enlace de activación inválido</p>
-        <p className="text-sm text-ink-muted">
+        <p className="text-strong font-medium text-ink">Enlace de activación inválido</p>
+        <p className="text-body text-ink-muted">
           Falta el token de invitación. Usa el enlace exacto del email que recibiste,
           o pide al mandante que te invite nuevamente.
         </p>
@@ -117,14 +117,14 @@ function ActivarForm() {
   }
 
   if (cargandoInvitacion) {
-    return <p className="text-sm text-ink-subtle text-center">Cargando invitación...</p>
+    return <p className="text-body text-ink-subtle text-center">Cargando invitación...</p>
   }
 
   if (!invitacion) {
     return (
       <div className="text-center space-y-3">
-        <p className="text-sm font-medium text-ink">No pudimos cargar tu invitación</p>
-        <p className="text-sm text-ink-muted">
+        <p className="text-strong font-medium text-ink">No pudimos cargar tu invitación</p>
+        <p className="text-body text-ink-muted">
           {error ?? "El enlace puede haber expirado o la cuenta ya fue activada."}
         </p>
       </div>
@@ -143,7 +143,7 @@ function ActivarForm() {
           BERISA" a alguien que sumó su colega del mandante era falso, y pedirle
           que confirme los datos de una empresa cuyos campos ni siquiera se le
           muestran, desconcertante. */}
-      <p className="text-sm text-ink-muted bg-surface-app border border-line rounded-lg px-3 py-2">
+      <p className="text-body text-ink-muted bg-surface-app border border-line rounded-lg px-3 py-2">
         Invitación de{" "}
         <span className="font-medium text-ink-secondary">
           {esEquipo
@@ -160,7 +160,7 @@ function ActivarForm() {
         // RUT de su propia organización— y pedírselos era desconcertante, porque
         // veía la razón social de otra empresa como si fuera suya.
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">Tu nombre</label>
+          <label className="text-strong font-medium text-ink-secondary">Tu nombre</label>
           <input
             value={nombre}
             onChange={e => setNombre(e.target.value)}
@@ -175,7 +175,7 @@ function ActivarForm() {
               que sin este campo el administrador quedaba llamándose "Minera del
               Norte SpA" y en Equipo aparecía como si fuera una persona. */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Tu nombre</label>
+            <label className="text-strong font-medium text-ink-secondary">Tu nombre</label>
             <input
               value={nombre}
               onChange={e => setNombre(e.target.value)}
@@ -186,7 +186,7 @@ function ActivarForm() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Razón social de tu empresa</label>
+            <label className="text-strong font-medium text-ink-secondary">Razón social de tu empresa</label>
             <div className="relative">
               <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
               <input
@@ -201,7 +201,7 @@ function ActivarForm() {
 
           <div className={cn("gap-3", esMandante ? "" : "grid grid-cols-2")}>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink-secondary">RUT empresa</label>
+              <label className="text-strong font-medium text-ink-secondary">RUT empresa</label>
               <input
                 value={rut}
                 onChange={e => setRut(e.target.value)}
@@ -213,7 +213,7 @@ function ActivarForm() {
             {/* El giro es un dato del contratista; el modelo Mandante no lo tiene. */}
             {!esMandante && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink-secondary">Giro (opcional)</label>
+                <label className="text-strong font-medium text-ink-secondary">Giro (opcional)</label>
                 <input
                   value={giro}
                   onChange={e => setGiro(e.target.value)}
@@ -227,7 +227,7 @@ function ActivarForm() {
       )}
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-ink-secondary">Contraseña</label>
+        <label className="text-strong font-medium text-ink-secondary">Contraseña</label>
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
@@ -248,7 +248,7 @@ function ActivarForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-ink-secondary">Confirmar contraseña</label>
+        <label className="text-strong font-medium text-ink-secondary">Confirmar contraseña</label>
         <input
           type={showPassword ? "text" : "password"}
           value={confirmar}
@@ -259,14 +259,14 @@ function ActivarForm() {
       </div>
 
       {error && (
-        <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-3 py-2">{error}</p>
+        <p className="text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-3 py-2">{error}</p>
       )}
 
       <button
         type="submit"
         disabled={loading}
         className={cn(
-          "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
+          "w-full py-2.5 rounded-lg text-strong font-medium transition-all",
           loading ? "bg-line text-ink-subtle cursor-not-allowed" : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
         )}
       >
@@ -286,16 +286,16 @@ export default function ActivarPage() {
 
         <div className="bg-surface rounded-xl border border-line p-8">
           <div className="mb-6">
-            <h1 className="text-lg font-semibold text-ink">Activa tu cuenta</h1>
+            <h1 className="text-title font-semibold text-ink">Activa tu cuenta</h1>
             {/* El subtítulo específico lo pone el formulario, que sí sabe si es
                 un alta de empresa o alguien sumándose a un equipo. */}
           </div>
-          <Suspense fallback={<p className="text-sm text-ink-subtle">Cargando...</p>}>
+          <Suspense fallback={<p className="text-body text-ink-subtle">Cargando...</p>}>
             <ActivarForm />
           </Suspense>
         </div>
 
-        <p className="text-xs text-ink-subtle text-center mt-6">
+        <p className="text-meta text-ink-subtle text-center mt-6">
           ¿Ya tienes cuenta? <a href="/login" className="text-ink-muted font-medium hover:underline">Inicia sesión</a>
         </p>
       </div>

@@ -74,8 +74,8 @@ export default function EquipoPage() {
     <div className="flex flex-col min-h-screen">
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
-          <h1 className="text-lg sm:text-xl font-semibold text-ink">Equipo</h1>
-          <p className="text-sm text-ink-muted mt-0.5">
+          <h1 className="text-title sm:text-title font-semibold text-ink">Equipo</h1>
+          <p className="text-body text-ink-muted mt-0.5">
             {equipo.length === 0
               ? "Invita a quienes revisarán la documentación de tus contratistas"
               : sinPermisos > 0
@@ -85,7 +85,7 @@ export default function EquipoPage() {
         </div>
         <button
           onClick={() => setDialogo({ usuario: null })}
-          className="inline-flex items-center justify-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+          className="inline-flex items-center justify-center gap-2 bg-surface-inverse text-white text-strong font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
         >
           <UserPlus size={14} />
           Invitar usuario
@@ -94,19 +94,19 @@ export default function EquipoPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6">
         {aviso && (
-          <p className="text-sm text-ok-ink bg-ok-soft border border-ok-line px-3 py-2 rounded-lg mb-4">{aviso}</p>
+          <p className="text-body text-ok-ink bg-ok-soft border border-ok-line px-3 py-2 rounded-lg mb-4">{aviso}</p>
         )}
         {(error || errorAccion) && (
-          <p className="text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg mb-4">{error || errorAccion}</p>
+          <p className="text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3 py-2 rounded-lg mb-4">{error || errorAccion}</p>
         )}
 
         {loading ? (
-          <p className="text-sm text-ink-subtle py-14 text-center">Cargando equipo...</p>
+          <p className="text-body text-ink-subtle py-14 text-center">Cargando equipo...</p>
         ) : equipo.length === 0 ? (
           <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
             <Users size={26} className="text-ink-subtle mx-auto mb-3" />
-            <p className="text-sm text-ink-muted">Todavía no hay nadie más en tu equipo</p>
-            <p className="text-xs text-ink-subtle mt-1">
+            <p className="text-body text-ink-muted">Todavía no hay nadie más en tu equipo</p>
+            <p className="text-meta text-ink-subtle mt-1">
               Puedes invitar a alguien y definir qué pilares podrá aprobar.
             </p>
           </div>
@@ -114,12 +114,12 @@ export default function EquipoPage() {
           <div className="bg-surface rounded-xl border border-line divide-y divide-line">
             {equipo.map(u => (
               <div key={u.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-5 py-4">
-                <div className="w-8 h-8 rounded-full bg-surface-sunken text-ink-muted text-xs font-semibold flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full bg-surface-sunken text-ink-muted text-micro font-semibold flex items-center justify-center shrink-0">
                   {iniciales(u.nombre)}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm font-medium", u.activo ? "text-ink" : "text-ink-subtle")}>
+                  <p className={cn("text-strong font-medium", u.activo ? "text-ink" : "text-ink-subtle")}>
                     {u.nombre}
                     {!u.activo && (
                       // "invitación pendiente" y "sin acceso" son estados opuestos y
@@ -131,7 +131,7 @@ export default function EquipoPage() {
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-ink-subtle font-mono">{u.email}</p>
+                  <p className="text-meta text-ink-subtle font-mono">{u.email}</p>
                   {u.cargo && <p className="text-[11px] text-ink-muted mt-0.5">{u.cargo}</p>}
                   <p className={cn(
                     "text-[11px] mt-0.5",
@@ -156,7 +156,7 @@ export default function EquipoPage() {
                   {u.rol !== "mandante_admin" && (
                     <button
                       onClick={() => setDialogo({ usuario: u })}
-                      className="text-xs text-ink-muted hover:text-ink border border-line px-2.5 py-1 rounded-lg hover:bg-surface-app transition-colors"
+                      className="text-meta text-ink-muted hover:text-ink border border-line px-2.5 py-1 rounded-lg hover:bg-surface-app transition-colors"
                     >
                       Permisos
                     </button>
@@ -167,7 +167,7 @@ export default function EquipoPage() {
                   {!u.es_uno_mismo && (
                     <button
                       onClick={() => setCuenta(u)}
-                      className="text-xs text-ink-muted hover:text-ink border border-line px-2.5 py-1 rounded-lg hover:bg-surface-app transition-colors"
+                      className="text-meta text-ink-muted hover:text-ink border border-line px-2.5 py-1 rounded-lg hover:bg-surface-app transition-colors"
                     >
                       Cuenta
                     </button>

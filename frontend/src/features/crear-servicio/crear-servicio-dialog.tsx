@@ -95,7 +95,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
   }
 
   const selectClass =
-    "w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+    "w-full px-3 py-2 text-body border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -166,7 +166,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
                 entregado un documento. Se avisa ACÁ, que es donde se toma la
                 decisión, y no sólo en la pantalla de perfiles. */}
             {perfilVacio && (
-              <p className="text-xs text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-md px-3 py-2">
+              <p className="text-meta text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-md px-3 py-2">
                 Ese perfil no exige ningún documento: el contratista de esta faena va a
                 figurar en regla sin entregar nada. Puedes crear el servicio igual y
                 configurarlo después en Perfiles.
@@ -214,7 +214,7 @@ export function CrearServicioDialog({ open, onClose, onSuccess }: Props) {
             </div>
           </div>
           {error && (
-            <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
+            <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
