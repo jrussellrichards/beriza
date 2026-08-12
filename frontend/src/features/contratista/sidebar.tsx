@@ -108,7 +108,10 @@ export function SidebarContratista() {
         </button>
       </header>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-surface-inverse border-t border-white/10 grid grid-cols-4">
+      {/* Cinco destinos en cuatro columnas: "Equipo" caía solo a una segunda
+          fila y la barra crecía al doble, tapando contenido. Se declara el
+          número real. */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-surface-inverse border-t border-white/10 grid grid-cols-5">
         {nav.map(({ href, label, icon: Icon }) => {
           const active = esActivo(path, href)
           return (
