@@ -289,7 +289,7 @@ function DetailPanel({ c, onClose, onCambio }: {
       <div className="px-5 pt-5 pb-0 border-b border-line-subtle">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-surface-sunken text-ink-muted text-[10px] font-semibold flex items-center justify-center shrink-0">
               {initials(c.razon_social)}
             </div>
             <div>
@@ -628,7 +628,7 @@ export default function ContratistasPage() {
                     >
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-md bg-surface-sunken text-ink-muted text-[10px] font-bold flex items-center justify-center shrink-0">
+                          <div className="w-7 h-7 rounded-md bg-surface-sunken text-ink-muted text-[10px] font-semibold flex items-center justify-center shrink-0">
                             {initials(c.razon_social)}
                           </div>
                           <span className="font-medium text-ink truncate max-w-[180px]">{c.razon_social}</span>
