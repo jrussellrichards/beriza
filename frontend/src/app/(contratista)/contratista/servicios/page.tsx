@@ -121,7 +121,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
             onChange={(e) => setSeleccion(e.target.value)}
             // min-w-0: un item flex no baja de su contenido por defecto (min-width:auto),
             // asi que los nombres largos empujaban el boton "Asignar" fuera del panel.
-            className="flex-1 min-w-0 px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
+            className="flex-1 min-w-0 px-3 py-2 text-body border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
           >
             <option value="" disabled>Agregar trabajador a la faena...</option>
             {disponibles.map((t) => (
@@ -131,25 +131,25 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           <button
             onClick={asignar}
             disabled={!seleccion || cargando}
-            className="shrink-0 flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors disabled:opacity-40"
+            className="shrink-0 flex items-center gap-1.5 bg-surface-inverse text-white text-micro font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors disabled:opacity-40"
           >
             <Plus size={13} /> Asignar
           </button>
         </div>
       ) : (
-        <p className="text-xs text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+        <p className="text-meta text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
           Solo se puede modificar la dotación de servicios activos.
         </p>
       )}
 
-      {error && <p className="text-xs text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+      {error && <p className="text-meta text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
 
       <div className="space-y-1.5">
         {asignados.map((t) => (
           <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-surface-app border border-line-subtle">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-ink truncate">{t.nombre_completo}</p>
-              <p className="text-xs text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
+              <p className="text-strong font-medium text-ink truncate">{t.nombre_completo}</p>
+              <p className="text-meta text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
             </div>
 
             {/* Cargo con el que participa en ESTA faena. Decide que documentos se
@@ -161,7 +161,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
                   disabled={guardandoCargo === t.id}
                   onChange={(e) => definirCargo(t.id, e.target.value)}
                   className={cn(
-                    "text-xs rounded-md border px-2 py-1 bg-surface transition-colors",
+                    "text-meta rounded-md border px-2 py-1 bg-surface transition-colors",
                     t.cargo_id ? "border-line text-ink" : "border-accion-line text-accion-ink bg-accion-soft",
                   )}
                   title={t.cargo_id
@@ -188,7 +188,7 @@ function DotacionTab({ servicio, onCambio }: { servicio: Servicio; onCambio: () 
           </div>
         ))}
         {asignados.length === 0 && (
-          <p className="text-xs text-ink-subtle italic px-1">Sin trabajadores asignados a esta faena</p>
+          <p className="text-meta text-ink-subtle italic px-1">Sin trabajadores asignados a esta faena</p>
         )}
       </div>
     </div>
@@ -207,8 +207,8 @@ function DetailPanel({ s, onClose, onCambio }: { s: Servicio; onClose: () => voi
       <div className="px-5 pt-5 pb-0 border-b border-line-subtle">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <p className="text-sm font-semibold text-ink leading-tight">{s.nombre}</p>
-            <p className="text-xs text-ink-subtle">
+            <p className="text-strong font-semibold text-ink leading-tight">{s.nombre}</p>
+            <p className="text-meta text-ink-subtle">
               {s.codigo_referencia ? `${s.codigo_referencia} · ` : ""}Perfil: {s.perfil_nombre}
             </p>
           </div>
@@ -222,7 +222,7 @@ function DetailPanel({ s, onClose, onCambio }: { s: Servicio; onClose: () => voi
             tenía el dato y el contratista igual lo pedía por WhatsApp. */}
         {s.centro_trabajo_nombre && (
           <div className="mt-3 bg-surface-app border border-line-subtle rounded-lg px-3 py-2.5 space-y-1.5">
-            <p className="text-xs font-medium text-ink flex items-center gap-1.5">
+            <p className="text-micro font-medium text-ink flex items-center gap-1.5">
               <MapPin size={12} className="text-ink-subtle shrink-0" />
               {s.centro_trabajo_nombre}
             </p>
@@ -254,7 +254,7 @@ function DetailPanel({ s, onClose, onCambio }: { s: Servicio; onClose: () => voi
               key={id}
               onClick={() => setTab(id)}
               className={cn(
-                "px-3 py-2 text-xs font-medium border-b-2 transition-colors",
+                "px-3 py-2 text-micro font-medium border-b-2 transition-colors",
                 tab === id ? "border-ink text-ink" : "border-transparent text-ink-subtle hover:text-ink-muted"
               )}
             >
@@ -293,23 +293,23 @@ export default function ServiciosContratistaPage() {
       <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", seleccionado ? "lg:mr-96" : "")}>
 
         <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
-          <h1 className="text-lg sm:text-xl font-semibold text-ink">Mis servicios</h1>
-          <p className="text-sm text-ink-muted mt-0.5">
+          <h1 className="text-title sm:text-title font-semibold text-ink">Mis servicios</h1>
+          <p className="text-body text-ink-muted mt-0.5">
             Lo que cada cliente te contrató, su avance y la dotación asignada
           </p>
         </div>
 
         <div className="flex-1 px-6 sm:px-8 py-6 overflow-x-auto">
           <div className="bg-surface border border-line rounded-xl overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
                 <tr className="border-b border-line-subtle bg-surface-app/60">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Servicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Dónde</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider hidden lg:table-cell">Perfil</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Dotación</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Inicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Servicio</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Dónde</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider hidden lg:table-cell">Perfil</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Dotación</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Inicio</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -339,7 +339,7 @@ export default function ServiciosContratistaPage() {
                       <td className="px-4 py-3.5">
                         {s.centro_trabajo_nombre ? (
                           <>
-                            <p className="text-xs text-ink-secondary flex items-center gap-1.5">
+                            <p className="text-meta text-ink-secondary flex items-center gap-1.5">
                               <MapPin size={11} className="text-ink-subtle shrink-0" />
                               <span className="truncate max-w-[140px]">{s.centro_trabajo_nombre}</span>
                             </p>
@@ -352,12 +352,12 @@ export default function ServiciosContratistaPage() {
                         ) : (
                           // El contratista no puede arreglarlo: lo asigna el
                           // mandante. Se dice en gris, no en ámbar de acción.
-                          <span className="text-xs text-ink-subtle">Por confirmar</span>
+                          <span className="text-meta text-ink-subtle">Por confirmar</span>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-ink-muted hidden lg:table-cell">{s.perfil_nombre}</td>
-                      <td className="px-4 py-3.5 text-xs text-ink-muted">{s.trabajadores_asignados}</td>
-                      <td className="px-4 py-3.5 text-xs text-ink-subtle">{s.fecha_inicio}</td>
+                      <td className="px-4 py-3.5 text-meta text-ink-muted hidden lg:table-cell">{s.perfil_nombre}</td>
+                      <td className="px-4 py-3.5 text-meta text-ink-muted">{s.trabajadores_asignados}</td>
+                      <td className="px-4 py-3.5 text-meta text-ink-subtle">{s.fecha_inicio}</td>
                       <td className="px-4 py-3.5"><EstadoServicioBadge estado={s.estado} /></td>
                       <td className="px-4 py-3.5">
                         <ChevronRight size={14} className={cn("text-ink-subtle transition-transform", selected && "rotate-90 text-ink-muted")} />
@@ -370,7 +370,7 @@ export default function ServiciosContratistaPage() {
 
             {servicios.length === 0 && (
               <div className="py-14 text-center">
-                <p className="text-sm text-ink-subtle">Aún no tienes servicios contratados</p>
+                <p className="text-body text-ink-subtle">Aún no tienes servicios contratados</p>
               </div>
             )}
           </div>

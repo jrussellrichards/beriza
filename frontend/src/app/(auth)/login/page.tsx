@@ -60,7 +60,7 @@ export default function LoginPage() {
         */}
         <div className="space-y-6">
           <div className="space-y-4">
-            <h1 className="text-3xl font-semibold text-ink-inverse leading-tight">
+            <h1 className="text-metric font-semibold text-ink-inverse leading-tight">
               Saber exactamente quién puede entrar a faena.
             </h1>
             <p className="text-ink-inverse-muted text-body leading-relaxed max-w-md">
@@ -84,7 +84,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-xs text-ink-muted">
+        <p className="text-meta text-ink-muted">
           © 2025 BERISA. Plataforma de acreditación para la industria de la construcción.
         </p>
       </div>
@@ -100,14 +100,14 @@ export default function LoginPage() {
 
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-semibold text-ink">Iniciar sesión</h2>
-            <p className="text-sm text-ink-muted mt-1">Ingresa tus credenciales para continuar</p>
+            <h2 className="text-title font-semibold text-ink">Iniciar sesión</h2>
+            <p className="text-body text-ink-muted mt-1">Ingresa tus credenciales para continuar</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink-secondary" htmlFor="email">
+              <label className="text-strong font-medium text-ink-secondary" htmlFor="email">
                 Correo electrónico
               </label>
               <input
@@ -118,18 +118,18 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong transition-colors"
+                className="w-full px-3.5 py-2.5 text-body border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong transition-colors"
               />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-ink-secondary" htmlFor="password">
+                <label className="text-strong font-medium text-ink-secondary" htmlFor="password">
                   Contraseña
                 </label>
                 <Link
                   href="/recuperar"
-                  className="text-xs text-ink-muted hover:text-ink transition-colors"
+                  className="text-meta text-ink-muted hover:text-ink transition-colors"
                 >
                   ¿La olvidaste?
                 </Link>
@@ -143,7 +143,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 pr-10 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong transition-colors"
+                  className="w-full px-3.5 py-2.5 pr-10 text-body border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong transition-colors"
                 />
                 <button
                   type="button"
@@ -156,7 +156,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3.5 py-2.5 rounded-lg">
+              <div className="flex items-center gap-2 text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line px-3.5 py-2.5 rounded-lg">
                 <span className="w-1.5 h-1.5 rounded-full bg-bloqueo-ink shrink-0" />
                 {error}
               </div>
@@ -166,7 +166,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading || !email || !password}
               className={cn(
-                "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all",
+                "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-strong font-semibold transition-all",
                 loading || !email || !password
                   ? "bg-line text-ink-subtle cursor-not-allowed"
                   : "bg-surface-inverse text-ink-inverse hover:bg-surface-inverse-hover active:scale-[0.98]"

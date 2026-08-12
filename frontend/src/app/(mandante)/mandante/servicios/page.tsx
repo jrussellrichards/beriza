@@ -48,8 +48,8 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
               {initials(s.contratista_razon_social)}
             </div>
             <div>
-              <p className="text-sm font-semibold text-ink leading-tight">{s.nombre}</p>
-              <p className="text-xs text-ink-subtle">{s.contratista_razon_social}</p>
+              <p className="text-strong font-semibold text-ink leading-tight">{s.nombre}</p>
+              <p className="text-meta text-ink-subtle">{s.contratista_razon_social}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted shrink-0">
@@ -90,7 +90,7 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
               <button
                 onClick={() => cambiarEstado("SUSPENDIDO")}
                 disabled={cambiando}
-                className="flex items-center gap-1.5 text-xs font-medium text-accion-ink border border-accion-line bg-accion-soft hover:bg-accion-soft px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-micro font-medium text-accion-ink border border-accion-line bg-accion-soft hover:bg-accion-soft px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
               >
                 <Pause size={11} /> Suspender
               </button>
@@ -98,7 +98,7 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
               <button
                 onClick={() => cambiarEstado("ACTIVO")}
                 disabled={cambiando}
-                className="flex items-center gap-1.5 text-xs font-medium text-ok-ink border border-ok-line bg-ok-soft hover:bg-ok-soft px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-micro font-medium text-ok-ink border border-ok-line bg-ok-soft hover:bg-ok-soft px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
               >
                 <Play size={11} /> Reactivar
               </button>
@@ -106,13 +106,13 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
             <button
               onClick={() => cambiarEstado("TERMINADO")}
               disabled={cambiando}
-              className="flex items-center gap-1.5 text-xs font-medium text-ink-muted border border-line bg-surface hover:bg-surface-app px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-micro font-medium text-ink-muted border border-line bg-surface hover:bg-surface-app px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
             >
               <Square size={10} /> Terminar
             </button>
           </div>
         )}
-        {error && <p className="text-xs text-bloqueo-ink mt-2">{error}</p>}
+        {error && <p className="text-meta text-bloqueo-ink mt-2">{error}</p>}
       </div>
 
       {/* Avance */}
@@ -212,12 +212,12 @@ export default function ServiciosPage() {
         <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-ink">Servicios</h1>
-              <p className="text-sm text-ink-muted mt-0.5">Contratos y faenas con sus exigencias documentales</p>
+              <h1 className="text-title font-semibold text-ink">Servicios</h1>
+              <p className="text-body text-ink-muted mt-0.5">Contratos y faenas con sus exigencias documentales</p>
             </div>
             <button
               onClick={() => setDialogAbierto(true)}
-              className="flex items-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+              className="flex items-center gap-2 bg-surface-inverse text-white text-strong font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
             >
               <Plus size={15} />
               Nuevo servicio
@@ -238,8 +238,8 @@ export default function ServiciosPage() {
               { label: "Terminados", value: kpi.terminados, color: "text-ink-muted" },
             ].map((k) => (
               <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
-                <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
-                <p className={cn("text-3xl font-semibold mt-1 tabular", k.color)}>{k.value}</p>
+                <p className="text-micro font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
+                <p className={cn("text-metric font-semibold mt-1 tabular", k.color)}>{k.value}</p>
               </div>
             ))}
           </div>
@@ -254,14 +254,14 @@ export default function ServiciosPage() {
                 placeholder="Buscar servicio, empresa o N° contrato..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+                className="w-full pl-9 pr-3 py-2 text-body border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
               />
             </div>
             {(centros.length > 0 || haySinCentro) && (
               <select
                 value={centroFiltro}
                 onChange={(e) => cambiarCentro(e.target.value)}
-                className="px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
+                className="px-3 py-2 text-body border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
               >
                 <option value="TODOS">Todos los centros</option>
                 {centros.map(([id, nombre]) => (
@@ -276,7 +276,7 @@ export default function ServiciosPage() {
                   key={e}
                   onClick={() => setFiltro(e)}
                   className={cn(
-                    "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                    "px-3 py-1.5 rounded-md text-micro font-medium transition-colors",
                     filtro === e ? "bg-surface-inverse text-white" : "text-ink-muted hover:text-ink"
                   )}
                 >
@@ -284,21 +284,21 @@ export default function ServiciosPage() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-ink-subtle ml-auto">{filtrados.length} de {servicios.length}</p>
+            <p className="text-meta text-ink-subtle ml-auto">{filtrados.length} de {servicios.length}</p>
           </div>
 
           {/* Tabla */}
           <div className="bg-surface border border-line rounded-xl overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
                 <tr className="border-b border-line-subtle bg-surface-app/60">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Servicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Contratista</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Centro</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider hidden lg:table-cell">Perfil</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Dotación</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Inicio</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Servicio</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Contratista</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Centro</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider hidden lg:table-cell">Perfil</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Dotación</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Inicio</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Estado</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -330,17 +330,17 @@ export default function ServiciosPage() {
                       </td>
                       <td className="px-4 py-3.5">
                         {s.centro_trabajo_nombre ? (
-                          <p className="text-xs text-ink-secondary flex items-center gap-1.5">
+                          <p className="text-meta text-ink-secondary flex items-center gap-1.5">
                             <MapPin size={11} className="text-ink-subtle shrink-0" />
                             <span className="truncate max-w-[140px]">{s.centro_trabajo_nombre}</span>
                           </p>
                         ) : (
-                          <span className="text-xs text-accion-ink">Sin asignar</span>
+                          <span className="text-meta text-accion-ink">Sin asignar</span>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-ink-muted hidden lg:table-cell">{s.perfil_nombre}</td>
-                      <td className="px-4 py-3.5 text-xs text-ink-muted">{s.trabajadores_asignados}</td>
-                      <td className="px-4 py-3.5 text-xs text-ink-subtle">{s.fecha_inicio}</td>
+                      <td className="px-4 py-3.5 text-meta text-ink-muted hidden lg:table-cell">{s.perfil_nombre}</td>
+                      <td className="px-4 py-3.5 text-meta text-ink-muted">{s.trabajadores_asignados}</td>
+                      <td className="px-4 py-3.5 text-meta text-ink-subtle">{s.fecha_inicio}</td>
                       <td className="px-4 py-3.5"><EstadoServicioBadge estado={s.estado} /></td>
                       <td className="px-4 py-3.5">
                         <ChevronRight size={14} className={cn("text-ink-subtle transition-transform", selected && "rotate-90 text-ink-muted")} />
@@ -357,15 +357,15 @@ export default function ServiciosPage() {
               <div className="py-14 px-6 text-center">
                 {servicios.length === 0 ? (
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-ink">Todavía no hay ninguna faena</p>
-                    <p className="text-xs text-ink-subtle max-w-md mx-auto leading-relaxed">
+                    <p className="text-strong font-medium text-ink">Todavía no hay ninguna faena</p>
+                    <p className="text-meta text-ink-subtle max-w-md mx-auto leading-relaxed">
                       Una faena une a una empresa contratista con un lugar de trabajo y un perfil
                       de exigencias. Recién ahí empiezan a correr los documentos que le pides.
                       Necesitas al menos un perfil, un centro y una empresa invitada.
                     </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-ink-subtle">
+                  <p className="text-body text-ink-subtle">
                     Ninguna faena coincide con lo que buscas.
                   </p>
                 )}

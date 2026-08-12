@@ -107,7 +107,7 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
           <DialogDescription>{titulo}</DialogDescription>
         </DialogHeader>
 
-        {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+        {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
         {!historial && !error && (
           <div className="flex justify-center py-8 text-ink-subtle"><Loader2 size={18} className="animate-spin" /></div>
         )}
@@ -115,12 +115,12 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
         {historial && (
           <div className="space-y-5">
             <div>
-              <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
+              <p className="text-micro font-semibold text-ink-muted uppercase tracking-wider mb-2">
                 Versiones ({historial.versiones.length})
               </p>
               {historial.versiones.length === 0 && (
                 <div className="rounded-lg border border-dashed border-line px-3 py-4 text-center">
-                  <p className="text-xs text-ink-muted">
+                  <p className="text-meta text-ink-muted">
                     El contratista todavía no autorizó compartir este documento.
                   </p>
                   <p className="text-[10px] text-ink-subtle mt-0.5">
@@ -148,7 +148,7 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
                   return (
                     <div key={v.id} className="rounded-lg border border-line-subtle bg-surface-app px-3 py-2.5">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-ink">
+                        <p className="text-micro font-semibold text-ink">
                           Versión {v.numero_version}
                           {v.aprobado_por_excepcion && (
                             <span className="ml-2 text-[10px] font-medium text-excepcion-ink border border-excepcion-line bg-excepcion-soft rounded px-1.5 py-0.5">
@@ -187,14 +187,14 @@ export function HistorialDialog({ documentoId, titulo, estadoAcreditacion, onClo
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
+              <p className="text-micro font-semibold text-ink-muted uppercase tracking-wider mb-2">
                 Bitácora ({historial.eventos.length})
               </p>
               <div className="space-y-0">
                 {[...historial.eventos].reverse().map((ev, i) => (
                   <div key={i} className="flex items-start gap-2.5 py-1.5 border-l-2 border-line-subtle pl-3 ml-1">
                     <div className="flex-1">
-                      <p className="text-xs text-ink-secondary">
+                      <p className="text-meta text-ink-secondary">
                         {EVENTO_LABEL[ev.tipo_evento] ?? ev.tipo_evento}
                         {ev.estado_anterior !== null && ev.estado_nuevo !== null && (
                           <span className="text-ink-subtle">

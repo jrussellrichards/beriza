@@ -62,9 +62,9 @@ export function PendienteRow({ p, onResuelto }: {
       <Icono size={17} className={cn("shrink-0", color)} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-ink">{p.titulo}</p>
-        {p.detalle && <p className="text-xs text-ink-subtle mt-0.5">{p.detalle}</p>}
-        {error && <p className="text-xs text-bloqueo-ink mt-1">{error}</p>}
+        <p className="text-body text-ink">{p.titulo}</p>
+        {p.detalle && <p className="text-meta text-ink-subtle mt-0.5">{p.detalle}</p>}
+        {error && <p className="text-meta text-bloqueo-ink mt-1">{error}</p>}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -73,14 +73,14 @@ export function PendienteRow({ p, onResuelto }: {
             <button
               onClick={() => resolver("rechazar")}
               disabled={ocupado}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-ink-muted hover:bg-surface-app disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-micro font-medium border border-line text-ink-muted hover:bg-surface-app disabled:opacity-50 transition-colors"
             >
               Rechazar
             </button>
             <button
               onClick={() => resolver("autorizar")}
               disabled={ocupado}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-micro font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover disabled:opacity-50 transition-colors"
             >
               Autorizar
             </button>
@@ -88,7 +88,7 @@ export function PendienteRow({ p, onResuelto }: {
         ) : (
           <button
             onClick={irA}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-ink-muted hover:bg-surface-app transition-colors"
+            className="px-3 py-1.5 rounded-lg text-micro font-medium border border-line text-ink-muted hover:bg-surface-app transition-colors"
           >
             {p.tipo === "OBSERVADO" ? "Subir corrección"
               : p.tipo === "POR_VENCER" ? "Renovar"

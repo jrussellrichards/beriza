@@ -13,7 +13,7 @@ export default function SolicitudesRedirect() {
   useEffect(() => { window.location.replace("/contratista") }, [])
   return (
     <div className="p-8">
-      <p className="text-sm text-ink-muted">Ahora tus solicitudes están en Inicio. Redirigiendo...</p>
+      <p className="text-body text-ink-muted">Ahora tus solicitudes están en Inicio. Redirigiendo...</p>
     </div>
   )
 }

@@ -145,7 +145,7 @@ export function SubirDocumentoDialog({
               volver a subir. Para el contratista ese ciclo es gente sin poder
               entrar a faena; el costo de leerlo de más es un párrafo. */}
           {requisito.descripcion && (
-            <details open className="text-xs bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+            <details open className="text-meta bg-surface-app border border-line-subtle rounded-md px-3 py-2">
               <summary className="cursor-pointer text-ink-secondary font-medium">
                 Qué debe contener este documento
               </summary>
@@ -156,7 +156,7 @@ export function SubirDocumentoDialog({
           )}
 
           {requiereServicio && servicioFijo && (
-            <p className="text-xs text-ink-muted bg-brand-soft border border-brand-line rounded-md px-3 py-2">
+            <p className="text-meta text-ink-muted bg-brand-soft border border-brand-line rounded-md px-3 py-2">
               Este documento acredita el servicio <strong>{servicioFijo.nombre}</strong>.
             </p>
           )}
@@ -168,14 +168,14 @@ export function SubirDocumentoDialog({
                 value={servicioId}
                 onChange={(e) => setServicioId(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
+                className="w-full px-3 py-2 text-body border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
               >
                 <option value="" disabled>Selecciona el servicio...</option>
                 {servicios.map((s) => (
                   <option key={s.id} value={s.id}>{s.nombre}{s.codigo_referencia ? ` (${s.codigo_referencia})` : ""}</option>
                 ))}
               </select>
-              <p className="text-xs text-ink-muted">
+              <p className="text-meta text-ink-muted">
                 Este documento se acredita por cada servicio contratado.
               </p>
             </div>
@@ -192,7 +192,7 @@ export function SubirDocumentoDialog({
               multiple={requisito.max_archivos > 1}
               onChange={(e) => { agregarArchivos(e.target.files); e.target.value = "" }}
             />
-            <p className="text-xs text-ink-muted">
+            <p className="text-meta text-ink-muted">
               Máximo 20 MB por archivo. {etiquetaFormatos(formatos)}.
             </p>
           </div>
@@ -202,7 +202,7 @@ export function SubirDocumentoDialog({
               {files.map((f, i) => (
                 <div key={`${f.name}-${i}`} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-app border border-line-subtle">
                   <FileText size={13} className="text-ink-subtle shrink-0" />
-                  <span className="text-xs text-ink-secondary truncate flex-1">{f.name}</span>
+                  <span className="text-meta text-ink-secondary truncate flex-1">{f.name}</span>
                   <span className="text-[10px] text-ink-subtle">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
                   <button
                     type="button"
@@ -217,7 +217,7 @@ export function SubirDocumentoDialog({
           )}
 
           {error && (
-            <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
+            <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>

@@ -89,17 +89,17 @@ export function CentroTrabajoDialog({ centro, onClose, onGuardado }: {
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+  const inputCls = "w-full px-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
 
   return (
     <div className="fixed inset-0 bg-surface-inverse/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-surface rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-strong font-semibold text-ink">
               {editando ? "Editar centro de trabajo" : "Nuevo centro de trabajo"}
             </p>
-            <p className="text-xs text-ink-subtle mt-0.5">
+            <p className="text-meta text-ink-subtle mt-0.5">
               El lugar donde se ejecutan los servicios
             </p>
           </div>
@@ -108,13 +108,13 @@ export function CentroTrabajoDialog({ centro, onClose, onGuardado }: {
 
         <div className="px-6 py-5 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Nombre</label>
+            <label className="text-strong font-medium text-ink-secondary">Nombre</label>
             <input value={nombre} onChange={e => setNombre(e.target.value)}
                    placeholder="Chuquicamata" className={inputCls} />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">
+            <label className="text-strong font-medium text-ink-secondary">
               Dirección <span className="font-normal text-ink-subtle">(opcional)</span>
             </label>
             <input value={direccion} onChange={e => setDireccion(e.target.value)}
@@ -122,7 +122,7 @@ export function CentroTrabajoDialog({ centro, onClose, onGuardado }: {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Encargado</label>
+            <label className="text-strong font-medium text-ink-secondary">Encargado</label>
             <select
               value={encargadoId}
               onChange={e => setEncargadoId(e.target.value)}
@@ -139,7 +139,7 @@ export function CentroTrabajoDialog({ centro, onClose, onGuardado }: {
             </p>
           </div>
 
-          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
 
           {editando && centro.activo && (
             <div className="pt-2 border-t border-line-subtle space-y-1.5">
@@ -147,7 +147,7 @@ export function CentroTrabajoDialog({ centro, onClose, onGuardado }: {
                 onClick={cerrar}
                 disabled={guardando || centro.servicios_activos > 0}
                 className={cn(
-                  "text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors",
+                  "text-micro font-medium px-3 py-1.5 rounded-lg border transition-colors",
                   centro.servicios_activos > 0
                     ? "border-line text-ink-subtle cursor-not-allowed"
                     : "border-bloqueo-line text-bloqueo-ink hover:bg-bloqueo-soft",
@@ -169,7 +169,7 @@ export function CentroTrabajoDialog({ centro, onClose, onGuardado }: {
             onClick={guardar}
             disabled={!nombre.trim() || guardando}
             className={cn(
-              "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
+              "w-full py-2.5 rounded-lg text-strong font-medium transition-all",
               !nombre.trim() || guardando
                 ? "bg-line text-ink-subtle cursor-not-allowed"
                 : "bg-surface-inverse text-white hover:bg-surface-inverse-hover",

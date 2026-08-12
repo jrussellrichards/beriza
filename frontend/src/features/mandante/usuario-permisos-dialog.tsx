@@ -131,7 +131,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+  const inputCls = "w-full px-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
   const puedeGuardar = editando ? true : Boolean(email && nombre)
 
   const OPCIONES_ALCANCE: { v: Alcance; label: string; ayuda: string }[] = [
@@ -145,10 +145,10 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
       <div className="bg-surface rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-strong font-semibold text-ink">
               {editando ? "Alcance de aprobación" : "Invitar a tu equipo"}
             </p>
-            <p className="text-xs text-ink-subtle mt-0.5">
+            <p className="text-meta text-ink-subtle mt-0.5">
               {editando ? usuario.nombre : "Se le enviará un email para activar su cuenta"}
             </p>
           </div>
@@ -159,19 +159,19 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
           {!editando && (
             <>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink-secondary">Nombre</label>
+                <label className="text-strong font-medium text-ink-secondary">Nombre</label>
                 <input value={nombre} onChange={e => setNombre(e.target.value)}
                        placeholder="Patricia Rojas" className={inputCls} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink-secondary">Email</label>
+                <label className="text-strong font-medium text-ink-secondary">Email</label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                        placeholder="patricia@empresa.cl" className={inputCls} />
               </div>
               {/* Texto libre a propósito: es lo que la gente quiere cuando pide
                   "crear un rol nuevo", y como etiqueta no toca los permisos. */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink-secondary">
+                <label className="text-strong font-medium text-ink-secondary">
                   Cargo <span className="font-normal text-ink-subtle">(opcional)</span>
                 </label>
                 <input value={cargo} onChange={e => setCargo(e.target.value)}
@@ -191,7 +191,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
               desde su ficha, no acá. */}
           {!editando && (
             <div className="space-y-1.5 pt-1 border-t border-line-subtle">
-              <label className="text-sm font-medium text-ink-secondary">Administra la cuenta</label>
+              <label className="text-strong font-medium text-ink-secondary">Administra la cuenta</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { v: false, label: "No" },
@@ -201,7 +201,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
                     key={String(o.v)}
                     onClick={() => setAdministra(o.v)}
                     className={cn(
-                      "py-2 rounded-lg border text-xs font-medium transition-colors",
+                      "py-2 rounded-lg border text-micro font-medium transition-colors",
                       administra === o.v ? "border-ink bg-surface-inverse text-white"
                                          : "border-line text-ink-muted hover:border-line-strong"
                     )}
@@ -225,7 +225,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
 
           {/* Alcance de aprobación */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Qué puede aprobar</label>
+            <label className="text-strong font-medium text-ink-secondary">Qué puede aprobar</label>
             <div className="space-y-1.5">
               {OPCIONES_ALCANCE.map(o => {
                 const activo = alcanceEfectivo === o.v
@@ -240,7 +240,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
                       administra && "opacity-60 cursor-not-allowed",
                     )}
                   >
-                    <span className={cn("text-sm font-medium", activo ? "text-ink" : "text-ink-muted")}>
+                    <span className={cn("text-strong font-medium", activo ? "text-ink" : "text-ink-muted")}>
                       {o.label}
                     </span>
                     <span className="block text-[10px] text-ink-subtle mt-0.5">{o.ayuda}</span>
@@ -257,7 +257,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
 
           {alcanceEfectivo === "ALGUNOS" && (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink-secondary flex items-center gap-1.5">
+              <label className="text-strong font-medium text-ink-secondary flex items-center gap-1.5">
                 <ShieldCheck size={13} className="text-ink-subtle" />
                 Pilares que puede aprobar
               </label>
@@ -267,11 +267,11 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
                          className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-line px-3 py-2 hover:border-line-strong">
                     <input type="checkbox" checked={elegidos.includes(p.id)}
                            onChange={() => alternar(p.id)} />
-                    <span className="text-sm text-ink-secondary">{p.nombre}</span>
+                    <span className="text-body text-ink-secondary">{p.nombre}</span>
                   </label>
                 ))}
                 {pilares.length === 0 && (
-                  <p className="text-xs text-ink-subtle">No hay pilares en el catálogo.</p>
+                  <p className="text-meta text-ink-subtle">No hay pilares en el catálogo.</p>
                 )}
               </div>
               <p className="text-[10px] text-ink-subtle">
@@ -286,11 +286,11 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
             </div>
           )}
 
-          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
 
           {linkRespaldo && (
             <div className="rounded-lg bg-accion-soft border border-accion-line p-3 space-y-2">
-              <p className="text-xs text-accion-ink">
+              <p className="text-meta text-accion-ink">
                 El usuario se creó pero el email no pudo enviarse. Entrégale este enlace:
               </p>
               <code className="block text-[10px] bg-surface border border-accion-line rounded px-2 py-1.5 break-all text-ink-secondary">
@@ -305,7 +305,7 @@ export function UsuarioPermisosDialog({ mandanteId, usuario, onClose, onGuardado
             onClick={guardar}
             disabled={!puedeGuardar || guardando}
             className={cn(
-              "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
+              "w-full py-2.5 rounded-lg text-strong font-medium transition-all",
               !puedeGuardar || guardando
                 ? "bg-line text-ink-subtle cursor-not-allowed"
                 : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"

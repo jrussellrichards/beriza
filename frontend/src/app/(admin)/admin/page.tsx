@@ -56,12 +56,12 @@ export default function AdminDashboardPage() {
       <div className="px-8 py-6 border-b border-line bg-surface shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-ink">Dashboard BERISA</h1>
-            <p className="text-sm text-ink-muted mt-0.5">Visión global de la plataforma</p>
+            <h1 className="text-title font-semibold text-ink">Dashboard BERISA</h1>
+            <p className="text-body text-ink-muted mt-0.5">Visión global de la plataforma</p>
           </div>
           <a
             href="/admin/mandantes"
-            className="flex items-center gap-2 text-sm text-ink-muted border border-line px-4 py-2 rounded-lg hover:bg-surface-app transition-colors"
+            className="flex items-center gap-2 text-body text-ink-muted border border-line px-4 py-2 rounded-lg hover:bg-surface-app transition-colors"
           >
             Gestionar mandantes
             <ArrowUpRight size={14} />
@@ -83,13 +83,13 @@ export default function AdminDashboardPage() {
             return (
               <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
+                  <p className="text-micro font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
                   <div className="w-7 h-7 rounded-lg bg-surface-sunken flex items-center justify-center">
                     <Icon size={13} className="text-ink-muted" />
                   </div>
                 </div>
-                <p className={cn("text-3xl font-semibold tabular", k.color)}>{k.value}</p>
-                <p className="text-xs text-ink-subtle mt-1">{k.sub}</p>
+                <p className={cn("text-metric font-semibold tabular", k.color)}>{k.value}</p>
+                <p className="text-meta text-ink-subtle mt-1">{k.sub}</p>
               </div>
             )
           })}
@@ -103,9 +103,9 @@ export default function AdminDashboardPage() {
             <div className="px-5 py-4 border-b border-line-subtle flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Building2 size={14} className="text-ink-subtle" />
-                <h2 className="text-sm font-semibold text-ink">Mandantes</h2>
+                <h2 className="text-strong font-semibold text-ink">Mandantes</h2>
               </div>
-              <a href="/admin/mandantes" className="text-xs text-ink-subtle hover:text-ink-muted transition-colors">Ver todos →</a>
+              <a href="/admin/mandantes" className="text-meta text-ink-subtle hover:text-ink-muted transition-colors">Ver todos →</a>
             </div>
             <div className="divide-y divide-line">
               {mandantes.map(m => {
@@ -117,7 +117,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-medium text-ink truncate">{m.razon_social}</p>
+                        <p className="text-strong font-medium text-ink truncate">{m.razon_social}</p>
                         <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded border shrink-0", PLAN_CFG[m.plan] ?? "bg-surface-sunken text-ink-muted border-line")}>
                           {m.plan}
                         </span>
@@ -129,7 +129,7 @@ export default function AdminDashboardPage() {
                         <div className="flex-1 h-1.5 bg-surface-sunken rounded-full overflow-hidden max-w-[120px]">
                           <div className={cn("h-full rounded-full", color)} style={{ width: `${m.pct_acreditacion}%` }} />
                         </div>
-                        <span className="text-xs text-ink-subtle">{m.acreditadas}/{m.total_contratistas} acreditados</span>
+                        <span className="text-meta text-ink-subtle">{m.acreditadas}/{m.total_contratistas} acreditados</span>
                       </div>
                     </div>
                     <ChevronRight size={14} className="text-ink-subtle shrink-0" />
@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
           <div className="col-span-2 bg-surface rounded-xl border border-line p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp size={14} className="text-ink-subtle" />
-              <h2 className="text-sm font-semibold text-ink">Acreditación global</h2>
+              <h2 className="text-strong font-semibold text-ink">Acreditación global</h2>
             </div>
 
             <div className="flex items-center justify-center flex-1 py-2">
@@ -166,7 +166,7 @@ export default function AdminDashboardPage() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-3xl font-semibold text-ink">{pct}%</p>
+                  <p className="text-metric font-semibold text-ink">{pct}%</p>
                   <p className="text-[10px] text-ink-subtle mt-0.5">acreditados</p>
                 </div>
               </div>
@@ -174,11 +174,11 @@ export default function AdminDashboardPage() {
 
             <div className="grid grid-cols-2 gap-3 mt-2">
               <div className="rounded-lg bg-surface-app border border-line-subtle px-3 py-2.5 text-center">
-                <p className="text-lg font-semibold text-ok-ink">{totalAcreditadas}</p>
+                <p className="text-title font-semibold text-ok-ink">{totalAcreditadas}</p>
                 <p className="text-[10px] text-ink-subtle">Acreditados</p>
               </div>
               <div className="rounded-lg bg-surface-app border border-line-subtle px-3 py-2.5 text-center">
-                <p className="text-lg font-semibold text-ink-muted">{totalContratistas - totalAcreditadas}</p>
+                <p className="text-title font-semibold text-ink-muted">{totalContratistas - totalAcreditadas}</p>
                 <p className="text-[10px] text-ink-subtle">Pendientes</p>
               </div>
             </div>
@@ -189,7 +189,7 @@ export default function AdminDashboardPage() {
         <div className="bg-surface rounded-xl border border-line overflow-hidden">
           <div className="px-5 py-4 border-b border-line-subtle flex items-center gap-2">
             <Activity size={14} className="text-ink-subtle" />
-            <h2 className="text-sm font-semibold text-ink">Actividad reciente — todos los mandantes</h2>
+            <h2 className="text-strong font-semibold text-ink">Actividad reciente — todos los mandantes</h2>
           </div>
           <div className="divide-y divide-line">
             {actividad.map((a, i) => {
@@ -197,9 +197,9 @@ export default function AdminDashboardPage() {
               return (
                 <div key={i} className="px-5 py-3.5 flex items-center gap-4 hover:bg-surface-app/60 transition-colors">
                   <span className={cn("w-2 h-2 rounded-full shrink-0", c.dot)} />
-                  <span className="text-xs font-semibold text-ink-subtle w-32 shrink-0">{a.mandante}</span>
-                  <p className="text-sm text-ink-secondary flex-1">{a.accion}</p>
-                  <p className="text-xs text-ink-subtle shrink-0">{a.tiempo}</p>
+                  <span className="text-micro font-semibold text-ink-subtle w-32 shrink-0">{a.mandante}</span>
+                  <p className="text-body text-ink-secondary flex-1">{a.accion}</p>
+                  <p className="text-meta text-ink-subtle shrink-0">{a.tiempo}</p>
                 </div>
               )
             })}

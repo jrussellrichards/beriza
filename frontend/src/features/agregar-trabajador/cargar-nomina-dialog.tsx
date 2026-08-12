@@ -78,8 +78,8 @@ export function CargarNominaDialog({ onClose, onCargado }: {
       <div className="bg-surface rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-ink">Cargar nómina</p>
-            <p className="text-xs text-ink-subtle mt-0.5">
+            <p className="text-strong font-semibold text-ink">Cargar nómina</p>
+            <p className="text-meta text-ink-subtle mt-0.5">
               Sube tu lista de trabajadores en un archivo, en vez de uno por uno
             </p>
           </div>
@@ -101,7 +101,7 @@ export function CargarNominaDialog({ onClose, onCargado }: {
                     : "bg-surface-app border-line",
                 )}>
                   <p className={cn(
-                    "text-xl font-semibold",
+                    "text-title font-semibold",
                     k.tono === "ok" ? "text-ok-ink" : k.tono === "accion" ? "text-accion-ink" : "text-ink-muted",
                   )}>{k.n}</p>
                   <p className="text-[10px] text-ink-subtle mt-0.5">{k.label}</p>
@@ -110,7 +110,7 @@ export function CargarNominaDialog({ onClose, onCargado }: {
             </div>
 
             {reporte.con_error === 0 ? (
-              <p className="text-sm text-ok-ink bg-ok-soft border border-ok-line rounded-lg px-3 py-2 flex items-center gap-2">
+              <p className="text-body text-ok-ink bg-ok-soft border border-ok-line rounded-lg px-3 py-2 flex items-center gap-2">
                 <CheckCircle2 size={14} className="shrink-0" />
                 Se leyeron {reporte.filas_leidas} filas y todas quedaron en orden.
               </p>
@@ -118,14 +118,14 @@ export function CargarNominaDialog({ onClose, onCargado }: {
               <div className="space-y-1.5">
                 {/* Cada error nombra la FILA del archivo: decir "hay 3 errores"
                     obliga a revisar 80 líneas a mano para encontrarlos. */}
-                <p className="text-xs font-medium text-ink-secondary flex items-center gap-1.5">
+                <p className="text-micro font-medium text-ink-secondary flex items-center gap-1.5">
                   <AlertTriangle size={13} className="text-accion-ink" />
                   Filas que no se cargaron — corrígelas y vuelve a subir el archivo
                 </p>
                 <div className="border border-line rounded-lg divide-y divide-line max-h-56 overflow-y-auto">
                   {reporte.errores.map(e => (
                     <div key={e.fila} className="px-3 py-2">
-                      <p className="text-xs text-ink">
+                      <p className="text-meta text-ink">
                         <span className="font-mono text-ink-muted">Fila {e.fila}</span>
                         {e.nombre && <span className="ml-2">{e.nombre}</span>}
                       </p>
@@ -142,14 +142,14 @@ export function CargarNominaDialog({ onClose, onCargado }: {
         ) : (
           <div className="px-6 py-5 space-y-4">
             <div className="rounded-lg bg-surface-app border border-line px-3 py-2.5 space-y-2">
-              <p className="text-xs text-ink-secondary">
+              <p className="text-meta text-ink-secondary">
                 El archivo necesita las columnas <strong>RUT</strong> y <strong>Nombre completo</strong>.
                 El <strong>Cargo</strong> es opcional.
               </p>
               <button
                 onClick={descargarPlantilla}
                 disabled={descargando}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-ink hover:underline disabled:text-ink-subtle"
+                className="inline-flex items-center gap-1.5 text-micro font-medium text-ink hover:underline disabled:text-ink-subtle"
               >
                 <Download size={13} />
                 {descargando ? "Descargando..." : "Descargar plantilla"}
@@ -168,13 +168,13 @@ export function CargarNominaDialog({ onClose, onCargado }: {
               className="w-full border border-dashed border-line-strong rounded-lg py-6 flex flex-col items-center gap-2 hover:bg-surface-app transition-colors"
             >
               <FileSpreadsheet size={22} className="text-ink-subtle" />
-              <span className="text-sm text-ink-secondary">
+              <span className="text-body text-ink-secondary">
                 {archivo ? archivo.name : "Elegir archivo .csv o .xlsx"}
               </span>
               {!archivo && <span className="text-[10px] text-ink-subtle">o arrastra la planilla aquí</span>}
             </button>
 
-            {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+            {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           </div>
         )}
 
@@ -182,7 +182,7 @@ export function CargarNominaDialog({ onClose, onCargado }: {
           {reporte ? (
             <button
               onClick={onClose}
-              className="w-full py-2.5 rounded-lg text-sm font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-all"
+              className="w-full py-2.5 rounded-lg text-strong font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-all"
             >
               Listo
             </button>
@@ -191,7 +191,7 @@ export function CargarNominaDialog({ onClose, onCargado }: {
               onClick={subir}
               disabled={!archivo || subiendo}
               className={cn(
-                "w-full py-2.5 rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-2",
+                "w-full py-2.5 rounded-lg text-strong font-medium transition-all inline-flex items-center justify-center gap-2",
                 !archivo || subiendo
                   ? "bg-line text-ink-subtle cursor-not-allowed"
                   : "bg-surface-inverse text-white hover:bg-surface-inverse-hover",

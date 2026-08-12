@@ -36,7 +36,7 @@ export function SidebarAdmin() {
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
+                "flex items-center gap-2.5 px-3 py-2 rounded-md text-body transition-colors",
                 active
                   ? "bg-white/[0.06] text-ink-inverse font-medium border-l-2 border-brand-on-dark pl-[10px]"
                   : "text-ink-inverse-muted hover:text-ink-inverse hover:bg-white/5"
@@ -52,7 +52,7 @@ export function SidebarAdmin() {
       <div className="p-3 border-t border-line-inverse">
         <button
           onClick={() => { localStorage.clear(); window.location.href = "/login" }}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-ink-inverse-muted hover:text-ink-inverse hover:bg-white/5 w-full transition-colors"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-md text-body text-ink-inverse-muted hover:text-ink-inverse hover:bg-white/5 w-full transition-colors"
         >
           <LogOut size={14} />
           Cerrar sesión

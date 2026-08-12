@@ -124,7 +124,7 @@ function ExcepcionDialog({ doc, onClose, onDone }: {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {doc.mensaje_brecha && (
-            <p className="text-xs text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-md px-3 py-2">
+            <p className="text-meta text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-md px-3 py-2">
               Observación actual: {doc.mensaje_brecha}
             </p>
           )}
@@ -139,7 +139,7 @@ function ExcepcionDialog({ doc, onClose, onDone }: {
               required
             />
           </div>
-          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
@@ -166,7 +166,7 @@ function DocRow({ doc, onExcepcion, onVerArchivos }: {
       <div className="flex items-center gap-2.5">
         <FileText size={13} className="text-ink-subtle shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-ink truncate">
+          <p className="text-micro font-medium text-ink truncate">
             {doc.requisito_nombre}
             {doc.servicio_nombre && <span className="text-brand font-normal"> — {doc.servicio_nombre}</span>}
           </p>
@@ -225,10 +225,10 @@ function ServiciosTab({ contratistaId }: { contratistaId: string }) {
       .catch(() => setServicios([]))
   }, [contratistaId])
 
-  if (servicios === null) return <p className="text-xs text-ink-subtle">Cargando servicios...</p>
+  if (servicios === null) return <p className="text-meta text-ink-subtle">Cargando servicios...</p>
   if (servicios.length === 0) {
     return (
-      <p className="text-xs text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+      <p className="text-meta text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
         Sin servicios contratados. Crea uno desde la página Servicios para que existan exigencias.
       </p>
     )
@@ -240,7 +240,7 @@ function ServiciosTab({ contratistaId }: { contratistaId: string }) {
           <div className="flex items-center gap-2.5 min-w-0">
             <Briefcase size={13} className="text-ink-subtle shrink-0" />
             <div className="min-w-0">
-              <p className="text-xs font-medium text-ink truncate">{s.nombre}</p>
+              <p className="text-micro font-medium text-ink truncate">{s.nombre}</p>
               <p className="text-[10px] text-ink-subtle">
                 {s.codigo_referencia ? `${s.codigo_referencia} · ` : ""}Perfil: {s.perfil_nombre} · {s.trabajadores_asignados} trabajador{s.trabajadores_asignados !== 1 ? "es" : ""}
               </p>
@@ -293,8 +293,8 @@ function DetailPanel({ c, onClose, onCambio }: {
               {initials(c.razon_social)}
             </div>
             <div>
-              <p className="text-sm font-semibold text-ink leading-tight">{c.razon_social}</p>
-              <p className="text-xs text-ink-subtle font-mono">{c.rut}</p>
+              <p className="text-strong font-semibold text-ink leading-tight">{c.razon_social}</p>
+              <p className="text-meta text-ink-subtle font-mono">{c.rut}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted shrink-0">
@@ -309,7 +309,7 @@ function DetailPanel({ c, onClose, onCambio }: {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
+                "flex items-center gap-1.5 px-3 py-2 text-micro font-medium border-b-2 transition-colors whitespace-nowrap",
                 tab === t.id
                   ? "border-ink text-ink"
                   : "border-transparent text-ink-subtle hover:text-ink-muted"
@@ -353,16 +353,16 @@ function DetailPanel({ c, onClose, onCambio }: {
               return (
                 <div key={pilar.codigo} className="rounded-lg border border-line-subtle bg-surface-app p-3">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium text-ink">{pilar.nombre}</p>
+                    <p className="text-strong font-medium text-ink">{pilar.nombre}</p>
                     {pilar.cumple && brechas.length === 0
-                      ? <span className="flex items-center gap-1 text-xs font-medium text-ok-ink"><CheckCircle2 size={12} /> OK</span>
-                      : <span className="flex items-center gap-1 text-xs font-medium text-bloqueo-ink"><AlertCircle size={12} /> {brechas.length} brecha{brechas.length !== 1 ? "s" : ""}</span>
+                      ? <span className="flex items-center gap-1 text-micro font-medium text-ok-ink"><CheckCircle2 size={12} /> OK</span>
+                      : <span className="flex items-center gap-1 text-micro font-medium text-bloqueo-ink"><AlertCircle size={12} /> {brechas.length} brecha{brechas.length !== 1 ? "s" : ""}</span>
                     }
                   </div>
                   {brechas.length > 0 && (
                     <ul className="mt-2 space-y-1">
                       {brechas.map((b, i) => (
-                        <li key={i} className="flex items-start gap-2 text-xs text-ink-muted">
+                        <li key={i} className="flex items-start gap-2 text-meta text-ink-muted">
                           <AlertCircle size={11} className="text-bloqueo-ink mt-0.5 shrink-0" />
                           {b}
                         </li>
@@ -373,7 +373,7 @@ function DetailPanel({ c, onClose, onCambio }: {
               )
             })}
             {c.pilares.length === 0 && (
-              <p className="text-xs text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+              <p className="text-meta text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
                 Sin servicios activos — no hay requisitos exigibles para esta empresa todavía.
               </p>
             )}
@@ -418,14 +418,14 @@ function DetailPanel({ c, onClose, onCambio }: {
 
         {tab === "trabajadores" && (
           <div className="space-y-2">
-            <p className="text-xs text-ink-subtle mb-3">
+            <p className="text-meta text-ink-subtle mb-3">
               {trabajadoresOk}/{c.trabajadores.length} trabajadores evaluados cumplen todos los requisitos
             </p>
             {c.trabajadores.map(t => (
               <div key={t.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-app border border-line-subtle">
                 <div>
-                  <p className="text-sm font-medium text-ink">{t.nombre}</p>
-                  <p className="text-xs text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
+                  <p className="text-strong font-medium text-ink">{t.nombre}</p>
+                  <p className="text-meta text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
                 </div>
                 {t.cumple
                   ? <CheckCircle2 size={14} className="text-ok-ink" />
@@ -434,7 +434,7 @@ function DetailPanel({ c, onClose, onCambio }: {
               </div>
             ))}
             {c.trabajadores.length === 0 && (
-              <p className="text-xs text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+              <p className="text-meta text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
                 Sin trabajadores asignados a servicios activos.
               </p>
             )}
@@ -528,12 +528,12 @@ export default function ContratistasPage() {
         <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg sm:text-xl font-semibold text-ink">Contratistas</h1>
-              <p className="text-sm text-ink-muted mt-0.5">Gestiona y monitorea el estado de acreditación</p>
+              <h1 className="text-title sm:text-title font-semibold text-ink">Contratistas</h1>
+              <p className="text-body text-ink-muted mt-0.5">Gestiona y monitorea el estado de acreditación</p>
             </div>
             <button
               onClick={() => setDialogInvitar(true)}
-              className="flex items-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+              className="flex items-center gap-2 bg-surface-inverse text-white text-strong font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
             >
               <Plus size={15} />
               Invitar contratista
@@ -542,7 +542,7 @@ export default function ContratistasPage() {
           {invitado && (
             <div className="mt-3 flex items-center gap-2 bg-ok-soft border border-ok-line rounded-lg px-4 py-2.5">
               <ShieldCheck size={14} className="text-ok-ink" />
-              <p className="text-xs text-ok-ink">Invitación enviada — la empresa aparecerá al activar su cuenta.</p>
+              <p className="text-meta text-ok-ink">Invitación enviada — la empresa aparecerá al activar su cuenta.</p>
             </div>
           )}
         </div>
@@ -563,8 +563,8 @@ export default function ContratistasPage() {
               { label: "Bloqueadas", value: kpi.bloqueadas, color: "text-bloqueo-ink" },
             ].map(k => (
               <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
-                <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
-                <p className={cn("text-3xl font-semibold mt-1 tabular", k.color)}>{k.value}</p>
+                <p className="text-micro font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
+                <p className={cn("text-metric font-semibold mt-1 tabular", k.color)}>{k.value}</p>
               </div>
             ))}
           </div>
@@ -579,7 +579,7 @@ export default function ContratistasPage() {
                 placeholder="Buscar empresa o RUT..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+                className="w-full pl-9 pr-3 py-2 text-body border border-line rounded-lg bg-surface text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
               />
             </div>
             <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-1">
@@ -588,7 +588,7 @@ export default function ContratistasPage() {
                   key={e}
                   onClick={() => setFiltro(e)}
                   className={cn(
-                    "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                    "px-3 py-1.5 rounded-md text-micro font-medium transition-colors",
                     filtro === e ? "bg-surface-inverse text-white" : "text-ink-muted hover:text-ink"
                   )}
                 >
@@ -596,21 +596,21 @@ export default function ContratistasPage() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-ink-subtle ml-auto">{filtrados.length} de {contratistas.length}</p>
+            <p className="text-meta text-ink-subtle ml-auto">{filtrados.length} de {contratistas.length}</p>
           </div>
 
           {/* Tabla */}
           <div className="bg-surface border border-line rounded-xl overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
                 <tr className="border-b border-line-subtle bg-surface-app/60">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Empresa</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">RUT</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">Acreditación</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Empresa</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">RUT</th>
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">Acreditación</th>
                   {pilarColumnas.map(p => (
-                    <th key={p.codigo} className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">{p.nombre}</th>
+                    <th key={p.codigo} className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">{p.nombre}</th>
                   ))}
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-muted uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 text-micro font-semibold text-ink-muted uppercase tracking-wider">
                     <Users size={12} className="inline" />
                   </th>
                   <th className="px-4 py-3" />
@@ -634,16 +634,16 @@ export default function ContratistasPage() {
                           <span className="font-medium text-ink truncate max-w-[180px]">{c.razon_social}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-ink-muted font-mono text-xs">{c.rut}</td>
+                      <td className="px-4 py-3.5 text-ink-muted font-mono text-meta">{c.rut}</td>
                       <td className="px-4 py-3.5"><EstadoAgregadoBadge estado={c.estado_acreditacion} /></td>
                       {pilarColumnas.map(col => {
                         const p = c.pilares.find(x => x.codigo === col.codigo)
                         return (
                           <td key={col.codigo} className="px-4 py-3.5">
                             {p === undefined
-                              ? <span className="text-xs text-ink-subtle">—</span>
+                              ? <span className="text-meta text-ink-subtle">—</span>
                               : (
-                                <span className={cn("inline-flex items-center gap-1 text-xs font-medium", p.cumple ? "text-ok-ink" : "text-bloqueo-ink")}>
+                                <span className={cn("inline-flex items-center gap-1 text-micro font-medium", p.cumple ? "text-ok-ink" : "text-bloqueo-ink")}>
                                   <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", p.cumple ? "bg-ok-ink" : "bg-bloqueo-ink")} />
                                   {p.cumple ? "OK" : "Brechas"}
                                 </span>
@@ -652,7 +652,7 @@ export default function ContratistasPage() {
                         )
                       })}
                       <td className="px-4 py-3.5">
-                        <span className={cn("text-xs font-medium", c.trabajadores.length > 0 && tOk === c.trabajadores.length ? "text-ok-ink" : "text-accion-ink")}>
+                        <span className={cn("text-micro font-medium", c.trabajadores.length > 0 && tOk === c.trabajadores.length ? "text-ok-ink" : "text-accion-ink")}>
                           {tOk}/{c.trabajadores.length}
                         </span>
                       </td>
@@ -666,10 +666,10 @@ export default function ContratistasPage() {
             </table>
 
             {loading && filtrados.length === 0 && (
-              <div className="py-14 text-center"><p className="text-sm text-ink-subtle">Cargando contratistas...</p></div>
+              <div className="py-14 text-center"><p className="text-body text-ink-subtle">Cargando contratistas...</p></div>
             )}
             {error && !loading && (
-              <div className="py-14 text-center"><p className="text-sm text-bloqueo-ink">No se pudieron cargar los contratistas: {error}</p></div>
+              <div className="py-14 text-center"><p className="text-body text-bloqueo-ink">No se pudieron cargar los contratistas: {error}</p></div>
             )}
             {/* "No hay ninguno todavía" y "tu filtro no encontró nada" son cosas
                 distintas y estaban resueltas con el mismo mensaje de búsqueda
@@ -680,20 +680,20 @@ export default function ContratistasPage() {
               <div className="py-14 px-6 text-center">
                 {contratistas.length === 0 ? (
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-ink">Todavía no invitaste ninguna empresa</p>
-                    <p className="text-xs text-ink-subtle max-w-md mx-auto leading-relaxed">
+                    <p className="text-strong font-medium text-ink">Todavía no invitaste ninguna empresa</p>
+                    <p className="text-meta text-ink-subtle max-w-md mx-auto leading-relaxed">
                       Al invitar a una contratista, recibe un correo y carga sus documentos por su
                       cuenta. Tú defines qué se le exige en cada faena y revisas lo que entrega.
                     </p>
                     <button
                       onClick={() => setDialogInvitar(true)}
-                      className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+                      className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-micro font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
                     >
                       <Plus size={13} /> Invitar mi primera empresa
                     </button>
                   </div>
                 ) : (
-                  <p className="text-sm text-ink-subtle">
+                  <p className="text-body text-ink-subtle">
                     Ninguna empresa coincide con lo que buscas.
                   </p>
                 )}

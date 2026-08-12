@@ -140,14 +140,14 @@ export default function ConfiguracionPage() {
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-semibold text-ink">Configuración</h1>
-            <p className="text-sm text-ink-muted mt-0.5">Ajustes de tu organización y cuenta</p>
+            <h1 className="text-title sm:text-title font-semibold text-ink">Configuración</h1>
+            <p className="text-body text-ink-muted mt-0.5">Ajustes de tu organización y cuenta</p>
           </div>
           <button
             onClick={handleSave}
             disabled={guardando}
             className={cn(
-              "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
+              "flex items-center gap-2 text-strong font-medium px-4 py-2 rounded-lg transition-all",
               saved ? "bg-ok-ink text-white" : "bg-surface-inverse text-white hover:bg-surface-inverse-hover",
               guardando && "opacity-60 cursor-not-allowed"
             )}
@@ -157,7 +157,7 @@ export default function ConfiguracionPage() {
           </button>
         </div>
         {errorGuardado && (
-          <p className="mt-3 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{errorGuardado}</p>
+          <p className="mt-3 text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{errorGuardado}</p>
         )}
       </div>
 
@@ -178,7 +178,7 @@ export default function ConfiguracionPage() {
               >
                 <Icon size={15} className={active ? "text-ink" : "text-ink-subtle"} />
                 <div>
-                  <p className={cn("text-sm font-medium", active ? "text-ink" : "text-ink-muted")}>{s.titulo}</p>
+                  <p className={cn("text-strong font-medium", active ? "text-ink" : "text-ink-muted")}>{s.titulo}</p>
                   <p className="text-[10px] text-ink-subtle">{s.descripcion}</p>
                 </div>
               </button>
@@ -194,68 +194,68 @@ export default function ConfiguracionPage() {
             <div className="max-w-xl space-y-6">
               <div>
                 <h2 className="text-base font-semibold text-ink mb-1">Datos de la organización</h2>
-                <p className="text-sm text-ink-subtle">Información del mandante mostrada a los contratistas</p>
+                <p className="text-body text-ink-subtle">Información del mandante mostrada a los contratistas</p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink-secondary">Razón social</label>
+                  <label className="text-strong font-medium text-ink-secondary">Razón social</label>
                   <div className="relative">
                     <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
                     <input
                       value={razonSocial}
                       onChange={e => setRazonSocial(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+                      className="w-full pl-9 pr-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink-secondary">RUT</label>
+                  <label className="text-strong font-medium text-ink-secondary">RUT</label>
                   <input
                     value={rut}
                     onChange={e => setRut(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+                    className="w-full px-3 py-2.5 text-body border border-line rounded-lg bg-surface font-mono focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink-secondary">Email de contacto</label>
+                  <label className="text-strong font-medium text-ink-secondary">Email de contacto</label>
                   <div className="relative">
                     <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
                     <input
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+                      className="w-full pl-9 pr-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink-secondary">Sitio web</label>
+                  <label className="text-strong font-medium text-ink-secondary">Sitio web</label>
                   <div className="relative">
                     <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
                     <input
                       value={sitioWeb}
                       onChange={e => setSitioWeb(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+                      className="w-full pl-9 pr-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="border-t border-line-subtle pt-5">
-                <h3 className="text-sm font-semibold text-ink mb-3">Alertas de vencimiento</h3>
+                <h3 className="text-strong font-semibold text-ink mb-3">Alertas de vencimiento</h3>
                 <div className="flex items-center gap-3">
-                  <label className="text-sm text-ink-muted">Avisar con</label>
+                  <label className="text-body text-ink-muted">Avisar con</label>
                   <input
                     type="number"
                     value={diasAviso}
                     onChange={e => setDiasAviso(e.target.value)}
-                    className="w-16 px-2 py-1.5 text-sm border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-16 px-2 py-1.5 text-body border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
                   />
-                  <label className="text-sm text-ink-muted">días de anticipación</label>
+                  <label className="text-body text-ink-muted">días de anticipación</label>
                 </div>
               </div>
             </div>
@@ -266,9 +266,9 @@ export default function ConfiguracionPage() {
             <div className="max-w-xl space-y-6">
               <div>
                 <h2 className="text-base font-semibold text-ink mb-1">Notificaciones por email</h2>
-                <p className="text-sm text-ink-subtle">Controla qué alertas recibes en tu correo</p>
+                <p className="text-body text-ink-subtle">Controla qué alertas recibes en tu correo</p>
               </div>
-              <p className="text-xs text-accion-ink bg-accion-soft border border-accion-line rounded-lg px-4 py-2.5">
+              <p className="text-meta text-accion-ink bg-accion-soft border border-accion-line rounded-lg px-4 py-2.5">
                 Estas preferencias aún no se guardan — la configuración de notificaciones está en desarrollo.
               </p>
 
@@ -281,8 +281,8 @@ export default function ConfiguracionPage() {
                 ].map(n => (
                   <div key={n.label} className="flex items-center justify-between px-5 py-4">
                     <div>
-                      <p className="text-sm font-medium text-ink">{n.label}</p>
-                      <p className="text-xs text-ink-subtle mt-0.5">{n.desc}</p>
+                      <p className="text-strong font-medium text-ink">{n.label}</p>
+                      <p className="text-meta text-ink-subtle mt-0.5">{n.desc}</p>
                     </div>
                     <Toggle checked={n.value} onChange={n.set} etiqueta={n.label} />
                   </div>
@@ -296,39 +296,39 @@ export default function ConfiguracionPage() {
             <div className="max-w-xl space-y-6">
               <div>
                 <h2 className="text-base font-semibold text-ink mb-1">Seguridad de la cuenta</h2>
-                <p className="text-sm text-ink-subtle">Configuración de autenticación y sesiones</p>
+                <p className="text-body text-ink-subtle">Configuración de autenticación y sesiones</p>
               </div>
-              <p className="text-xs text-accion-ink bg-accion-soft border border-accion-line rounded-lg px-4 py-2.5">
+              <p className="text-meta text-accion-ink bg-accion-soft border border-accion-line rounded-lg px-4 py-2.5">
                 Estas preferencias aún no se guardan — la configuración de seguridad está en desarrollo.
               </p>
 
               <div className="bg-surface rounded-xl border border-line divide-y divide-line">
                 <div className="flex items-center justify-between px-5 py-4">
                   <div>
-                    <p className="text-sm font-medium text-ink">Doble factor de autenticación (2FA)</p>
-                    <p className="text-xs text-ink-subtle mt-0.5">Requiere código adicional al iniciar sesión</p>
+                    <p className="text-strong font-medium text-ink">Doble factor de autenticación (2FA)</p>
+                    <p className="text-meta text-ink-subtle mt-0.5">Requiere código adicional al iniciar sesión</p>
                   </div>
                   <Toggle checked={sesion2fa} onChange={setSesion2fa} etiqueta="Doble factor de autenticación" />
                 </div>
                 <div className="px-5 py-4">
-                  <p className="text-sm font-medium text-ink mb-1">Duración de sesión</p>
-                  <p className="text-xs text-ink-subtle mb-3">Cierra sesión automáticamente después de</p>
+                  <p className="text-strong font-medium text-ink mb-1">Duración de sesión</p>
+                  <p className="text-meta text-ink-subtle mb-3">Cierra sesión automáticamente después de</p>
                   <div className="flex items-center gap-3">
                     <input
                       type="number"
                       value={sesionDias}
                       onChange={e => setSesionDias(e.target.value)}
-                      className="w-16 px-2 py-1.5 text-sm border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      className="w-16 px-2 py-1.5 text-body border border-line rounded-lg bg-surface text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
                     />
-                    <span className="text-sm text-ink-muted">días de inactividad</span>
+                    <span className="text-body text-ink-muted">días de inactividad</span>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-lg border border-bloqueo-line bg-bloqueo-soft p-4">
-                <p className="text-sm font-semibold text-bloqueo-ink mb-1">Zona de peligro</p>
-                <p className="text-xs text-bloqueo-ink mb-3">Estas acciones son irreversibles. Procede con cuidado.</p>
-                <button disabled title="Eliminar la cuenta requiere contactar a BERISA" className="text-xs font-medium text-bloqueo-ink border border-bloqueo-line bg-surface hover:bg-bloqueo-soft px-3 py-2 rounded-md transition-colors">Eliminar cuenta del mandante</button>
+                <p className="text-strong font-semibold text-bloqueo-ink mb-1">Zona de peligro</p>
+                <p className="text-meta text-bloqueo-ink mb-3">Estas acciones son irreversibles. Procede con cuidado.</p>
+                <button disabled title="Eliminar la cuenta requiere contactar a BERISA" className="text-micro font-medium text-bloqueo-ink border border-bloqueo-line bg-surface hover:bg-bloqueo-soft px-3 py-2 rounded-md transition-colors">Eliminar cuenta del mandante</button>
               </div>
             </div>
           )}

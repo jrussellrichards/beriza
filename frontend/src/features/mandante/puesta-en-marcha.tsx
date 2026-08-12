@@ -87,8 +87,8 @@ export function PuestaEnMarcha({ tieneServicios }: { tieneServicios: boolean }) 
   return (
     <section className="rounded-xl border border-brand-line bg-brand-soft px-5 py-4">
       <div className="flex items-baseline justify-between gap-3 mb-3">
-        <p className="text-sm font-semibold text-ink">Termina de configurar tu cuenta</p>
-        <span className="text-xs text-brand-hover shrink-0">{listos} de {pasos.length}</span>
+        <p className="text-strong font-semibold text-ink">Termina de configurar tu cuenta</p>
+        <span className="text-meta text-brand-hover shrink-0">{listos} de {pasos.length}</span>
       </div>
 
       <ol className="space-y-2.5">
@@ -109,20 +109,20 @@ export function PuestaEnMarcha({ tieneServicios }: { tieneServicios: boolean }) 
 
               <div className="min-w-0 flex-1">
                 <p className={cn(
-                  "text-sm",
+                  "text-body",
                   p.hecho ? "text-ink-subtle line-through" : "text-ink font-medium",
                 )}>
                   {p.titulo}
                 </p>
                 {esSiguiente && (
-                  <p className="text-xs text-brand-hover mt-0.5 leading-relaxed">{p.detalle}</p>
+                  <p className="text-meta text-brand-hover mt-0.5 leading-relaxed">{p.detalle}</p>
                 )}
               </div>
 
               {esSiguiente && (
                 <Link
                   href={p.href}
-                  className="shrink-0 inline-flex items-center gap-1 text-xs font-medium bg-surface-inverse text-white px-3 py-1.5 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+                  className="shrink-0 inline-flex items-center gap-1 text-micro font-medium bg-surface-inverse text-white px-3 py-1.5 rounded-lg hover:bg-surface-inverse-hover transition-colors"
                 >
                   Ir <ArrowRight size={12} />
                 </Link>

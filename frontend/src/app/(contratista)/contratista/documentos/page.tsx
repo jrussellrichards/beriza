@@ -43,7 +43,7 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
                 distinguían en 10 px: parecía un error de la aplicación, y el
                 riesgo real era subir el archivo en la fila equivocada. El dato
                 que distingue tiene que estar donde el ojo compara. */}
-            <p className="text-sm font-medium text-ink">
+            <p className="text-strong font-medium text-ink">
               {doc.requisito_nombre}
               {doc.servicio_nombre && (
                 <span className="text-brand"> — {doc.servicio_nombre}</span>
@@ -79,7 +79,7 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
           )}
           <button
             onClick={() => onSubir(doc)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-micro font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-colors"
           >
             <Upload size={12} />
             Subir
@@ -106,7 +106,7 @@ function Grupo({ titulo, color, docs, children }: {
         className={cn("w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg transition-opacity hover:opacity-90", c.bg)}
       >
         <span className={cn("w-2 h-2 rounded-full shrink-0", c.dot)} />
-        <p className={cn("text-xs font-semibold flex-1 uppercase tracking-wider", c.text)}>{titulo}</p>
+        <p className={cn("text-micro font-semibold flex-1 uppercase tracking-wider", c.text)}>{titulo}</p>
         {/* Antes acá iba `docs.length`, que responde "¿cuántos tengo?". La
             pregunta real del contratista es "¿estoy en regla?", y solo la razón
             la contesta. */}
@@ -161,8 +161,8 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
   return (
     <div className="fixed inset-0 bg-surface-inverse/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-surface rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-        <p className="text-sm font-semibold text-ink">Compartir este documento</p>
-        <p className="text-xs text-ink-muted mt-1">{doc.requisito_nombre}</p>
+        <p className="text-strong font-semibold text-ink">Compartir este documento</p>
+        <p className="text-meta text-ink-muted mt-1">{doc.requisito_nombre}</p>
         {doc.sensible && doc.puede_relajar && (
           <p className="text-[11px] text-excepcion-ink bg-excepcion-soft border border-excepcion-line rounded-md px-2.5 py-1.5 mt-3">
             Si eliges compartir sin preguntar, las solicitudes que ya estén esperando tu
@@ -187,7 +187,7 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
                       : "border-line hover:border-line-strong"
                 )}
               >
-                <span className="text-sm text-ink flex items-center gap-2">
+                <span className="text-body text-ink flex items-center gap-2">
                   <Icono size={13} /> {titulo}
                   {activo && <span className="text-[10px] text-ink-muted">· actual</span>}
                 </span>
@@ -197,9 +197,9 @@ function SensibilidadDialog({ doc, onClose, onDone }: {
           })}
         </div>
 
-        {error && <p className="text-xs text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md mt-3">{error}</p>}
+        {error && <p className="text-meta text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md mt-3">{error}</p>}
 
-        <button onClick={onClose} className="w-full mt-4 py-2 text-sm text-ink-muted hover:text-ink">
+        <button onClick={onClose} className="w-full mt-4 py-2 text-body text-ink-muted hover:text-ink">
           Cancelar
         </button>
       </div>
@@ -291,8 +291,8 @@ export default function DocumentosPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
-        <h1 className="text-lg sm:text-xl font-semibold text-ink">Mis documentos</h1>
-        <p className="text-sm text-ink-muted mt-0.5">
+        <h1 className="text-title sm:text-title font-semibold text-ink">Mis documentos</h1>
+        <p className="text-body text-ink-muted mt-0.5">
           Tu biblioteca. Cada documento se sube una vez y vale para todos los clientes que lo exijan.
         </p>
       </div>
@@ -307,7 +307,7 @@ export default function DocumentosPage() {
               key={v}
               onClick={() => setAmbito(v)}
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-micro font-medium transition-colors",
                 ambito === v ? "bg-surface text-ink shadow-sm" : "text-ink-muted hover:text-ink-secondary"
               )}
             >
@@ -323,14 +323,14 @@ export default function DocumentosPage() {
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
             placeholder="Buscar documento..."
-            className="pl-8 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+            className="pl-8 pr-3 py-2 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
           />
         </div>
 
         <select
           value={filtroEstado}
           onChange={e => setFiltroEstado(e.target.value)}
-          className="px-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+          className="px-3 py-2 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
         >
           <option value="TODOS">Cualquier estado</option>
           <option value="FALTA">Falta subir</option>
@@ -345,7 +345,7 @@ export default function DocumentosPage() {
           <select
             value={filtroMandante}
             onChange={e => setFiltroMandante(e.target.value)}
-            className="px-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+            className="px-3 py-2 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
           >
             <option value="TODOS">Todos los clientes</option>
             {mandantes.map(([id, nombre]) => (
@@ -357,17 +357,17 @@ export default function DocumentosPage() {
 
       <div className="flex-1 px-6 sm:px-8 py-6 space-y-5">
         {loading ? (
-          <p className="text-sm text-ink-subtle py-14 text-center">Cargando documentos...</p>
+          <p className="text-body text-ink-subtle py-14 text-center">Cargando documentos...</p>
         ) : grupos.length === 0 ? (
           <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
             <FileText size={26} className="text-ink-subtle mx-auto mb-3" />
-            <p className="text-sm text-ink-muted">
+            <p className="text-body text-ink-muted">
               {docs.length === 0
                 ? "Todavía no hay documentos exigidos"
                 : "Ningún documento coincide con el filtro"}
             </p>
             {docs.length === 0 && (
-              <p className="text-xs text-ink-subtle mt-1">
+              <p className="text-meta text-ink-subtle mt-1">
                 Cuando un cliente cree un servicio para tu empresa, sus exigencias aparecerán aquí.
               </p>
             )}

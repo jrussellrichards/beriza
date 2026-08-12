@@ -102,23 +102,23 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
+  const inputCls = "w-full px-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-line-strong"
 
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 py-5 border-b border-line-subtle flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-strong font-semibold text-ink">
             {editando ? "Editar requisito" : contexto === "propio" ? "Nuevo requisito propio" : "Nuevo requisito"}
           </p>
-          <p className="text-xs text-ink-subtle mt-0.5">Pilar: {pilar.nombre}</p>
+          <p className="text-meta text-ink-subtle mt-0.5">Pilar: {pilar.nombre}</p>
         </div>
         <button onClick={onClose} className="text-ink-subtle hover:text-ink-muted"><X size={16} /></button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">Código</label>
+          <label className="text-strong font-medium text-ink-secondary">Código</label>
           <input
             value={codigo}
             onChange={e => setCodigo(e.target.value)}
@@ -131,11 +131,11 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           </p>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">Nombre del requisito</label>
+          <label className="text-strong font-medium text-ink-secondary">Nombre del requisito</label>
           <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Certificado de seguridad" className={inputCls} />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">Descripción</label>
+          <label className="text-strong font-medium text-ink-secondary">Descripción</label>
           <textarea
             value={descripcion} onChange={e => setDescripcion(e.target.value)}
             placeholder="Qué debe contener este documento y cuándo aplica..."
@@ -144,7 +144,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">Entidad que lo presenta</label>
+          <label className="text-strong font-medium text-ink-secondary">Entidad que lo presenta</label>
           <div className="grid grid-cols-2 gap-2">
             {(["EMPRESA", "TRABAJADOR"] as const).map(e => (
               <button
@@ -152,7 +152,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
                 onClick={() => !editando && setEntidad(e)}
                 disabled={editando}
                 className={cn(
-                  "py-2 rounded-lg border text-sm font-medium transition-colors",
+                  "py-2 rounded-lg border text-strong font-medium transition-colors",
                   entidad === e ? "border-ink bg-surface-inverse text-white" : "border-line text-ink-muted hover:border-line-strong",
                   editando && "opacity-60 cursor-not-allowed"
                 )}
@@ -163,7 +163,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           </div>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">Naturaleza normativa</label>
+          <label className="text-strong font-medium text-ink-secondary">Naturaleza normativa</label>
           <div className="grid grid-cols-3 gap-2">
             {NIVELES.map(n => (
               <button
@@ -171,7 +171,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
                 onClick={() => setNivel(n.v)}
                 title={n.ayuda}
                 className={cn(
-                  "py-2 rounded-lg border text-xs font-medium transition-colors",
+                  "py-2 rounded-lg border text-micro font-medium transition-colors",
                   nivel === n.v ? "border-ink bg-surface-inverse text-white" : "border-line text-ink-muted hover:border-line-strong"
                 )}
               >
@@ -186,7 +186,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
         </div>
         {pilar.subpilares && pilar.subpilares.length > 1 && (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Grupo dentro del pilar</label>
+            <label className="text-strong font-medium text-ink-secondary">Grupo dentro del pilar</label>
             <select
               value={subpilarId}
               onChange={e => setSubpilarId(e.target.value)}
@@ -202,7 +202,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           </div>
         )}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">Alcance</label>
+          <label className="text-strong font-medium text-ink-secondary">Alcance</label>
           <div className="grid grid-cols-2 gap-2">
             {([
               { v: "ENTIDAD", label: "Se acredita una vez" },
@@ -212,7 +212,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
                 key={o.v}
                 onClick={() => setAlcance(o.v)}
                 className={cn(
-                  "py-2 rounded-lg border text-xs font-medium transition-colors",
+                  "py-2 rounded-lg border text-micro font-medium transition-colors",
                   alcance === o.v ? "border-ink bg-surface-inverse text-white" : "border-line text-ink-muted hover:border-line-strong"
                 )}
               >
@@ -227,7 +227,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           </p>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-ink-secondary">Archivos por entrega</label>
+          <label className="text-strong font-medium text-ink-secondary">Archivos por entrega</label>
           <input
             type="number" min={1} max={20}
             value={maxArchivos}
@@ -244,7 +244,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
             onChange={e => setSinVencimiento(e.target.checked)}
             className="mt-0.5"
           />
-          <span className="text-sm text-ink-secondary">
+          <span className="text-body text-ink-secondary">
             Sin vencimiento
             <span className="block text-[10px] text-ink-subtle">
               El documento no caduca; no genera alertas de vencimiento (ej: escritura de la sociedad).
@@ -259,7 +259,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
             onChange={e => setSensible(e.target.checked)}
             className="mt-0.5"
           />
-          <span className="text-sm text-ink-secondary">
+          <span className="text-body text-ink-secondary">
             Contenido sensible
             <span className="block text-[10px] text-ink-subtle">
               No se comparte con un mandante nuevo sin autorización del contratista (ej: carpeta tributaria).
@@ -267,14 +267,14 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           </span>
         </label>
 
-        <div className="rounded-lg bg-accion-soft border border-accion-line px-3 py-2.5 text-xs text-accion-ink flex items-start gap-2">
+        <div className="rounded-lg bg-accion-soft border border-accion-line px-3 py-2.5 text-meta text-accion-ink flex items-start gap-2">
           <Lock size={11} className="mt-0.5 shrink-0" />
           {contexto === "propio"
             ? "Este requisito queda visible solo para tu organización — otros mandantes no lo verán."
             : "Este requisito queda en el catálogo global. Cada mandante decide en sus perfiles si lo exige y con qué parámetros."}
         </div>
 
-        {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+        {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
       </div>
 
       <div className="px-6 py-4 border-t border-line-subtle shrink-0">
@@ -282,7 +282,7 @@ export function RequisitoPanel({ pilar, requisito, contexto, onClose, onDone }: 
           onClick={handleGuardar}
           disabled={loading || !nombre || (!editando && !codigo)}
           className={cn(
-            "w-full py-2.5 rounded-lg text-sm font-medium transition-all",
+            "w-full py-2.5 rounded-lg text-strong font-medium transition-all",
             loading || !nombre || (!editando && !codigo)
               ? "bg-line text-ink-subtle cursor-not-allowed"
               : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"

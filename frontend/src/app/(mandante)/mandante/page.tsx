@@ -26,12 +26,12 @@ function FaenaRow({ s }: { s: ServicioEnRiesgo }) {
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-sm font-medium text-ink">{s.servicio_nombre}</span>
+            <span className="text-strong font-medium text-ink">{s.servicio_nombre}</span>
           </div>
-          <p className="text-xs text-ink-muted mt-0.5">{s.contratista_razon_social}</p>
+          <p className="text-meta text-ink-muted mt-0.5">{s.contratista_razon_social}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 shrink-0 text-xs">
+        <div className="flex flex-wrap items-center gap-3 shrink-0 text-meta">
           {s.trabajadores_no_habilitados > 0 && (
             <span className="inline-flex items-center gap-1.5 text-bloqueo-ink font-medium">
               <UserX size={12} />
@@ -100,8 +100,8 @@ export default function InicioMandantePage() {
         <div className="rounded-xl border border-accion-line bg-accion-soft px-5 py-4 flex items-start gap-3">
           <AlertTriangle size={18} className="text-accion-ink mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-medium text-ink">No pudimos revisar el estado de tus faenas</p>
-            <p className="text-xs text-ink-muted mt-1">
+            <p className="text-strong font-medium text-ink">No pudimos revisar el estado de tus faenas</p>
+            <p className="text-meta text-ink-muted mt-1">
               {error} — vuelve a cargar la página. Mientras no carguemos esto, puede haber
               personal trabajando sin cumplir.
             </p>
@@ -116,8 +116,8 @@ export default function InicioMandantePage() {
   return (
     <div className="flex flex-col min-h-screen">
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
-        <h1 className="text-lg sm:text-xl font-semibold text-ink">Estado de mis faenas</h1>
-        <p className="text-sm text-ink-muted mt-0.5">
+        <h1 className="text-title sm:text-title font-semibold text-ink">Estado de mis faenas</h1>
+        <p className="text-body text-ink-muted mt-0.5">
           {riesgo.total_servicios === 0
             ? "Aún no tienes servicios activos"
             : sinRiesgo
@@ -136,9 +136,9 @@ export default function InicioMandantePage() {
             "rounded-xl border p-4",
             riesgo.personas_no_habilitadas > 0 ? "border-bloqueo-line bg-bloqueo-soft" : "border-line bg-surface"
           )}>
-            <p className="text-xs text-ink-muted">Personas sin poder ingresar</p>
+            <p className="text-meta text-ink-muted">Personas sin poder ingresar</p>
             <p className={cn(
-              "text-2xl font-semibold mt-1",
+              "text-title font-semibold mt-1",
               riesgo.personas_no_habilitadas > 0 ? "text-bloqueo-ink" : "text-ink"
             )}>
               {riesgo.personas_no_habilitadas}
@@ -152,31 +152,31 @@ export default function InicioMandantePage() {
             onClick={() => window.location.href = "/mandante/revision"}
             className="text-left rounded-xl border border-line bg-surface p-4 hover:bg-surface-app/70 transition-colors"
           >
-            <p className="text-xs text-ink-muted">Esperando tu revisión</p>
-            <p className="text-2xl font-semibold text-ink mt-1">{riesgo.documentos_por_revisar}</p>
+            <p className="text-meta text-ink-muted">Esperando tu revisión</p>
+            <p className="text-title font-semibold text-ink mt-1">{riesgo.documentos_por_revisar}</p>
             <p className="text-[11px] text-ink-muted mt-1 inline-flex items-center gap-1">
               Ir a Revisión <ArrowRight size={10} />
             </p>
           </button>
 
           <div className="rounded-xl border border-line bg-surface p-4">
-            <p className="text-xs text-ink-muted">Faenas en regla</p>
-            <p className="text-2xl font-semibold text-ink mt-1">
+            <p className="text-meta text-ink-muted">Faenas en regla</p>
+            <p className="text-title font-semibold text-ink mt-1">
               {riesgo.total_servicios - riesgo.servicios_en_riesgo}
-              <span className="text-sm text-ink-subtle font-normal">/{riesgo.total_servicios}</span>
+              <span className="text-body text-ink-subtle font-normal">/{riesgo.total_servicios}</span>
             </p>
             <p className="text-[11px] text-ink-muted mt-1">sin incumplimientos abiertos</p>
           </div>
         </div>
 
         <section>
-          <p className="text-xs text-ink-muted mb-2">Mis faenas · más expuestas primero</p>
+          <p className="text-meta text-ink-muted mb-2">Mis faenas · más expuestas primero</p>
 
           {riesgo.servicios.length === 0 ? (
             <div className="rounded-xl border border-dashed border-line py-12 text-center">
               <ClipboardCheck size={24} className="text-ink-subtle mx-auto mb-3" />
-              <p className="text-sm text-ink-muted">No tienes servicios activos</p>
-              <p className="text-xs text-ink-subtle mt-1">
+              <p className="text-body text-ink-muted">No tienes servicios activos</p>
+              <p className="text-meta text-ink-subtle mt-1">
                 Cuando tengas una faena creada, acá vas a ver dónde hay gente sin
                 poder ingresar.
               </p>

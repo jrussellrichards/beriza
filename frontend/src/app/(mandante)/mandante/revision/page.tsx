@@ -107,7 +107,7 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
                 value={fechaVigencia}
                 onChange={(e) => setFechaVigencia(e.target.value)}
               />
-              <p className="text-xs text-ink-muted">
+              <p className="text-meta text-ink-muted">
                 Fecha de vencimiento del documento, si aplica (ej. F30 vence a 30 días).
               </p>
             </div>
@@ -122,12 +122,12 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
                 required
                 rows={3}
               />
-              <p className="text-xs text-ink-muted">
+              <p className="text-meta text-ink-muted">
                 El contratista verá este mensaje exacto para corregir su entrega.
               </p>
             </div>
           )}
-          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
@@ -158,7 +158,7 @@ function Chip({ activo, onClick, label, n, soloLectura }: {
     <button
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs transition-colors",
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-meta transition-colors",
         activo
           ? "border-ink bg-surface-inverse text-white font-medium"
           : "border-line text-ink-muted hover:border-line-strong hover:bg-surface-app",
@@ -251,14 +251,14 @@ export default function RevisionPage() {
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-semibold text-ink">Revisión de documentos</h1>
-            <p className="text-sm text-ink-muted mt-0.5">
+            <h1 className="text-title sm:text-title font-semibold text-ink">Revisión de documentos</h1>
+            <p className="text-body text-ink-muted mt-0.5">
               Entregas de contratistas pendientes de tu aprobación
             </p>
           </div>
           <button
             onClick={cargar}
-            className="flex items-center gap-2 text-sm text-ink-muted border border-line px-3 py-2 rounded-lg hover:bg-surface-app transition-colors"
+            className="flex items-center gap-2 text-body text-ink-muted border border-line px-3 py-2 rounded-lg hover:bg-surface-app transition-colors"
           >
             <RefreshCw size={13} />
             Actualizar
@@ -301,15 +301,15 @@ export default function RevisionPage() {
 
         {loading && pendientes.length === 0 && (
           <div className="py-14 text-center bg-surface rounded-xl border border-line">
-            <p className="text-sm text-ink-subtle">Cargando entregas...</p>
+            <p className="text-body text-ink-subtle">Cargando entregas...</p>
           </div>
         )}
 
         {!loading && pendientes.length === 0 && (
           <div className="py-16 text-center bg-surface rounded-xl border border-line">
             <Inbox size={32} className="text-ink-subtle mx-auto mb-3" />
-            <p className="text-sm font-medium text-ink-muted">No hay entregas pendientes de revisión</p>
-            <p className="text-xs text-ink-subtle mt-1">Cuando un contratista suba un documento aparecerá aquí.</p>
+            <p className="text-strong font-medium text-ink-muted">No hay entregas pendientes de revisión</p>
+            <p className="text-meta text-ink-subtle mt-1">Cuando un contratista suba un documento aparecerá aquí.</p>
           </div>
         )}
 
@@ -317,10 +317,10 @@ export default function RevisionPage() {
             categoría. Con el mensaje anterior parecía que la cola estaba limpia. */}
         {!loading && pendientes.length > 0 && visibles.length === 0 && (
           <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
-            <p className="text-sm text-ink-muted">Nada pendiente en esta categoría</p>
+            <p className="text-body text-ink-muted">Nada pendiente en esta categoría</p>
             <button
               onClick={() => elegirPilar(null)}
-              className="text-xs text-ink-muted underline mt-1 hover:text-ink"
+              className="text-meta text-ink-muted underline mt-1 hover:text-ink"
             >
               Ver las {pendientes.length} entregas
             </button>
@@ -337,7 +337,7 @@ export default function RevisionPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-ink">{p.requisito_nombre}</p>
+                      <p className="text-strong font-semibold text-ink">{p.requisito_nombre}</p>
                       {siglaVisible(p.requisito_codigo) && (
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-surface-sunken text-ink-muted border-line">
                           {p.requisito_codigo}
@@ -349,7 +349,7 @@ export default function RevisionPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-ink-muted mt-0.5">
+                    <p className="text-meta text-ink-muted mt-0.5">
                       {p.contratista_razon_social}
                       {p.trabajador_nombre && <> · Trabajador: <span className="font-medium">{p.trabajador_nombre}</span></>}
                       {p.servicio_nombre && <> · Servicio: {p.servicio_nombre}</>}
@@ -360,7 +360,7 @@ export default function RevisionPage() {
                         <button
                           key={a.id}
                           onClick={() => descargar(p, a)}
-                          className="flex items-center gap-1.5 text-xs text-ink-muted border border-line px-2 py-1 rounded-md hover:bg-surface-app transition-colors"
+                          className="flex items-center gap-1.5 text-meta text-ink-muted border border-line px-2 py-1 rounded-md hover:bg-surface-app transition-colors"
                         >
                           <Download size={11} />
                           {a.nombre_original}
@@ -383,13 +383,13 @@ export default function RevisionPage() {
                         al puntero, porque el hover repetía el color del fondo. */}
                     <button
                       onClick={() => setDialogo({ pendiente: p, accion: "observar" })}
-                      className="flex items-center gap-1.5 text-xs font-medium text-bloqueo-ink border border-bloqueo-line bg-bloqueo-soft hover:bg-bloqueo-line hover:border-bloqueo-ink px-3 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 text-micro font-medium text-bloqueo-ink border border-bloqueo-line bg-bloqueo-soft hover:bg-bloqueo-line hover:border-bloqueo-ink px-3 py-2 rounded-lg transition-colors"
                     >
                       <XCircle size={13} /> Observar
                     </button>
                     <button
                       onClick={() => setDialogo({ pendiente: p, accion: "aprobar" })}
-                      className="flex items-center gap-1.5 text-xs font-medium text-ok-ink border border-ok-line bg-ok-soft hover:bg-ok-line hover:border-ok-ink px-3 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 text-micro font-medium text-ok-ink border border-ok-line bg-ok-soft hover:bg-ok-line hover:border-ok-ink px-3 py-2 rounded-lg transition-colors"
                     >
                       <CheckCircle2 size={13} /> Aprobar
                     </button>

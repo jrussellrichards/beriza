@@ -124,11 +124,11 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
               onChange={(e) => setDescripcion(e.target.value)}
             />
           </div>
-          <p className="text-xs text-ink-muted bg-surface-app border border-line-subtle rounded-md px-3 py-2">
+          <p className="text-meta text-ink-muted bg-surface-app border border-line-subtle rounded-md px-3 py-2">
             El perfil parte sin requisitos exigidos — actívalos después de crearlo.
             Cada servicio que crees podrá usar este perfil.
           </p>
-          {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
@@ -212,7 +212,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <p className={cn("text-sm font-semibold", req.es_obligatorio ? "text-ink" : "text-ink-subtle")}>
+            <p className={cn("text-strong font-semibold", req.es_obligatorio ? "text-ink" : "text-ink-subtle")}>
               {req.nombre}
             </p>
             <span className={cn(
@@ -247,24 +247,24 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
           {req.es_obligatorio && (
             <div className="flex items-center gap-4 flex-wrap mt-2">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-ink-muted whitespace-nowrap">Vigencia máx. (días)</label>
+                <label className="text-meta text-ink-muted whitespace-nowrap">Vigencia máx. (días)</label>
                 <input
                   type="number"
                   min={1}
                   value={req.vigencia_max_dias}
                   onChange={(e) => onChange(req.id, { vigencia_max_dias: Number(e.target.value) })}
-                  className="w-20 text-xs border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  className="w-20 text-meta border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
                 />
               </div>
               {req.codigo.startsWith("F30") && (
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-ink-muted whitespace-nowrap">Deuda máx. ($)</label>
+                  <label className="text-meta text-ink-muted whitespace-nowrap">Deuda máx. ($)</label>
                   <input
                     type="number"
                     min={0}
                     value={req.umbral_deuda_max ?? 0}
                     onChange={(e) => onChange(req.id, { umbral_deuda_max: Number(e.target.value) })}
-                    className="w-28 text-xs border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-28 text-meta border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
                   />
                 </div>
               )}
@@ -357,7 +357,7 @@ function CargosDialog({ cargos, onClose, onCambio }: {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle>Cargos de tu organización</DialogTitle></DialogHeader>
 
-        <p className="text-xs text-ink-muted -mt-2">
+        <p className="text-meta text-ink-muted -mt-2">
           Son las columnas de la matriz. Cada cargo debería implicar documentos distintos:
           si a dos les pides exactamente lo mismo, sobra uno.
         </p>
@@ -366,7 +366,7 @@ function CargosDialog({ cargos, onClose, onCambio }: {
           {cargos.map(c => (
             <div key={c.id} className="flex items-center justify-between px-3 py-2 rounded-lg border border-line-subtle bg-surface-app">
               <div className="min-w-0">
-                <p className="text-sm text-ink truncate">{c.nombre}</p>
+                <p className="text-body text-ink truncate">{c.nombre}</p>
                 <p className="text-[10px] font-mono text-ink-subtle">{c.codigo}{c.area ? ` · ${c.area}` : ""}</p>
               </div>
               <button onClick={() => eliminar(c)} title="Eliminar"
@@ -375,7 +375,7 @@ function CargosDialog({ cargos, onClose, onCambio }: {
               </button>
             </div>
           ))}
-          {cargos.length === 0 && <p className="text-xs text-ink-subtle">Todavía no hay cargos.</p>}
+          {cargos.length === 0 && <p className="text-meta text-ink-subtle">Todavía no hay cargos.</p>}
         </div>
 
         <form onSubmit={crear} className="space-y-2 border-t border-line-subtle pt-3">
@@ -384,7 +384,7 @@ function CargosDialog({ cargos, onClose, onCambio }: {
             <Input placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} required />
             <Input placeholder="Área" value={area} onChange={e => setArea(e.target.value)} />
           </div>
-          {error && <p className="text-xs text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+          {error && <p className="text-meta text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cerrar</Button>
             <Button type="submit" disabled={cargando || !codigo.trim() || !nombre.trim()}>Agregar</Button>
@@ -409,8 +409,8 @@ function MatrizCargos({ requisitos, cargos, guardando, onCambiar, onGestionar, o
   if (cargos.length === 0) {
     return (
       <div className="rounded-xl border border-line bg-surface px-5 py-4">
-        <p className="text-sm font-medium text-ink">Pedir distinto según el cargo</p>
-        <p className="text-xs text-ink-muted mt-1 max-w-2xl">
+        <p className="text-strong font-medium text-ink">Pedir distinto según el cargo</p>
+        <p className="text-meta text-ink-muted mt-1 max-w-2xl">
           Hoy estos {requisitos.length} documentos se le exigen igual a toda la dotación:
           al conductor, al eléctrico y a la administrativa. Creando cargos puedes pedir
           la licencia solo a quien conduce.
@@ -418,13 +418,13 @@ function MatrizCargos({ requisitos, cargos, guardando, onCambiar, onGestionar, o
         <div className="flex items-center gap-2 mt-3">
           <button
             onClick={onSetSugerido}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-colors"
+            className="text-micro font-medium px-3 py-1.5 rounded-lg bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-colors"
           >
             Crear set sugerido
           </button>
           <button
             onClick={onGestionar}
-            className="text-xs px-3 py-1.5 rounded-lg border border-line text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors"
+            className="text-meta px-3 py-1.5 rounded-lg border border-line text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors"
           >
             Crearlos yo
           </button>
@@ -447,32 +447,32 @@ function MatrizCargos({ requisitos, cargos, guardando, onCambiar, onGestionar, o
     <div className="rounded-xl border border-line bg-surface overflow-hidden">
       <div className="px-5 py-3 border-b border-line bg-surface-app/60 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-ink">A quién se le pide cada documento</p>
+          <p className="text-strong font-semibold text-ink">A quién se le pide cada documento</p>
           <p className="text-[11px] text-ink-muted mt-0.5">
             Sin ninguna marca, el documento se exige a toda la dotación. Se guarda al marcar.
           </p>
         </div>
         <button
           onClick={onGestionar}
-          className="text-xs px-2.5 py-1 rounded-md border border-line text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors shrink-0"
+          className="text-meta px-2.5 py-1 rounded-md border border-line text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors shrink-0"
         >
           Editar cargos
         </button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-line">
-              <th className="text-left font-medium text-ink-muted text-xs px-5 py-2.5 min-w-[16rem]">
+              <th className="text-left font-medium text-ink-muted text-meta px-5 py-2.5 min-w-[16rem]">
                 Requisito
               </th>
-              <th className="text-center font-medium text-ink-muted text-xs px-3 py-2.5 w-20">
+              <th className="text-center font-medium text-ink-muted text-meta px-3 py-2.5 w-20">
                 Todos
               </th>
               {cargos.map(c => (
                 <th key={c.id} title={c.area ?? undefined}
-                    className="text-center font-medium text-ink-muted text-xs px-3 py-2.5 w-24">
+                    className="text-center font-medium text-ink-muted text-meta px-3 py-2.5 w-24">
                   {c.nombre.length > 14 ? c.nombre.slice(0, 13) + "…" : c.nombre}
                 </th>
               ))}
@@ -553,8 +553,8 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
         className={cn("w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:opacity-90", c.bg)}
       >
         <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
-        <p className={cn("text-sm font-semibold flex-1", c.text)}>{pilar.nombre}</p>
-        <span className="text-xs text-ink-muted">{obligatorios}/{pilar.requisitos.length} exigidos</span>
+        <p className={cn("text-strong font-semibold flex-1", c.text)}>{pilar.nombre}</p>
+        <span className="text-meta text-ink-muted">{obligatorios}/{pilar.requisitos.length} exigidos</span>
         {open ? <ChevronDown size={15} className="text-ink-subtle" /> : <ChevronRight size={15} className="text-ink-subtle" />}
       </button>
 
@@ -586,7 +586,7 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
           <div className="px-5 py-3 border-t border-line-subtle">
             <button
               onClick={onCrearPropio}
-              className="flex items-center gap-2 text-xs font-medium text-ink-muted hover:text-ink transition-colors"
+              className="flex items-center gap-2 text-micro font-medium text-ink-muted hover:text-ink transition-colors"
             >
               <Plus size={13} />
               Crear requisito propio en {pilar.nombre}
@@ -844,13 +844,13 @@ ${info.descripcion}
       <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-line bg-surface">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-semibold text-ink">Perfiles de exigencias</h1>
-            <p className="text-sm text-ink-muted mt-0.5">
+            <h1 className="text-title sm:text-title font-semibold text-ink">Perfiles de exigencias</h1>
+            <p className="text-body text-ink-muted mt-0.5">
               Define qué documentos exiges por tipo de servicio — cada servicio usa un perfil
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-ink-muted bg-surface-app border border-line px-3 py-2 rounded-lg">
+            <div className="flex items-center gap-1.5 text-meta text-ink-muted bg-surface-app border border-line px-3 py-2 rounded-lg">
               <Lock size={12} className="text-ink-subtle" />
               Catálogo global de BERISA + tus requisitos propios
             </div>
@@ -858,7 +858,7 @@ ${info.descripcion}
               onClick={handleGuardar}
               disabled={dirties.size === 0 || guardando}
               className={cn(
-                "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
+                "flex items-center gap-2 text-strong font-medium px-4 py-2 rounded-lg transition-all",
                 guardado
                   ? "bg-ok-ink text-white"
                   : dirties.size === 0
@@ -875,14 +875,14 @@ ${info.descripcion}
         {/* 1. El PERFIL manda: define que conjunto de exigencias se esta editando.
             Va primero porque todo lo de abajo actua sobre el. */}
         <div className="mt-5 flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-medium text-ink-secondary mr-1">Perfil</span>
+          <span className="text-micro font-medium text-ink-secondary mr-1">Perfil</span>
           <Layers size={14} className="text-ink-subtle" />
           {perfiles.map((p) => (
             <button
               key={p.id}
               onClick={() => setPerfilId(p.id)}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                "px-3 py-1.5 rounded-lg text-micro font-medium border transition-colors",
                 p.id === perfilId
                   ? "bg-surface-inverse text-white border-ink"
                   : "bg-surface text-ink-muted border-line hover:border-line-strong"
@@ -893,7 +893,7 @@ ${info.descripcion}
           ))}
           <button
             onClick={() => setDialogPerfil(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-line-strong text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-micro font-medium border border-dashed border-line-strong text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors"
           >
             <Plus size={12} /> Nuevo perfil
           </button>
@@ -901,7 +901,7 @@ ${info.descripcion}
 
         {/* 2. Accion masiva SOBRE el perfil de arriba, no una propiedad suya. */}
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-ink-subtle">Aplicar plantilla</span>
+          <span className="text-meta text-ink-subtle">Aplicar plantilla</span>
           {[
             { n: "ARRANQUE", label: "Arranque" },
             { n: "COMPLETA", label: "Legal completa" },
@@ -915,7 +915,7 @@ ${info.descripcion}
               disabled={!perfilId || aplicando !== null}
               onClick={() => handlePlantilla(pl.n)}
               className={cn(
-                "text-xs px-2.5 py-1 rounded-md border transition-colors",
+                "text-meta px-2.5 py-1 rounded-md border transition-colors",
                 aplicando === pl.n
                   ? "border-ink bg-surface-inverse text-white"
                   : "border-line text-ink-muted hover:border-line-strong hover:text-ink-secondary",
@@ -944,14 +944,14 @@ ${info.descripcion}
                 onClick={() => setEntidad(t.v)}
                 title={t.ayuda}
                 className={cn(
-                  "px-4 py-2 text-sm transition-colors -mb-px border-b-2",
+                  "px-4 py-2 text-body transition-colors -mb-px border-b-2",
                   entidad === t.v
                     ? "border-ink text-ink font-medium"
                     : "border-transparent text-ink-muted hover:text-ink-secondary",
                 )}
               >
                 {t.label}
-                <span className="ml-2 text-xs text-ink-subtle">
+                <span className="ml-2 text-meta text-ink-subtle">
                   {exigidosEntidad(t.v)} de {cuentaEntidad(t.v)}
                 </span>
               </button>
@@ -990,7 +990,7 @@ ${info.descripcion}
         {perfilActivo && totalExigidos === 0 && (
           <div className="mt-3 flex items-start gap-2 bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-3">
             <AlertCircle size={14} className="text-bloqueo-ink mt-0.5 shrink-0" />
-            <p className="text-xs text-bloqueo-ink">
+            <p className="text-meta text-bloqueo-ink">
               <strong>{perfilActivo.nombre} no exige ningún documento.</strong> Cualquier
               contratista con un servicio que use este perfil va a figurar en regla sin
               haber entregado nada. Activa los requisitos que necesitas, o aplica una
@@ -1002,7 +1002,7 @@ ${info.descripcion}
         {perfilActivo && totalExigidos > 0 && (
           <div className="mt-3 flex items-start gap-2 bg-brand-soft border border-brand-line rounded-lg px-4 py-3">
             <Briefcase size={14} className="text-brand mt-0.5 shrink-0" />
-            <p className="text-xs text-brand-hover">
+            <p className="text-meta text-brand-hover">
               Perfil <strong>{perfilActivo.nombre}</strong>: {totalExigidos} requisito{totalExigidos !== 1 ? "s" : ""} exigido{totalExigidos !== 1 ? "s" : ""}.
               {perfilActivo.descripcion ? ` ${perfilActivo.descripcion}.` : ""} Se aplica a los servicios que usen este perfil.
             </p>
@@ -1010,7 +1010,7 @@ ${info.descripcion}
         )}
 
         {error && (
-          <p className="mt-3 text-sm text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{error}</p>
+          <p className="mt-3 text-body text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-lg px-4 py-2">{error}</p>
         )}
       </div>
 
@@ -1060,20 +1060,20 @@ ${info.descripcion}
           <div className="py-14 text-center bg-surface rounded-xl border border-line px-6">
             {perfilesCargados && perfiles.length === 0 ? (
               <div className="space-y-3">
-                <p className="text-sm font-medium text-ink">Todavía no tienes perfiles de exigencias</p>
-                <p className="text-xs text-ink-subtle max-w-md mx-auto leading-relaxed">
+                <p className="text-strong font-medium text-ink">Todavía no tienes perfiles de exigencias</p>
+                <p className="text-meta text-ink-subtle max-w-md mx-auto leading-relaxed">
                   Un perfil define qué documentos exiges por tipo de servicio. Necesitas al
                   menos uno para poder crear servicios y contratar empresas.
                 </p>
                 <button
                   onClick={() => setDialogPerfil(true)}
-                  className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+                  className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-micro font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
                 >
                   <Plus size={13} /> Crear mi primer perfil
                 </button>
               </div>
             ) : (
-              <p className="text-sm text-ink-subtle">Cargando configuración del perfil...</p>
+              <p className="text-body text-ink-subtle">Cargando configuración del perfil...</p>
             )}
           </div>
         )}
