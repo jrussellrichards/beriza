@@ -137,7 +137,11 @@
   --text-title--font-weight: 600;
   --text-title--letter-spacing: -0.015em;
 
-  --text-metric: 1.5rem; /* 24/28 — KPI, siempre con tabular-nums */
+  /* KPI y cifras. El comentario decía "siempre con tabular-nums" y era sólo un
+     comentario: `tabular-nums` aparecía 3 veces en toda la aplicación, así que
+     los contadores bailaban al cambiar de valor y las columnas de RUT, fechas y
+     porcentajes no alineaban dígitos. Ahora la regla vive en el token. */
+  --text-metric: 1.5rem; /* 24/28 */
   --text-metric--line-height: 1.75rem;
   --text-metric--font-weight: 600;
   --text-metric--letter-spacing: -0.02em;
@@ -260,4 +264,12 @@
     transition-duration: var(--acr-dur-cambio) !important;
   }
   .animate-pulse, .animate-spin { animation: none !important; }
+}
+
+/* Cifras que se comparan entre filas o que cambian en su lugar: ancho fijo por
+   dígito para que la columna no se mueva. Se aplica por utilidad de tamaño y no
+   caso por caso, que es lo que hizo que la regla existiera sólo en el comentario. */
+.text-metric,
+.tabular {
+  font-variant-numeric: tabular-nums;
 }

@@ -391,7 +391,7 @@ export default function MandantesPage() {
             ].map(k => (
               <div key={k.label} className="bg-surface rounded-xl border border-line px-5 py-4">
                 <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{k.label}</p>
-                <p className={cn("text-3xl font-semibold mt-1", k.color)}>{k.value}</p>
+                <p className={cn("text-3xl font-semibold mt-1 tabular", k.color)}>{k.value}</p>
               </div>
             ))}
           </div>

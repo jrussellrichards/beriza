@@ -7,17 +7,18 @@ import {
   OctagonX,
   TriangleAlert,
 } from "lucide-react"
-import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      // Claro fijo, no "system". El modo oscuro se descartó a propósito para
+      // este producto: medido, aguanta menos luz ambiente que el claro, y sus
+      // usuarios trabajan a pleno sol. Al no consultar el tema del sistema se
+      // cae ademas una dependencia que no usaba nadie mas.
+      theme="light"
       className="toaster group"
       icons={{
         success: <CircleCheck className="h-4 w-4" />,
