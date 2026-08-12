@@ -91,32 +91,52 @@ export function MarcaAcredita({
   const enOscuro = contexto === "oscuro"
 
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
-      <LogoAcredita
-        size={28}
-        // El cobre es el color de marca, y solo vive en superficies de marca.
-        // Sobre fondo oscuro no tiene contraste suficiente, así que ahí manda el
-        // azul claro (9.36:1 contra el sidebar).
-        className={enOscuro ? "text-brand-on-dark" : "text-brand-mark"}
-      />
-      <div>
-        <p
+    <div className={cn("flex flex-col", className)}>
+      {/* La A del pórtico ES la A de "Acredita", no un ícono al lado del nombre.
+          Ponerla aparte obligaba a leer dos veces la misma letra y hacía que el
+          conjunto se viera como símbolo prestado + texto. Acá el logotipo y el
+          símbolo son una sola cosa, que es la ventaja de que el objeto del
+          negocio empiece con la inicial del nombre.
+
+          `items-baseline` con la A alineada por su base: el trazo se apoya en la
+          misma línea que el resto de las letras. `alignmentBaseline` no sirve en
+          un SVG inline, por eso el ajuste va con un margen negativo calibrado
+          contra la altura de mayúscula de IBM Plex. */}
+      <div className="flex items-baseline">
+        {/* 28 y no 22, que era la paridad matematica con la altura de mayuscula.
+            Una letra de trazo abierto se lee mas chica que una solida del mismo
+            alto: la correccion es optica, no aritmetica. El margen negativo
+            apoya la tinta en la linea base — la caja del SVG tiene 5,5 unidades
+            de aire bajo el trazo, que a 28 px son 3,2. */}
+        <LogoAcredita
+          size={28}
+          // La A conserva el color de marca aunque sea una letra de la palabra:
+          // es lo que la vuelve marca y no tipografía. Sobre fondo oscuro el
+          // cobre no tiene contraste, así que ahí manda el azul claro.
           className={cn(
-            "text-[19px] font-medium leading-none tracking-[-0.02em]",
-            enOscuro ? "text-ink-inverse" : "text-ink"
+            "-mb-[3.2px] mr-[2px]",
+            enOscuro ? "text-brand-on-dark" : "text-brand-mark",
+          )}
+        />
+        <span
+          className={cn(
+            "text-[22px] font-medium leading-none tracking-[-0.025em]",
+            enOscuro ? "text-ink-inverse" : "text-ink",
           )}
         >
-          Acredita
-        </p>
-        <p
-          className={cn(
-            "text-[10px] mt-1 tracking-[0.04em]",
-            enOscuro ? "text-ink-inverse-muted" : "text-ink-subtle"
-          )}
-        >
-          {subtitulo ?? "de BERISA"}
-        </p>
+          credita
+        </span>
       </div>
+      {/* Sangrado al ancho de la A, para que el subtítulo cuelgue del nombre y no
+          del borde de la caja. */}
+      <p
+        className={cn(
+          "text-[10px] mt-1.5 ml-[2px] tracking-[0.06em] uppercase",
+          enOscuro ? "text-ink-inverse-muted" : "text-ink-subtle",
+        )}
+      >
+        {subtitulo ?? "de BERISA"}
+      </p>
     </div>
   )
 }
