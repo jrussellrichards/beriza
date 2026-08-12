@@ -296,6 +296,19 @@
     [role="tab"] {
       min-height: 44px;
     }
+
+    /* 60 px, no 44, en la navegación y en las acciones principales.
+       Los 44 habituales son la medida de un dedo desnudo; la guía de trabajo de
+       campo pide 60 para operar con guantes, que es como se usa esto en obra.
+       No se sube TODO a 60 a propósito: en una tabla densa eso duplicaría el
+       alto de la pantalla y obligaría a desplazarse más, que es su propio
+       problema. Se sube donde el error cuesta —la barra de navegación y el botón
+       que confirma— y se deja 44 de piso para el resto. */
+    nav a,
+    nav button,
+    [data-toque="guante"] {
+      min-height: 60px;
+    }
   }
 }
 
