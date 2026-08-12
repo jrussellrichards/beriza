@@ -34,6 +34,8 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+import { Toaster } from "@/shared/ui/sonner";
+
 export const metadata: Metadata = {
   title: "Acredita — Acreditación de contratistas",
   description:
@@ -52,7 +54,16 @@ export default function RootLayout({
     // Sin `antialiased`: adelgaza el texto en macOS, y para leer al sol en faena
     // conviene más masa, no menos.
     <html lang="es" className={`${plexSans.variable} ${plexMono.variable} h-full`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* La aplicación no tenía forma de decir que sí: el Toaster estaba
+            construido y nadie lo montaba, así que la única confirmación del
+            producto era un setTimeout a mano en un botón. Guardar una
+            configuración, aprobar un documento o invitar a alguien terminaban en
+            silencio, y el usuario se quedaba mirando la pantalla sin saber si
+            había pasado algo. */}
+        <Toaster />
+      </body>
     </html>
   );
 }

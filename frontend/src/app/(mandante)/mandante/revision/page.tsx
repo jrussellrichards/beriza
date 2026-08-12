@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { CheckCircle2, Download, Eye, FileText, Inbox, RefreshCw, XCircle } from "lucide-react"
 import { cn, siglaVisible } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
+import { toast } from "sonner"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/shared/ui/dialog"
@@ -63,6 +64,20 @@ function RevisarDialog({ pendiente, accion, onClose, onDone }: {
         mensaje_brecha: accion === "observar" ? motivo : null,
         fecha_vigencia_hasta: accion === "aprobar" && fechaVigencia ? fechaVigencia : null,
       })
+      // Confirmar en voz alta lo que acaba de pasar. Aprobar y observar eran
+      // silenciosos: el diálogo se cerraba y la fila desaparecía de la cola, que
+      // es indistinguible de una recarga. Se nombra el documento porque quien
+      // revisa cuarenta seguidos necesita saber CUÁL resolvió, no sólo que algo
+      // se resolvió.
+      if (accion === "aprobar") {
+        toast.success(`Aprobado: ${pendiente.requisito_nombre}`, {
+          description: pendiente.contratista_razon_social,
+        })
+      } else {
+        toast(`Observado: ${pendiente.requisito_nombre}`, {
+          description: "El contratista ya puede ver el motivo y corregir.",
+        })
+      }
       onDone()
       onClose()
     } catch (e) {
