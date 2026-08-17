@@ -40,7 +40,16 @@ def get_usuario_actual(
     except JWTError:
         raise credenciales_invalidas
 
-    usuario = db.get(Usuario, usuario_id)
+    # El `sub` del JWT es texto y la columna es UUID. Postgres lo adapta solo,
+    # asi que en produccion nunca se noto; con SQLite —el motor del entorno de
+    # desarrollo sin Docker y el de toda la suite de tests— revienta con
+    # "'str' object has no attribute 'hex'" y devuelve un 500 en cada request
+    # autenticado. Convertirlo aca lo deja explicito para cualquier motor.
+    try:
+        usuario = db.get(Usuario, uuid.UUID(usuario_id))
+    except ValueError:
+        # Un sub que no es un UUID es un token invalido, no un error del servidor.
+        raise credenciales_invalidas
     if not usuario or not usuario.activo:
         raise credenciales_invalidas
 
