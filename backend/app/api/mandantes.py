@@ -14,7 +14,6 @@ from app.api.schemas import (
     InvitarUsuarioMandanteRequest,
     UsuarioMandanteResponse,
     ActualizarMandanteRequest,
-    AplicarPlantillaRequest,
     ConfigurarRequisitoPerfilRequest,
     DefinirCargosRequisitoRequest,
     CrearMandanteRequest,
@@ -24,9 +23,9 @@ from app.api.schemas import (
     PerfilResponse,
 )
 from app.core.config import settings
-from app.core.exceptions import PermisoInsuficiente
+from app.core.exceptions import AsignacionInvalida, PermisoInsuficiente
 from app.core.exceptions import PerfilNoEncontrado
-from app.domain import permiso_service, acreditacion_service, plantillas, servicio_service, usuario_service
+from app.domain import permiso_service, acreditacion_service, servicio_service, usuario_service
 from app.domain.estados import EntidadTipo, EstadoDocumento
 from app.domain.reglas_service import VIGENCIA_DEFAULT_DIAS
 from app.models.cargo import Cargo
@@ -93,17 +92,6 @@ def actualizar_mandante(
     db.commit()
     db.refresh(mandante)
     return mandante
-
-
-# Va declarada ANTES de /{mandante_id}: FastAPI resuelve por orden y la ruta
-# parametrica captura "plantillas" como si fuera un UUID (422).
-@router.get("/plantillas")
-def listar_plantillas(
-    db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
-):
-    """Plantillas de exigencia disponibles, con cuántos requisitos activa cada una."""
-    return plantillas.resumen(db)
 
 
 @router.get("/{mandante_id}", response_model=MandanteResponse)
@@ -565,7 +553,15 @@ def crear_perfil(
 ):
     if not db.get(Mandante, mandante_id):
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
-    return servicio_service.crear_perfil(db, mandante_id, body.nombre, body.descripcion)
+    try:
+        return servicio_service.crear_perfil(
+            db, mandante_id, body.nombre, body.descripcion,
+            copiar_de=body.copiar_de_perfil_id,
+        )
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/{mandante_id}/perfiles/{perfil_id}/requisitos", status_code=status.HTTP_201_CREATED)
@@ -594,6 +590,32 @@ def configurar_requisito_perfil(
         parametros_extra=body.parametros_extra,
     )
     return {"mensaje": "Requisito configurado en el perfil"}
+
+
+@router.delete("/{mandante_id}/perfiles/{perfil_id}/requisitos/{requisito_id}")
+def quitar_requisito_perfil(
+    mandante_id: uuid.UUID,
+    perfil_id: uuid.UUID,
+    requisito_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Saca un requisito de ESTE perfil. No toca el catálogo.
+
+    Es distinto de borrar un requisito propio, que lo elimina de la organización
+    entera. Dos gestos parecidos con consecuencias muy distintas: la interfaz los
+    llama "Quitar de este perfil" y "Eliminar del catálogo".
+    """
+    try:
+        perfil = servicio_service.obtener_perfil(db, perfil_id)
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if perfil.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="El perfil no pertenece a este mandante")
+
+    servicio_service.quitar_requisito_perfil(db, perfil_id, requisito_id)
+    return {"mensaje": "Requisito quitado del perfil"}
 
 
 @router.put("/{mandante_id}/perfiles/{perfil_id}/requisitos/{requisito_id}/cargos")
@@ -666,34 +688,6 @@ def definir_cargos_requisito(
     }
 
 
-@router.post("/{mandante_id}/perfiles/{perfil_id}/plantilla")
-def aplicar_plantilla_perfil(
-    mandante_id: uuid.UUID,
-    perfil_id: uuid.UUID,
-    body: AplicarPlantillaRequest,
-    db: Session = Depends(get_db),
-    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
-):
-    """
-    Deja el perfil exigiendo lo que dice la plantilla, en un solo request.
-
-    Sin esto, poner en marcha un perfil sobre el catálogo de 44 requisitos son 44
-    POST desde la pantalla, uno por casilla. Es un SET: lo que la plantilla no
-    incluye queda apagado, con su parametrización intacta por si se reactiva.
-    """
-    try:
-        perfil = servicio_service.obtener_perfil(db, perfil_id)
-    except PerfilNoEncontrado as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    if perfil.mandante_id != mandante_id:
-        raise HTTPException(status_code=403, detail="El perfil no pertenece a este mandante")
-    if usuario.mandante_id and usuario.mandante_id != mandante_id:
-        raise HTTPException(status_code=403, detail="Solo puede configurar perfiles de su propio mandante")
-
-    try:
-        return servicio_service.aplicar_plantilla(db, perfil_id, body.plantilla.strip().upper())
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 
 
