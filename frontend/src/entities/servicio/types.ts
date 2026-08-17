@@ -33,6 +33,9 @@ export interface Perfil {
   nombre: string
   descripcion: string | null
   activo: boolean
+  /** Cuántos documentos exige. El selector de plantilla no ofrece los de cero:
+   *  partir de un perfil vacío deja igual que partir en blanco. */
+  total_requisitos: number
 }
 
 // Estados de documento: 1=Enviado | 2=En Análisis | 3=Observado | 4=Aprobado | null=no subido

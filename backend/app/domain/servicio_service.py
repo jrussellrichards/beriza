@@ -36,13 +36,67 @@ def crear_perfil(
     mandante_id: uuid.UUID,
     nombre: str,
     descripcion: str | None = None,
+    copiar_de: uuid.UUID | None = None,
 ) -> PerfilRequisitos:
-    """Crea un perfil de exigencias para el mandante. El nombre es único por mandante."""
+    """
+    Crea un perfil de exigencias para el mandante. El nombre es único por mandante.
+
+    Con `copiar_de` parte desde otro perfil YA EXISTENTE del mismo mandante: se
+    copian sus requisitos con toda su parametrización —vigencias y umbrales, que
+    son la parte tediosa— y a partir de ahí los dos perfiles son independientes.
+
+    La copia es una FOTO, no un vínculo. Si fuera herencia viva, editar el perfil
+    de origen cambiaría en silencio lo que se le exige a contratistas que ya se
+    están acreditando: documentos que aparecen o desaparecen bajo sus pies y una
+    acreditación que cambia de resultado sin que nadie tocara ese servicio.
+    """
     perfil = PerfilRequisitos(mandante_id=mandante_id, nombre=nombre, descripcion=descripcion, activo=True)
     db.add(perfil)
+    db.flush()
+
+    if copiar_de is not None:
+        origen = obtener_perfil(db, copiar_de)
+        # Sin esta comprobación se podría copiar el perfil de otro mandante
+        # pasando su id: revelaría qué exige la competencia y traería requisitos
+        # ajenos —ya se vio en producción un perfil exigiendo requisitos propios
+        # de otro cliente, y eso reventó un borrado por integridad referencial.
+        if origen.mandante_id != mandante_id:
+            raise AsignacionInvalida("El perfil de origen no pertenece a tu organización.")
+        for cfg in db.query(PerfilRequisitoConfig).filter_by(perfil_id=origen.id).all():
+            db.add(PerfilRequisitoConfig(
+                perfil_id=perfil.id,
+                requisito_documental_id=cfg.requisito_documental_id,
+                es_obligatorio=cfg.es_obligatorio,
+                vigencia_max_dias=cfg.vigencia_max_dias,
+                umbral_deuda_max=cfg.umbral_deuda_max,
+                parametros_extra=cfg.parametros_extra,
+            ))
+
     db.commit()
     db.refresh(perfil)
     return perfil
+
+
+def quitar_requisito_perfil(
+    db: Session,
+    perfil_id: uuid.UUID,
+    requisito_documental_id: uuid.UUID,
+) -> None:
+    """
+    Saca un requisito del perfil borrando su fila de configuración.
+
+    No es lo mismo que apagarlo: hasta ahora la pantalla guardaba una fila con
+    es_obligatorio=False por cada requisito que el usuario tocaba, así que un
+    perfil con 12 exigencias arrastraba 44 filas. Que la fila EXISTA pase a
+    significar "este perfil lo exige" deja la base diciendo lo mismo que la
+    pantalla.
+    """
+    config = db.query(PerfilRequisitoConfig).filter_by(
+        perfil_id=perfil_id, requisito_documental_id=requisito_documental_id
+    ).first()
+    if config:
+        db.delete(config)
+        db.commit()
 
 
 def listar_perfiles(db: Session, mandante_id: uuid.UUID) -> list[PerfilRequisitos]:

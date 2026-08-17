@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   Briefcase, ChevronDown, ChevronRight, CheckCircle2,
-  Circle, Edit2, Layers, Lock, Plus, Save, Star, Trash2,
+  Circle, Edit2, Layers, Lock, Plus, Save, Search, Star, Trash2, X,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
@@ -55,15 +55,23 @@ const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text:
 
 // ── Crear perfil ──────────────────────────────────────────────────────────────
 
-function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
+function CrearPerfilDialog({ mandanteId, perfiles, onClose, onCreado }: {
   mandanteId: string
+  /** Para ofrecerlos como plantilla. */
+  perfiles: Perfil[]
   onClose: () => void
   onCreado: (perfil: Perfil) => void
 }) {
   const [nombre, setNombre] = useState("")
   const [descripcion, setDescripcion] = useState("")
+  const [plantillaId, setPlantillaId] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Solo los que exigen algo: partir de uno vacío deja igual que partir en
+  // blanco, y de los primeros siete perfiles reales cuatro no exigían nada.
+  const plantillas = perfiles.filter(p => (p.total_requisitos ?? 0) > 0)
+  const elegida = plantillas.find(p => p.id === plantillaId)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -73,6 +81,7 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
       const perfil = await api.post<Perfil>(`/api/v1/mandantes/${mandanteId}/perfiles`, {
         nombre,
         descripcion: descripcion || null,
+        copiar_de_perfil_id: plantillaId || null,
       })
       onCreado(perfil)
       onClose()
@@ -109,9 +118,34 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
               onChange={(e) => setDescripcion(e.target.value)}
             />
           </div>
+          {plantillas.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="plantilla">Partir desde</Label>
+              <select
+                id="plantilla"
+                value={plantillaId}
+                onChange={(e) => setPlantillaId(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
+              >
+                <option value="">Un perfil en blanco</option>
+                {plantillas.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre} — {p.total_requisitos} documento{p.total_requisitos === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Que es una copia y no un vínculo tiene que decirlo la pantalla: si
+              alguien cree que hereda, va a editar la plantilla esperando que el
+              cambio baje, y lo que exige a sus contratistas se quedaría atrás. */}
           <p className="text-xs text-ink-muted bg-surface-app border border-line-subtle rounded-md px-3 py-2">
-            El perfil parte sin requisitos exigidos — actívalos después de crearlo.
-            Cada servicio que crees podrá usar este perfil.
+            {elegida
+              ? `Se copiarán los ${elegida.total_requisitos} documentos de «${elegida.nombre}» con sus vigencias. Después podrás editarlos sin afectar a «${elegida.nombre}».`
+              : plantillas.length > 0
+                ? "Parte vacío y le agregas los documentos que exigirás."
+                : "El perfil parte vacío. Agrégale los documentos que exigirás y podrás usarlo como plantilla para los siguientes."}
           </p>
           {error && <p className="text-sm text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
@@ -130,29 +164,13 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
 
 // ── Fila de requisito ─────────────────────────────────────────────────────────
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-        checked ? "bg-surface-inverse" : "bg-line"
-      )}
-    >
-      <span className={cn(
-        "pointer-events-none inline-block h-4 w-4 rounded-full bg-surface shadow-sm transition-transform",
-        checked ? "translate-x-4" : "translate-x-0"
-      )} />
-    </button>
-  )
-}
-
-function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
+function RequisitoRow({ req, color, dirty, onChange, onQuitar, onEdit, onDelete }: {
   req: Requisito
   color: string
   dirty: boolean
   onChange: (id: string, cambios: Partial<Requisito>) => void
+  /** Lo saca de ESTE perfil. No toca el catálogo. */
+  onQuitar: (req: Requisito) => void
   onEdit: (req: Requisito) => void
   onDelete: (req: Requisito) => void
 }) {
@@ -160,27 +178,14 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
 
   return (
     <div className={cn(
-      "rounded-lg border p-4 transition-colors group",
-      req.es_obligatorio ? "bg-surface border-line" : "bg-surface-app/60 border-line-subtle",
-      dirty && "border-accion-line"
+      "rounded-lg border p-4 transition-colors group bg-surface",
+      dirty ? "border-accion-line" : "border-line"
     )}>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5">
-          <Toggle
-            checked={req.es_obligatorio}
-            onChange={(v) => onChange(req.id, { es_obligatorio: v })}
-          />
-        </div>
-
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <p className={cn("text-sm font-semibold", req.es_obligatorio ? "text-ink" : "text-ink-subtle")}>
-              {req.nombre}
-            </p>
-            <span className={cn(
-              "text-[10px] font-mono px-1.5 py-0.5 rounded border",
-              req.es_obligatorio ? c.badge : "bg-surface-sunken text-ink-subtle border-line"
-            )}>
+            <p className="text-sm font-semibold text-ink">{req.nombre}</p>
+            <span className={cn("text-[10px] font-mono px-1.5 py-0.5 rounded border", c.badge)}>
               {req.codigo}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-surface-sunken text-ink-muted border-line">
@@ -206,8 +211,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
             )}
           </div>
 
-          {req.es_obligatorio && (
-            <div className="flex items-center gap-4 flex-wrap mt-2">
+          <div className="flex items-center gap-4 flex-wrap mt-2">
               <div className="flex items-center gap-2">
                 <label className="text-xs text-ink-muted whitespace-nowrap">Vigencia máx. (días)</label>
                 <input
@@ -230,8 +234,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
                   />
                 </div>
               )}
-            </div>
-          )}
+          </div>
         </div>
 
         <div className="flex items-start gap-1.5 mt-0.5 shrink-0">
@@ -253,27 +256,35 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
               </button>
             </div>
           )}
-          {req.es_obligatorio
-            ? <CheckCircle2 size={15} className="text-ok-ink shrink-0" />
-            : <Circle size={15} className="text-ink-subtle shrink-0" />
-          }
+          <button
+            onClick={() => onQuitar(req)}
+            title="Quitar de este perfil (no lo borra del catálogo)"
+            className="p-1 rounded-md text-ink-subtle hover:bg-bloqueo-soft hover:text-bloqueo-ink transition-colors"
+          >
+            <X size={14} />
+          </button>
         </div>
       </div>
     </div>
   )
 }
 
-function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequisito, onCrearPropio }: {
+function PilarSection({ pilar, dirties, onChange, onQuitar, onEditRequisito, onDeleteRequisito, onCrearPropio }: {
   pilar: Pilar
   dirties: Set<string>
   onChange: (reqId: string, cambios: Partial<Requisito>) => void
+  onQuitar: (req: Requisito) => void
   onEditRequisito: (req: Requisito) => void
   onDeleteRequisito: (req: Requisito) => void
   onCrearPropio: () => void
 }) {
   const [open, setOpen] = useState(true)
   const c = COLOR_MAP[pilar.color] ?? COLOR_MAP.slate
-  const obligatorios = pilar.requisitos.filter(r => r.es_obligatorio).length
+  // Solo lo que este perfil exige. El resto del catálogo vive en "Agregar
+  // documentos": mezclarlos era lo que impedía responder "¿qué le pido?".
+  const incluidos = pilar.requisitos.filter(r => r.es_obligatorio)
+  // Un pilar sin nada exigido no ocupa espacio en la vista del perfil.
+  if (incluidos.length === 0) return null
 
   return (
     <div className={cn("rounded-xl border overflow-hidden", c.border)}>
@@ -283,20 +294,23 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
       >
         <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
         <p className={cn("text-sm font-bold flex-1", c.text)}>{pilar.nombre}</p>
-        <span className="text-xs text-ink-muted">{obligatorios}/{pilar.requisitos.length} exigidos</span>
+        <span className="text-xs text-ink-muted">
+          {incluidos.length} documento{incluidos.length === 1 ? "" : "s"}
+        </span>
         {open ? <ChevronDown size={15} className="text-ink-subtle" /> : <ChevronRight size={15} className="text-ink-subtle" />}
       </button>
 
       {open && (
         <div className="bg-surface">
           <div className="p-4 space-y-2">
-            {pilar.requisitos.map(req => (
+            {incluidos.map(req => (
               <RequisitoRow
                 key={req.id}
                 req={req}
                 color={pilar.color}
                 dirty={dirties.has(req.id)}
                 onChange={onChange}
+                onQuitar={onQuitar}
                 onEdit={onEditRequisito}
                 onDelete={onDeleteRequisito}
               />
@@ -317,6 +331,119 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
   )
 }
 
+// ── Agregar documentos al perfil ─────────────────────────────────────────────
+
+/**
+ * El catálogo completo, para elegir qué sumar al perfil.
+ *
+ * Aquí SÍ va un selector, y está bien: su trabajo es hojear 44 requisitos, y es
+ * un sitio al que se entra a propósito y de vez en cuando. Lo que no funcionaba
+ * era tener esos 44 como vista permanente del perfil, mezclando lo que se exige
+ * con lo que no.
+ */
+function AgregarRequisitosDialog({ pilares, onClose, onAgregar }: {
+  pilares: Pilar[]
+  onClose: () => void
+  onAgregar: (ids: string[]) => void
+}) {
+  const [busqueda, setBusqueda] = useState("")
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
+
+  const q = busqueda.trim().toLowerCase()
+  const disponibles = pilares
+    .map(p => ({
+      ...p,
+      requisitos: p.requisitos.filter(r =>
+        !r.es_obligatorio &&
+        (!q || r.nombre.toLowerCase().includes(q) || r.codigo.toLowerCase().includes(q))
+      ),
+    }))
+    .filter(p => p.requisitos.length > 0)
+
+  const total = disponibles.reduce((n, p) => n + p.requisitos.length, 0)
+
+  function alternar(id: string) {
+    setSeleccion(prev => {
+      const s = new Set(prev)
+      if (s.has(id)) s.delete(id); else s.add(id)
+      return s
+    })
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Agregar documentos al perfil</DialogTitle>
+        </DialogHeader>
+
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
+          <input
+            autoFocus
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre o código..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+          />
+        </div>
+
+        <div className="max-h-[50vh] overflow-y-auto space-y-4 -mx-1 px-1">
+          {disponibles.map(pilar => (
+            <div key={pilar.id} className="space-y-1.5">
+              <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
+                {pilar.nombre}
+              </p>
+              {pilar.requisitos.map(req => (
+                <button
+                  key={req.id}
+                  type="button"
+                  onClick={() => alternar(req.id)}
+                  className={cn(
+                    "w-full flex items-start gap-3 text-left px-3 py-2.5 rounded-lg border transition-colors",
+                    seleccion.has(req.id)
+                      ? "border-brand-line bg-brand-soft"
+                      : "border-line hover:bg-surface-app"
+                  )}
+                >
+                  {seleccion.has(req.id)
+                    ? <CheckCircle2 size={15} className="text-brand shrink-0 mt-0.5" />
+                    : <Circle size={15} className="text-ink-subtle shrink-0 mt-0.5" />}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm text-ink">{req.nombre}</span>
+                    <span className="block text-[10px] text-ink-subtle font-mono">
+                      {req.codigo} · {req.entidad === "EMPRESA" ? "Empresa" : "Trabajador"}
+                      {req.alcance === "SERVICIO" ? " · por cada servicio" : ""}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ))}
+          {total === 0 && (
+            <p className="text-sm text-ink-subtle text-center py-10">
+              {busqueda
+                ? "Ningún documento coincide con la búsqueda."
+                : "Este perfil ya exige todos los documentos del catálogo."}
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            type="button"
+            disabled={seleccion.size === 0}
+            onClick={() => { onAgregar([...seleccion]); onClose() }}
+          >
+            Agregar {seleccion.size > 0 ? seleccion.size : ""}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function PerfilesPage() {
@@ -329,6 +456,10 @@ export default function PerfilesPage() {
   const [guardado, setGuardado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dialogPerfil, setDialogPerfil] = useState(false)
+  const [dialogAgregar, setDialogAgregar] = useState(false)
+  // Quitados pero aún sin guardar. Se separan de `dirties` porque se resuelven
+  // con DELETE y no con POST, y porque hasta que no se guarde se puede desistir.
+  const [quitados, setQuitados] = useState<Set<string>>(new Set())
   const [panel, setPanel] = useState<{ pilar: Pilar; requisito: RequisitoCatalogo | null } | null>(null)
 
   useEffect(() => {
@@ -352,6 +483,7 @@ export default function PerfilesPage() {
   const cargarRequisitos = useCallback(() => {
     if (!mandanteId || !perfilId) return
     setDirties(new Set())
+    setQuitados(new Set())
     api.get<ConfigPerfil>(`/api/v1/mandantes/${mandanteId}/requisitos?perfil_id=${perfilId}`)
       .then((cfg) => setPilares(cfg.pilares))
       .catch(() => setPilares([]))
@@ -370,6 +502,27 @@ export default function PerfilesPage() {
     }
   }
 
+  function handleQuitar(req: Requisito) {
+    setGuardado(false)
+    setQuitados((prev) => new Set(prev).add(req.id))
+    setDirties((prev) => { const s = new Set(prev); s.delete(req.id); return s })
+    setPilares((prev) => prev.map(p => ({
+      ...p,
+      requisitos: p.requisitos.map(r => r.id !== req.id ? r : { ...r, es_obligatorio: false }),
+    })))
+  }
+
+  function handleAgregar(ids: string[]) {
+    setGuardado(false)
+    const nuevos = new Set(ids)
+    setQuitados((prev) => { const s = new Set(prev); ids.forEach(i => s.delete(i)); return s })
+    setDirties((prev) => new Set([...prev, ...ids]))
+    setPilares((prev) => prev.map(p => ({
+      ...p,
+      requisitos: p.requisitos.map(r => !nuevos.has(r.id) ? r : { ...r, es_obligatorio: true }),
+    })))
+  }
+
   function handleChange(reqId: string, cambios: Partial<Requisito>) {
     setGuardado(false)
     setDirties((prev) => new Set(prev).add(reqId))
@@ -380,7 +533,7 @@ export default function PerfilesPage() {
   }
 
   async function handleGuardar() {
-    if (!mandanteId || !perfilId || dirties.size === 0) return
+    if (!mandanteId || !perfilId || pendientes === 0) return
     setGuardando(true)
     setError(null)
     const requisitos = pilares.flatMap(p => p.requisitos).filter(r => dirties.has(r.id))
@@ -388,12 +541,18 @@ export default function PerfilesPage() {
       for (const r of requisitos) {
         await api.post(`/api/v1/mandantes/${mandanteId}/perfiles/${perfilId}/requisitos`, {
           requisito_documental_id: r.id,
-          es_obligatorio: r.es_obligatorio,
+          es_obligatorio: true,
           vigencia_max_dias: r.vigencia_max_dias,
           umbral_deuda_max: r.umbral_deuda_max ?? 0,
         })
       }
+      for (const id of quitados) {
+        await api.delete(`/api/v1/mandantes/${mandanteId}/perfiles/${perfilId}/requisitos/${id}`)
+      }
       setDirties(new Set())
+      setQuitados(new Set())
+      // El contador del selector de plantillas cambia al guardar.
+      if (mandanteId) cargarPerfiles(mandanteId)
       setGuardado(true)
       setTimeout(() => setGuardado(false), 2500)
     } catch (e) {
@@ -405,6 +564,7 @@ export default function PerfilesPage() {
 
   const perfilActivo = perfiles.find(p => p.id === perfilId)
   const totalExigidos = pilares.flatMap(p => p.requisitos).filter(r => r.es_obligatorio).length
+  const pendientes = dirties.size + quitados.size
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -424,18 +584,18 @@ export default function PerfilesPage() {
             </div>
             <button
               onClick={handleGuardar}
-              disabled={dirties.size === 0 || guardando}
+              disabled={pendientes === 0 || guardando}
               className={cn(
                 "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all",
                 guardado
                   ? "bg-ok-ink text-white"
-                  : dirties.size === 0
+                  : pendientes === 0
                     ? "bg-surface-sunken text-ink-subtle cursor-not-allowed"
                     : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
               )}
             >
               <Save size={14} />
-              {guardando ? "Guardando..." : guardado ? "¡Guardado!" : `Guardar${dirties.size > 0 ? ` (${dirties.size})` : ""}`}
+              {guardando ? "Guardando..." : guardado ? "¡Guardado!" : `Guardar${pendientes > 0 ? ` (${pendientes})` : ""}`}
             </button>
           </div>
         </div>
@@ -466,11 +626,17 @@ export default function PerfilesPage() {
         </div>
 
         {perfilActivo && (
-          <div className="mt-3 flex items-start gap-2 bg-brand-soft border border-brand-line rounded-lg px-4 py-3">
-            <Briefcase size={14} className="text-brand mt-0.5 shrink-0" />
-            <p className="text-xs text-brand-hover">
-              Perfil <strong>{perfilActivo.nombre}</strong>: {totalExigidos} requisito{totalExigidos !== 1 ? "s" : ""} exigido{totalExigidos !== 1 ? "s" : ""}.
-              {perfilActivo.descripcion ? ` ${perfilActivo.descripcion}.` : ""} Se aplica a los servicios que usen este perfil.
+          <div className={cn(
+            "mt-3 flex items-start gap-2 border rounded-lg px-4 py-3",
+            totalExigidos === 0
+              ? "bg-accion-soft border-accion-line"
+              : "bg-brand-soft border-brand-line",
+          )}>
+            <Briefcase size={14} className={cn("mt-0.5 shrink-0", totalExigidos === 0 ? "text-accion-ink" : "text-brand")} />
+            <p className={cn("text-xs", totalExigidos === 0 ? "text-accion-ink" : "text-brand-hover")}>
+              {totalExigidos === 0
+                ? <>Perfil <strong>{perfilActivo.nombre}</strong>: no exige ningún documento. Un servicio que lo use no le pedirá nada a su contratista.</>
+                : <>Perfil <strong>{perfilActivo.nombre}</strong>: exige {totalExigidos} documento{totalExigidos !== 1 ? "s" : ""}.{perfilActivo.descripcion ? ` ${perfilActivo.descripcion}.` : ""} Se aplica a los servicios que usen este perfil.</>}
             </p>
           </div>
         )}
@@ -488,6 +654,7 @@ export default function PerfilesPage() {
             pilar={pilar}
             dirties={dirties}
             onChange={handleChange}
+            onQuitar={handleQuitar}
             onEditRequisito={(req) => setPanel({
               pilar,
               requisito: {
@@ -499,6 +666,31 @@ export default function PerfilesPage() {
             onCrearPropio={() => setPanel({ pilar, requisito: null })}
           />
         ))}
+        {totalExigidos === 0 && pilares.length > 0 && (
+          <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line">
+            <p className="text-sm text-ink-muted">Este perfil no exige ningún documento</p>
+            <p className="text-xs text-ink-subtle mt-1 max-w-md mx-auto">
+              Un servicio que use este perfil no le pedirá nada a su contratista.
+              Agrega los documentos que quieras exigir.
+            </p>
+            <button
+              onClick={() => setDialogAgregar(true)}
+              className="mt-4 inline-flex items-center gap-2 bg-surface-inverse text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+            >
+              <Plus size={14} /> Agregar documentos
+            </button>
+          </div>
+        )}
+
+        {totalExigidos > 0 && (
+          <button
+            onClick={() => setDialogAgregar(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-line-strong text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface transition-colors"
+          >
+            <Plus size={14} /> Agregar documentos a este perfil
+          </button>
+        )}
+
         {pilares.length === 0 && (
           <div className="py-14 text-center bg-surface rounded-xl border border-line">
             <p className="text-sm text-ink-subtle">Cargando configuración del perfil...</p>
@@ -506,9 +698,18 @@ export default function PerfilesPage() {
         )}
       </div>
 
+      {dialogAgregar && (
+        <AgregarRequisitosDialog
+          pilares={pilares}
+          onClose={() => setDialogAgregar(false)}
+          onAgregar={handleAgregar}
+        />
+      )}
+
       {dialogPerfil && mandanteId && (
         <CrearPerfilDialog
           mandanteId={mandanteId}
+          perfiles={perfiles}
           onClose={() => setDialogPerfil(false)}
           onCreado={(p) => {
             setPerfiles((prev) => [...prev, p])

@@ -21,7 +21,7 @@ from app.api.schemas import (
     PerfilResponse,
 )
 from app.core.config import settings
-from app.core.exceptions import PermisoInsuficiente
+from app.core.exceptions import AsignacionInvalida, PermisoInsuficiente
 from app.core.exceptions import PerfilNoEncontrado
 from app.domain import permiso_service, acreditacion_service, servicio_service
 from app.domain.estados import EstadoDocumento
@@ -689,7 +689,15 @@ def listar_perfiles(
     usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
 ):
     """Perfiles de requisitos del mandante (plantillas de exigencias por tipo de servicio)."""
-    return servicio_service.listar_perfiles(db, mandante_id)
+    perfiles = servicio_service.listar_perfiles(db, mandante_id)
+    return [
+        PerfilResponse(
+            id=p.id, mandante_id=p.mandante_id, nombre=p.nombre,
+            descripcion=p.descripcion, activo=p.activo,
+            total_requisitos=len(p.requisitos_config),
+        )
+        for p in perfiles
+    ]
 
 
 @router.post("/{mandante_id}/perfiles", response_model=PerfilResponse, status_code=status.HTTP_201_CREATED)
@@ -701,7 +709,15 @@ def crear_perfil(
 ):
     if not db.get(Mandante, mandante_id):
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
-    return servicio_service.crear_perfil(db, mandante_id, body.nombre, body.descripcion)
+    try:
+        return servicio_service.crear_perfil(
+            db, mandante_id, body.nombre, body.descripcion,
+            copiar_de=body.copiar_de_perfil_id,
+        )
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/{mandante_id}/perfiles/{perfil_id}/requisitos", status_code=status.HTTP_201_CREATED)
@@ -732,6 +748,30 @@ def configurar_requisito_perfil(
     return {"mensaje": "Requisito configurado en el perfil"}
 
 
+@router.delete("/{mandante_id}/perfiles/{perfil_id}/requisitos/{requisito_id}")
+def quitar_requisito_perfil(
+    mandante_id: uuid.UUID,
+    perfil_id: uuid.UUID,
+    requisito_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario=Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Saca un requisito de ESTE perfil. No toca el catálogo.
+
+    Es distinto de DELETE /requisitos-propios/{id}, que borra el requisito de la
+    organización entera. Dos gestos parecidos con consecuencias muy distintas:
+    la interfaz los llama "Quitar de este perfil" y "Eliminar del catálogo".
+    """
+    try:
+        perfil = servicio_service.obtener_perfil(db, perfil_id)
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if perfil.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="El perfil no pertenece a este mandante")
+
+    servicio_service.quitar_requisito_perfil(db, perfil_id, requisito_id)
+    return {"mensaje": "Requisito quitado del perfil"}
 
 
 # ── Usuarios del mandante y sus permisos de aprobación ────────────────────────

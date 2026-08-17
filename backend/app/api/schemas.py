@@ -204,6 +204,9 @@ class ActualizarRequisitoCatalogoRequest(BaseModel):
 class CrearPerfilRequest(BaseModel):
     nombre: str
     descripcion: str | None = None
+    # Partir desde un perfil que ya existe, copiando sus requisitos y su
+    # parametrización. Es una copia, no un vínculo: después son independientes.
+    copiar_de_perfil_id: uuid.UUID | None = None
 
 
 class ConfigurarRequisitoPerfilRequest(BaseModel):
@@ -220,6 +223,10 @@ class PerfilResponse(BaseModel):
     nombre: str
     descripcion: str | None
     activo: bool
+    # Cuántos documentos exige. Lo usa el selector de plantilla para no ofrecer
+    # perfiles vacíos: 4 de los 7 que crearon los primeros usuarios no exigían
+    # nada, y partir de uno de esos deja igual de vacío que partir en blanco.
+    total_requisitos: int = 0
 
     model_config = {"from_attributes": True}
 
