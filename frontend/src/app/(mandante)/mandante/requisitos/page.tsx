@@ -70,15 +70,24 @@ const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text:
 
 // ── Crear perfil ──────────────────────────────────────────────────────────────
 
-function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
+function CrearPerfilDialog({ mandanteId, perfiles, onClose, onCreado }: {
   mandanteId: string
+  /** Los que ya existen, para ofrecerlos como punto de partida. */
+  perfiles: Perfil[]
   onClose: () => void
   onCreado: (perfil: Perfil) => void
 }) {
   const [nombre, setNombre] = useState("")
   const [descripcion, setDescripcion] = useState("")
+  const [plantillaId, setPlantillaId] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Solo los que exigen algo: partir de uno vacío deja igual que partir en
+  // blanco, y ya pasó — de los primeros siete perfiles reales, cuatro no
+  // exigían nada.
+  const plantillas = perfiles.filter(p => (p.requisitos_exigidos ?? 0) > 0)
+  const elegida = plantillas.find(p => p.id === plantillaId)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -88,6 +97,7 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
       const perfil = await api.post<Perfil>(`/api/v1/mandantes/${mandanteId}/perfiles`, {
         nombre,
         descripcion: descripcion || null,
+        copiar_de_perfil_id: plantillaId || null,
       })
       onCreado(perfil)
       onClose()
@@ -124,9 +134,34 @@ function CrearPerfilDialog({ mandanteId, onClose, onCreado }: {
               onChange={(e) => setDescripcion(e.target.value)}
             />
           </div>
+          {plantillas.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="plantilla">Partir desde</Label>
+              <select
+                id="plantilla"
+                value={plantillaId}
+                onChange={(e) => setPlantillaId(e.target.value)}
+                className="w-full px-3 py-2 text-body border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
+              >
+                <option value="">Un perfil en blanco</option>
+                {plantillas.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre} — {p.requisitos_exigidos} documento{p.requisitos_exigidos === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Que es una copia y no un vínculo tiene que decirlo la pantalla: si
+              alguien cree que hereda, editará el perfil de origen esperando que
+              el cambio baje, y lo que exige a sus contratistas se queda atrás. */}
           <p className="text-meta text-ink-muted bg-surface-app border border-line-subtle rounded-md px-3 py-2">
-            El perfil parte sin requisitos exigidos — actívalos después de crearlo.
-            Cada servicio que crees podrá usar este perfil.
+            {elegida
+              ? `Se copiarán los ${elegida.requisitos_exigidos} documentos de «${elegida.nombre}» con sus vigencias. Después podrás editarlos sin afectar a «${elegida.nombre}».`
+              : plantillas.length > 0
+                ? "Parte vacío y le activas los documentos que exigirás."
+                : "El perfil parte vacío. Actívale los documentos que exigirás y podrás usarlo como punto de partida para los siguientes."}
           </p>
           {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
           <DialogFooter>
@@ -646,12 +681,6 @@ export default function PerfilesPage() {
 
   useEffect(() => { cargarRequisitos() }, [cargarRequisitos])
 
-  useEffect(() => {
-    api.get<{ nombre: string; requisitos: number; descripcion: string }[]>("/api/v1/mandantes/plantillas")
-      .then(setPlantillas)
-      .catch(() => setPlantillas([]))
-  }, [])
-
   const cargarCargos = useCallback(() => {
     api.get<Cargo[]>("/api/v1/cargos/")
       .then(setCargos)
@@ -714,11 +743,6 @@ export default function PerfilesPage() {
     }
   }
 
-  // Aplicar plantilla: pone el perfil en un punto de partida sensato de una vez.
-  // Sin esto, arrancar un perfil sobre el catalogo de 44 requisitos es marcar
-  // casillas una por una, con un request por casilla.
-  const [aplicando, setAplicando] = useState<string | null>(null)
-
   // Dos ejes de filtro. Son preguntas distintas y por eso son controles distintos:
   //   entidad = a QUIEN se le pide (la empresa una vez, o cada persona)
   //   nivel   = POR QUE se puede pedir (obligacion legal, condicional, practica)
@@ -726,10 +750,6 @@ export default function PerfilesPage() {
   // ambas a la vez: son 38 requisitos de empresa contra 6 de persona, y esa
   // asimetria hace inutil la lista mezclada.
   const [cargos, setCargos] = useState<Cargo[]>([])
-  // Cuántos requisitos activa cada plantilla y qué contiene. El backend ya lo
-  // sabía; la pantalla lo tenía escrito a mano y sin el conteo, así que se
-  // aplicaba a ciegas una acción que REEMPLAZA la configuración.
-  const [plantillas, setPlantillas] = useState<{ nombre: string; requisitos: number; descripcion: string }[]>([])
   const [guardandoCargo, setGuardandoCargo] = useState<string | null>(null)
 
   const [entidad, setEntidad] = useState<"EMPRESA" | "TRABAJADOR">("EMPRESA")
@@ -771,41 +791,6 @@ export default function PerfilesPage() {
   const exigidosEntidad = (e: "EMPRESA" | "TRABAJADOR") =>
     pilares.flatMap(p => p.requisitos).filter(r => r.entidad === e && r.es_obligatorio).length
 
-  async function handlePlantilla(nombre: string) {
-    if (!mandanteId || !perfilId) return
-    // Reemplaza lo exigido en el perfil, y de eso depende qué se le pide a cada
-    // contratista. Se aplicaba con un clic y sin decir qué iba a pasar; el aviso
-    // estaba en letra chica debajo de los botones.
-    const info = plantillas.find(x => x.nombre === nombre)
-    const aviso = info
-      ? `Vas a exigir ${info.requisitos} documento${info.requisitos === 1 ? "" : "s"} en `
-        + `${perfilActivo?.nombre ?? "este perfil"}.
-
-${info.descripcion}
-
-`
-        + `Reemplaza lo que el perfil exige hoy (${totalExigidos}). `
-        + "Las vigencias que ya configuraste se conservan."
-      : "Esto reemplaza lo que el perfil exige hoy. ¿Continuar?"
-    if (!window.confirm(aviso)) return
-
-    setAplicando(nombre)
-    setError(null)
-    try {
-      const r = await api.post<{ exigidos: number; activados: number; desactivados: number }>(
-        `/api/v1/mandantes/${mandanteId}/perfiles/${perfilId}/plantilla`,
-        { plantilla: nombre },
-      )
-      cargarRequisitos()
-      setGuardado(true)
-      setTimeout(() => setGuardado(false), 2500)
-      console.info(`Plantilla ${nombre}: ${r.exigidos} exigidos`)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo aplicar la plantilla")
-    } finally {
-      setAplicando(null)
-    }
-  }
 
   /**
    * Guarda a que cargos aplica un requisito. Es un PUT con la lista COMPLETA:
@@ -899,39 +884,6 @@ ${info.descripcion}
           </button>
         </div>
 
-        {/* 2. Accion masiva SOBRE el perfil de arriba, no una propiedad suya. */}
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <span className="text-meta text-ink-subtle">Aplicar plantilla</span>
-          {[
-            { n: "ARRANQUE", label: "Arranque" },
-            { n: "COMPLETA", label: "Legal completa" },
-            { n: "OBRA", label: "Obra física" },
-          ].map(pl => {
-            const info = plantillas.find(x => x.nombre === pl.n)
-            return (
-            <button
-              key={pl.n}
-              title={info?.descripcion}
-              disabled={!perfilId || aplicando !== null}
-              onClick={() => handlePlantilla(pl.n)}
-              className={cn(
-                "text-meta px-2.5 py-1 rounded-md border transition-colors",
-                aplicando === pl.n
-                  ? "border-ink bg-surface-inverse text-white"
-                  : "border-line text-ink-muted hover:border-line-strong hover:text-ink-secondary",
-                (!perfilId || aplicando !== null) && "opacity-60 cursor-not-allowed",
-              )}
-            >
-              {aplicando === pl.n
-                ? "Aplicando..."
-                : info ? `${pl.label} · ${info.requisitos}` : pl.label}
-            </button>
-          )})}
-          <span className="text-[10px] text-ink-subtle">
-            Reemplaza lo exigido en este perfil; conserva vigencias ya configuradas
-          </span>
-        </div>
-
         {/* 3. Solo filtros de VISTA sobre el mismo perfil. No son dos perfiles. */}
         <div className="mt-4 flex items-center justify-between gap-4 flex-wrap border-b border-line">
           <div className="flex items-center gap-0">
@@ -993,8 +945,8 @@ ${info.descripcion}
             <p className="text-meta text-bloqueo-ink">
               <strong>{perfilActivo.nombre} no exige ningún documento.</strong> Cualquier
               contratista con un servicio que use este perfil va a figurar en regla sin
-              haber entregado nada. Activa los requisitos que necesitas, o aplica una
-              plantilla para partir.
+              haber entregado nada. Activa los requisitos que necesitas, o crea el
+              siguiente perfil partiendo desde uno que ya tengas configurado.
             </p>
           </div>
         )}
@@ -1082,6 +1034,7 @@ ${info.descripcion}
       {dialogPerfil && mandanteId && (
         <CrearPerfilDialog
           mandanteId={mandanteId}
+          perfiles={perfiles}
           onClose={() => setDialogPerfil(false)}
           onCreado={(p) => {
             setPerfiles((prev) => [...prev, p])

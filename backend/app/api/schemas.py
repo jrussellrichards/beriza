@@ -256,6 +256,9 @@ class ActualizarRequisitoCatalogoRequest(BaseModel):
 class CrearPerfilRequest(BaseModel):
     nombre: str
     descripcion: str | None = None
+    # Partir desde un perfil que ya existe, copiando sus requisitos y su
+    # parametrización. Es una copia, no un vínculo: después son independientes.
+    copiar_de_perfil_id: uuid.UUID | None = None
 
 
 class ConfigurarRequisitoPerfilRequest(BaseModel):
@@ -287,11 +290,6 @@ class DefinirCargosRequisitoRequest(BaseModel):
     # Lista COMPLETA de cargos a los que aplica el requisito dentro del perfil.
     # Vacia = aplica a todos los trabajadores (el comportamiento por defecto).
     cargo_ids: list[uuid.UUID] = []
-
-
-class AplicarPlantillaRequest(BaseModel):
-    # ARRANQUE | COMPLETA | OBRA — ver app/domain/plantillas.py
-    plantilla: str
 
 
 class PerfilResponse(BaseModel):
