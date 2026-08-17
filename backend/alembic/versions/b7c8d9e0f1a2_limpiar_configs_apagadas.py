@@ -1,6 +1,6 @@
 """se borran las configuraciones de perfil que no exigen nada
 
-Revision ID: f8a9b0c1d2e3
+Revision ID: b7c8d9e0f1a2
 Revises: c1d2e3f4a5b6
 Create Date: 2026-08-17
 
@@ -20,7 +20,7 @@ exigiendo 44, y bloquearia contratistas por documentos que nadie pidio.
 """
 from alembic import op
 
-revision = "f8a9b0c1d2e3"
+revision = "b7c8d9e0f1a2"
 down_revision = "c1d2e3f4a5b6"
 branch_labels = None
 depends_on = None
