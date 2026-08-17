@@ -23,7 +23,6 @@ import uuid as uuid_lib
 
 from app.core.config import settings
 from app.domain import rut_service
-from app.domain import plantillas as _plantillas
 from app.domain.estados import Alcance, EstadoDocumento, EstadoServicio, TipoEvento
 from app.models import Base, Usuario
 from app.models.mandante import Mandante
@@ -678,16 +677,44 @@ CATALOGO = [
 VIGENCIA_DEFAULT = 90
 VIGENCIAS = {r.codigo: r.vigencia for r in CATALOGO}
 
-# Qué exige un perfil el DÍA UNO. La definición NO vive acá: vive en
-# app/domain/plantillas.py, porque la API también la necesita — un mandante real
-# nunca corre este script y sin plantilla tendría que marcar 44 casillas a mano.
-# El seed solo la consume, para que no existan dos definiciones que se separen.
+# Qué exige el perfil de la DEMO. Estas listas vivían en app/domain/plantillas.py
+# como plantillas del producto (ARRANQUE / COMPLETA / OBRA) y se mudaron acá al
+# reemplazarse por "partir desde un perfil que ya existe": dejaron de ser una
+# función y quedaron como lo que siempre fueron para este script, un conjunto
+# razonable de exigencias para que la demo no muestre 44 documentos ni cero.
+#
+# El criterio sigue siendo el mismo: documentos que se obtienen en línea en una
+# tarde. Un contratista de 50 personas ve ~108 expedientes, no ~2.200.
+ARRANQUE = frozenset({
+    "F30",
+    "F30_1",
+    "CERT_AFILIACION_OA",
+    "SII_SITUACION_TRIBUTARIA",
+    "MIPER",
+    "RIHS",
+    "CONTRATO",
+    "IRL_ODI",
+})
+
+# Lo condicional que gatilla una faena de construcción u obra física.
+EXTRA_OBRA = frozenset({
+    "RIOHS",
+    "CPHS_DELEGADO_ACTA",
+    "EPP_GESTION",
+    "EPP_ENTREGA",
+    "PROC_TRABAJO_SEGURO",
+    "HDS_SUSTANCIAS",
+    "EXAM_MED",
+    "POLIZA_RESP_CIVIL",
+    "POLIZA_TODO_RIESGO_OBRA",
+})
+
 NIVEL_BASE = frozenset(r.codigo for r in CATALOGO if r.nivel == "BASE")
 
 PLANTILLAS = {
-    "ARRANQUE": _plantillas.ARRANQUE,
+    "ARRANQUE": ARRANQUE,
     "COMPLETA": NIVEL_BASE,
-    "OBRA": NIVEL_BASE | _plantillas.EXTRA_OBRA,
+    "OBRA": NIVEL_BASE | EXTRA_OBRA,
 }
 
 CATALOGO_POR_CODIGO = {r.codigo: r for r in CATALOGO}
