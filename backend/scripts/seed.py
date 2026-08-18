@@ -943,16 +943,23 @@ def seed_perfiles_y_servicios(session: Session, reqs: dict[str, RequisitoDocumen
         }
         plantilla = PLANTILLAS["ARRANQUE"]
         for codigo, req in reqs.items():
+            # SOLO lo que el perfil exige. Antes se sembraba una fila por cada
+            # requisito del catálogo, con es_obligatorio=False para los 36 que no
+            # entraban en la plantilla, y se justificaba como "config inerte, a
+            # un clic de encenderse". Con la pantalla nueva el perfil ES la lista
+            # de lo que contiene, así que una fila apagada no es un requisito
+            # medio puesto: es basura invisible.
+            #
+            # Y no era inerte: reglas_service.configs_para_requisito no filtra
+            # por es_obligatorio, y config_mas_estricta hace min() sobre vigencia
+            # y umbral. Una fila apagada con vigencia 30 le impone 30 días al
+            # mismo requisito exigido en otro perfil con 90.
+            if codigo not in plantilla:
+                continue
             if str(req.id) not in configs_existentes:
                 session.add(PerfilRequisitoConfig(
                     perfil_id=perfil.id, requisito_documental_id=req.id,
-                    # Solo la plantilla nace obligatoria. El resto se siembra en
-                    # False: config inerte para _configs_de_perfil (no genera
-                    # brecha ni expediente) pero ya parametrizada y visible en la
-                    # pantalla del mandante, a un clic de encenderse. Sin esto,
-                    # 44 requisitos globales se convertirían en 44 exigencias
-                    # para todo mandante nuevo el día uno.
-                    es_obligatorio=(codigo in plantilla),
+                    es_obligatorio=True,
                     vigencia_max_dias=VIGENCIAS.get(codigo) or VIGENCIA_DEFAULT,
                     umbral_deuda_max=0,
                 ))
