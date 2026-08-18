@@ -439,6 +439,35 @@ def configuracion_mandante(
     }
 
 
+def _perfil_por_defecto(db: Session, mandante_id: uuid.UUID) -> PerfilRequisitos:
+    """
+    El perfil que se usa cuando no se indica cuál.
+
+    Existía, se borró en el commit 6e7c4da y el call site quedó huérfano: sin
+    `perfil_id` el endpoint respondía 500 por NameError en vez del 404 que
+    prometía su propio docstring. No se notaba porque la pantalla siempre manda
+    el parámetro, pero cualquier otro consumidor se lo comía.
+
+    La versión anterior buscaba uno llamado "General", que es un nombre que pone
+    el seed de demo: un mandante real que nombra sus perfiles por tipo de trabajo
+    no tiene ninguno así y caía igual en el 404. Ahora toma el primero activo con
+    el MISMO orden que `listar_perfiles` (por nombre), para que "el primero" sea
+    el mismo que la interfaz muestra arriba y no uno al azar.
+    """
+    perfil = (
+        db.query(PerfilRequisitos)
+        .filter_by(mandante_id=mandante_id, activo=True)
+        .order_by(PerfilRequisitos.nombre)
+        .first()
+    )
+    if not perfil:
+        raise HTTPException(
+            status_code=404,
+            detail="El mandante no tiene perfiles de exigencias. Cree uno primero.",
+        )
+    return perfil
+
+
 @router.get("/{mandante_id}/requisitos")
 def listar_requisitos_mandante(
     mandante_id: uuid.UUID,
@@ -448,7 +477,7 @@ def listar_requisitos_mandante(
 ):
     """
     Catálogo de pilares/requisitos con la config del perfil superpuesta.
-    Sin perfil_id usa el perfil "General" del mandante.
+    Sin perfil_id usa el primer perfil activo del mandante.
     """
     mandante = db.get(Mandante, mandante_id)
     if not mandante:
