@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   AlertCircle, Briefcase, ChevronDown, ChevronRight, CheckCircle2,
-  Circle, Edit2, Layers, Lock, Plus, Save, Star, Trash2,
+  Circle, Edit2, Layers, Lock, Plus, Save, Search, Star, Trash2, X,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
@@ -180,80 +180,26 @@ function CrearPerfilDialog({ mandanteId, perfiles, onClose, onCreado }: {
 
 // ── Fila de requisito ─────────────────────────────────────────────────────────
 
-/**
- * Interruptor de "se exige o no".
- *
- * `etiqueta` no es opcional a propósito. Sin ella, esta pantalla presentaba 41
- * conmutadores idénticos y sin nombre a quien usa un lector de pantalla — y son
- * los que deciden qué documentos se le exigen a un contratista, con consecuencia
- * legal. El dato ya estaba en la fila; sólo había que pasarlo.
- *
- * El área de toque va en un envoltorio con padding transparente: el interruptor
- * sigue midiendo 20 px, que es lo que pide el diseño denso, pero se puede tocar
- * en 44 px, que es lo que pide un dedo. WCAG 2.5.8 exige 24 como mínimo.
- */
-function Toggle({ checked, onChange, etiqueta }: {
-  checked: boolean
-  onChange: (v: boolean) => void
-  etiqueta: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={`Exigir ${etiqueta}`}
-      title={`Exigir ${etiqueta}`}
-      onClick={() => onChange(!checked)}
-      className="inline-flex items-center justify-center p-3 -m-3 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-    >
-      <span className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-        checked ? "bg-surface-inverse" : "bg-line"
-      )}>
-        <span className={cn(
-          "pointer-events-none inline-block h-4 w-4 rounded-full bg-surface shadow-sm transition-transform",
-          checked ? "translate-x-4" : "translate-x-0"
-        )} />
-      </span>
-    </button>
-  )
-}
-
-function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
+function RequisitoRow({ req, color, dirty, onChange, onQuitar }: {
   req: Requisito
   color: string
   dirty: boolean
   onChange: (id: string, cambios: Partial<Requisito>) => void
-  onEdit: (req: Requisito) => void
-  onDelete: (req: Requisito) => void
+  /** Lo saca de ESTE perfil. El borrado del catalogo vive en el buscador. */
+  onQuitar: (req: Requisito) => void
 }) {
   const c = COLOR_MAP[color] ?? COLOR_MAP.slate
 
   return (
     <div className={cn(
-      "rounded-lg border p-4 transition-colors group",
-      req.es_obligatorio ? "bg-surface border-line" : "bg-surface-app/60 border-line-subtle",
-      dirty && "border-accion-line"
+      "rounded-lg border p-4 transition-colors group bg-surface",
+      dirty ? "border-accion-line" : "border-line",
     )}>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5">
-          <Toggle
-            checked={req.es_obligatorio}
-            onChange={(v) => onChange(req.id, { es_obligatorio: v })}
-            etiqueta={req.nombre}
-          />
-        </div>
-
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <p className={cn("text-strong font-semibold", req.es_obligatorio ? "text-ink" : "text-ink-subtle")}>
-              {req.nombre}
-            </p>
-            <span className={cn(
-              "text-[10px] font-mono px-1.5 py-0.5 rounded border",
-              req.es_obligatorio ? c.badge : "bg-surface-sunken text-ink-subtle border-line"
-            )}>
+            <p className="text-strong font-semibold text-ink">{req.nombre}</p>
+            <span className={cn("text-[10px] font-mono px-1.5 py-0.5 rounded border", c.badge)}>
               {req.codigo}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-surface-sunken text-ink-muted border-line">
@@ -279,8 +225,7 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
             )}
           </div>
 
-          {req.es_obligatorio && (
-            <div className="flex items-center gap-4 flex-wrap mt-2">
+          <div className="flex items-center gap-4 flex-wrap mt-2">
               <div className="flex items-center gap-2">
                 <label className="text-meta text-ink-muted whitespace-nowrap">Vigencia máx. (días)</label>
                 <input
@@ -303,33 +248,20 @@ function RequisitoRow({ req, color, dirty, onChange, onEdit, onDelete }: {
                   />
                 </div>
               )}
-            </div>
-          )}
+          </div>
         </div>
 
         <div className="flex items-start gap-1.5 mt-0.5 shrink-0">
-          {req.es_propio && (
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => onEdit(req)}
-                title="Editar requisito propio"
-                className="p-1 rounded-md hover:bg-surface-sunken text-ink-subtle hover:text-ink-muted transition-colors"
-              >
-                <Edit2 size={11} />
-              </button>
-              <button
-                onClick={() => onDelete(req)}
-                title="Eliminar requisito propio"
-                className="p-1 rounded-md hover:bg-bloqueo-soft text-ink-subtle hover:text-bloqueo-ink transition-colors"
-              >
-                <Trash2 size={11} />
-              </button>
-            </div>
-          )}
-          {req.es_obligatorio
-            ? <CheckCircle2 size={15} className="text-ok-ink shrink-0" />
-            : <Circle size={15} className="text-ink-subtle shrink-0" />
-          }
+          {/* Sin opacity-0/group-hover: eso lo deja inalcanzable por teclado y
+              por touch, y quitar pasa a ser el gesto cotidiano de la pantalla. */}
+          <button
+            onClick={() => onQuitar(req)}
+            aria-label={`Quitar ${req.nombre} de este perfil`}
+            title="Quitar de este perfil — no lo borra del catálogo"
+            className="p-2 -m-1 rounded-md text-ink-subtle hover:bg-bloqueo-soft hover:text-bloqueo-ink focus-visible:ring-2 focus-visible:ring-brand/30 transition-colors"
+          >
+            <X size={14} />
+          </button>
         </div>
       </div>
     </div>
@@ -569,17 +501,19 @@ function agruparPorSubpilar(reqs: Requisito[]) {
   return Array.from(mapa.values()).sort((a, b) => a.orden - b.orden)
 }
 
-function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequisito, onCrearPropio }: {
+function PilarSection({ pilar, dirties, onChange, onQuitar }: {
   pilar: Pilar
   dirties: Set<string>
   onChange: (reqId: string, cambios: Partial<Requisito>) => void
-  onEditRequisito: (req: Requisito) => void
-  onDeleteRequisito: (req: Requisito) => void
-  onCrearPropio: () => void
+  onQuitar: (req: Requisito) => void
 }) {
   const [open, setOpen] = useState(true)
   const c = COLOR_MAP[pilar.color] ?? COLOR_MAP.slate
-  const obligatorios = pilar.requisitos.filter(r => r.es_obligatorio).length
+  // Solo lo que este perfil exige. El resto del catalogo vive en el buscador de
+  // "Agregar requisitos": mezclarlos era lo que impedia responder "que le pido".
+  const incluidos = pilar.requisitos.filter(r => r.es_obligatorio)
+  // Un pilar del que no se exige nada no ocupa espacio en la vista del perfil.
+  if (incluidos.length === 0) return null
 
   return (
     <div className={cn("rounded-xl border overflow-hidden", c.border)}>
@@ -589,19 +523,21 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
       >
         <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", c.dot)} />
         <p className={cn("text-strong font-semibold flex-1", c.text)}>{pilar.nombre}</p>
-        <span className="text-meta text-ink-muted">{obligatorios}/{pilar.requisitos.length} exigidos</span>
+        <span className="text-meta text-ink-muted">
+          {incluidos.length} documento{incluidos.length === 1 ? "" : "s"}
+        </span>
         {open ? <ChevronDown size={15} className="text-ink-subtle" /> : <ChevronRight size={15} className="text-ink-subtle" />}
       </button>
 
       {open && (
         <div className="bg-surface">
           <div className="p-4 space-y-4">
-            {agruparPorSubpilar(pilar.requisitos).map(g => (
+            {agruparPorSubpilar(incluidos).map(g => (
               <div key={g.codigo} className="space-y-2">
                 <p className="text-[11px] font-medium text-ink-subtle uppercase tracking-wide px-1">
                   {g.nombre}
                   <span className="ml-2 normal-case tracking-normal text-ink-subtle/70">
-                    {g.requisitos.filter(r => r.es_obligatorio).length}/{g.requisitos.length}
+                    {g.requisitos.length}
                   </span>
                 </p>
                 {g.requisitos.map(req => (
@@ -611,25 +547,207 @@ function PilarSection({ pilar, dirties, onChange, onEditRequisito, onDeleteRequi
                 color={pilar.color}
                 dirty={dirties.has(req.id)}
                 onChange={onChange}
-                onEdit={onEditRequisito}
-                onDelete={onDeleteRequisito}
+                onQuitar={onQuitar}
               />
                 ))}
               </div>
             ))}
           </div>
-          <div className="px-5 py-3 border-t border-line-subtle">
-            <button
-              onClick={onCrearPropio}
-              className="flex items-center gap-2 text-micro font-medium text-ink-muted hover:text-ink transition-colors"
-            >
-              <Plus size={13} />
-              Crear requisito propio en {pilar.nombre}
-            </button>
-          </div>
         </div>
       )}
     </div>
+  )
+}
+
+// ── Agregar requisitos al perfil ─────────────────────────────────────────────
+
+const NIVEL_ETIQUETA: Record<string, { label: string; ayuda: string; clase: string }> = {
+  BASE:     { label: "Base",     ayuda: "Obligación legal de todo empleador", clase: "bg-bloqueo-soft text-bloqueo-ink border-bloqueo-line" },
+  AMPLIADO: { label: "Ampliado", ayuda: "Exigible bajo un supuesto",          clase: "bg-accion-soft text-accion-ink border-accion-line" },
+  OPCIONAL: { label: "Opcional", ayuda: "Práctica de mercado",                clase: "bg-surface-sunken text-ink-muted border-line" },
+}
+
+/**
+ * El catalogo completo, para elegir que sumar al perfil.
+ *
+ * Aqui SI va un selector, y esta bien: su trabajo es hojear 44 requisitos, y es
+ * un sitio al que se entra a proposito y de vez en cuando. Lo que no funcionaba
+ * era tener esos 44 como vista permanente del perfil, mezclando lo que se exige
+ * con lo que no.
+ *
+ * Se lleva tambien el alta, la edicion y el borrado de requisitos PROPIOS. Antes
+ * colgaban de la lista completa del catalogo; con la vista reducida a lo exigido,
+ * un requisito propio recien creado y aun sin exigir no aparecia en ninguna parte
+ * y no habia forma de volver a tocarlo nunca mas.
+ */
+function AgregarRequisitosDialog({ pilares, onClose, onAgregar, onCrearPropio, onEditarPropio, onEliminarPropio }: {
+  pilares: Pilar[]
+  onClose: () => void
+  onAgregar: (ids: string[]) => void
+  onCrearPropio: (pilar: Pilar) => void
+  onEditarPropio: (pilar: Pilar, req: Requisito) => void
+  onEliminarPropio: (req: Requisito) => void
+}) {
+  const [busqueda, setBusqueda] = useState("")
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
+
+  // Sin tildes de los dos lados: "poliza" tiene que encontrar "Póliza". Nadie
+  // escribe tildes en un buscador, y sin esto la mitad del catálogo —que está
+  // lleno de "póliza", "declaración", "médico"— es inalcanzable escribiendo
+  // normal.
+  const sinTildes = (t: string) =>
+    t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+
+  const q = sinTildes(busqueda.trim())
+  const disponibles = pilares
+    .map(p => ({
+      ...p,
+      requisitos: p.requisitos.filter(r =>
+        !r.es_obligatorio &&
+        (!q || sinTildes(r.nombre).includes(q) || sinTildes(r.codigo).includes(q))
+      ),
+    }))
+    .filter(p => p.requisitos.length > 0)
+
+  const total = disponibles.reduce((n, p) => n + p.requisitos.length, 0)
+
+  function alternar(id: string) {
+    setSeleccion(prev => {
+      const s = new Set(prev)
+      if (s.has(id)) s.delete(id); else s.add(id)
+      return s
+    })
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Agregar requisitos a este perfil</DialogTitle>
+        </DialogHeader>
+
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
+          <input
+            autoFocus
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre o código..."
+            aria-label="Buscar en el catálogo"
+            className="w-full pl-9 pr-3 py-2 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+          />
+        </div>
+
+        <div className="max-h-[52vh] overflow-y-auto space-y-5 -mx-1 px-1">
+          {disponibles.map(pilar => (
+            <div key={pilar.id} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-micro font-semibold text-ink-muted uppercase tracking-wider">
+                  {pilar.nombre}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onCrearPropio(pilar)}
+                  className="text-micro text-ink-subtle hover:text-ink inline-flex items-center gap-1 transition-colors"
+                >
+                  <Plus size={11} /> Crear uno propio
+                </button>
+              </div>
+
+              {pilar.requisitos.map(req => {
+                const n = NIVEL_ETIQUETA[req.nivel] ?? NIVEL_ETIQUETA.OPCIONAL
+                const puesto = seleccion.has(req.id)
+                return (
+                  <div
+                    key={req.id}
+                    className={cn(
+                      "flex items-start gap-3 px-3 py-2.5 rounded-lg border transition-colors",
+                      puesto ? "border-brand-line bg-brand-soft" : "border-line hover:bg-surface-app",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={puesto}
+                      aria-label={`Agregar ${req.nombre}`}
+                      onClick={() => alternar(req.id)}
+                      className="flex items-start gap-3 text-left flex-1 min-w-0 focus-visible:ring-2 focus-visible:ring-brand/30 rounded"
+                    >
+                      {puesto
+                        ? <CheckCircle2 size={15} className="text-brand shrink-0 mt-0.5" />
+                        : <Circle size={15} className="text-ink-subtle shrink-0 mt-0.5" />}
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-body text-ink">{req.nombre}</span>
+                        <span className="flex items-center gap-1.5 flex-wrap mt-1">
+                          <span className="text-[10px] font-mono text-ink-subtle">{req.codigo}</span>
+                          {/* El nivel viaja hasta aca a proposito: es lo unico en la app
+                              que distingue obligacion legal de practica de mercado, y este
+                              es justo el momento en que esa diferencia decide. */}
+                          <span title={n.ayuda} className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium", n.clase)}>
+                            {n.label}
+                          </span>
+                          <span className="text-[10px] text-ink-subtle">
+                            {req.entidad === "EMPRESA" ? "Empresa" : "Por trabajador"}
+                            {req.alcance === "SERVICIO" ? " · por cada servicio" : ""}
+                          </span>
+                          {req.es_propio && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-excepcion-soft text-excepcion-ink border-excepcion-line inline-flex items-center gap-1">
+                              <Star size={9} /> Propio
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+
+                    {req.es_propio && (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onEditarPropio(pilar, req)}
+                          aria-label={`Editar ${req.nombre}`}
+                          title="Editar este requisito propio"
+                          className="p-1.5 rounded-md text-ink-subtle hover:bg-surface-sunken hover:text-ink-muted transition-colors"
+                        >
+                          <Edit2 size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onEliminarPropio(req)}
+                          aria-label={`Eliminar ${req.nombre} del catálogo`}
+                          title="Eliminar del catálogo — lo saca de TODOS tus perfiles"
+                          className="p-1.5 rounded-md text-ink-subtle hover:bg-bloqueo-soft hover:text-bloqueo-ink transition-colors"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+
+          {total === 0 && (
+            <p className="text-body text-ink-subtle text-center py-10">
+              {busqueda
+                ? "Ningún requisito coincide con la búsqueda."
+                : "Este perfil ya exige todos los requisitos del catálogo."}
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            type="button"
+            disabled={seleccion.size === 0}
+            onClick={() => { onAgregar([...seleccion]); onClose() }}
+          >
+            Agregar{seleccion.size > 0 ? ` ${seleccion.size}` : ""}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -647,6 +765,19 @@ export default function PerfilesPage() {
   const [guardado, setGuardado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dialogPerfil, setDialogPerfil] = useState(false)
+  const [dialogAgregar, setDialogAgregar] = useState(false)
+  // Quitados pero aun sin guardar. Se separan de `dirties` porque se resuelven
+  // con DELETE y no con POST, y sobre todo porque QUITAR ES DESTRUCTIVO: borra
+  // la fila de config con su vigencia, su umbral y su matriz de cargos, que
+  // cuelga con cascade delete-orphan. Dejarlo pendiente hasta Guardar hace que
+  // un misclic no afloje una exigencia en silencio.
+  const [quitados, setQuitados] = useState<Set<string>>(new Set())
+  // Distingue "todavia no pregunte por los requisitos" de "pregunte y este
+  // perfil no exige ninguno". Antes se usaba pilares.length === 0 como
+  // "cargando", y funcionaba solo porque el catalogo nunca viene vacio; con la
+  // lista reducida a lo exigido, un perfil nuevo da 0 legitimamente y se
+  // quedaba en "Cargando..." para siempre.
+  const [requisitosCargados, setRequisitosCargados] = useState(false)
   const [panel, setPanel] = useState<{ pilar: Pilar; requisito: RequisitoCatalogo | null } | null>(null)
 
   useEffect(() => {
@@ -674,9 +805,11 @@ export default function PerfilesPage() {
   const cargarRequisitos = useCallback(() => {
     if (!mandanteId || !perfilId) return
     setDirties(new Set())
+    setQuitados(new Set())
     api.get<ConfigPerfil>(`/api/v1/mandantes/${mandanteId}/requisitos?perfil_id=${perfilId}`)
       .then((cfg) => setPilares(cfg.pilares))
       .catch(() => setPilares([]))
+      .finally(() => setRequisitosCargados(true))
   }, [mandanteId, perfilId])
 
   useEffect(() => { cargarRequisitos() }, [cargarRequisitos])
@@ -701,13 +834,43 @@ export default function PerfilesPage() {
 
   async function handleEliminarPropio(req: Requisito) {
     setError(null)
-    if (!window.confirm(`¿Eliminar el requisito propio "${req.nombre}"? Esto no afecta el catálogo global.`)) return
+    // "Eliminar del catalogo" y "Quitar de este perfil" son gestos distintos y
+    // el texto tiene que separarlos: este saca el requisito de TODOS los
+    // perfiles del mandante, no solo del que se esta mirando.
+    if (!window.confirm(
+      `¿Eliminar "${req.nombre}" de tu catálogo?
+
+` +
+      `Deja de estar disponible y sale de TODOS tus perfiles, no solo de este. ` +
+      `Para sacarlo únicamente de este perfil, usa la X de la lista.`
+    )) return
     try {
       await api.delete(`/api/v1/pilares/requisitos/${req.id}`)
       cargarRequisitos()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al eliminar")
     }
+  }
+
+  function handleQuitar(req: Requisito) {
+    setGuardado(false)
+    setQuitados((prev) => new Set(prev).add(req.id))
+    setDirties((prev) => { const s = new Set(prev); s.delete(req.id); return s })
+    setPilares((prev) => prev.map(p => ({
+      ...p,
+      requisitos: p.requisitos.map(r => r.id !== req.id ? r : { ...r, es_obligatorio: false }),
+    })))
+  }
+
+  function handleAgregar(ids: string[]) {
+    setGuardado(false)
+    const nuevos = new Set(ids)
+    setQuitados((prev) => { const s = new Set(prev); ids.forEach(i => s.delete(i)); return s })
+    setDirties((prev) => new Set([...prev, ...ids]))
+    setPilares((prev) => prev.map(p => ({
+      ...p,
+      requisitos: p.requisitos.map(r => !nuevos.has(r.id) ? r : { ...r, es_obligatorio: true }),
+    })))
   }
 
   function handleChange(reqId: string, cambios: Partial<Requisito>) {
@@ -720,7 +883,7 @@ export default function PerfilesPage() {
   }
 
   async function handleGuardar() {
-    if (!mandanteId || !perfilId || dirties.size === 0) return
+    if (!mandanteId || !perfilId || pendientes === 0) return
     setGuardando(true)
     setError(null)
     const requisitos = pilares.flatMap(p => p.requisitos).filter(r => dirties.has(r.id))
@@ -728,12 +891,20 @@ export default function PerfilesPage() {
       for (const r of requisitos) {
         await api.post(`/api/v1/mandantes/${mandanteId}/perfiles/${perfilId}/requisitos`, {
           requisito_documental_id: r.id,
-          es_obligatorio: r.es_obligatorio,
+          // Todo lo que esta en la lista se exige. Ya no existe el caso de
+          // guardar una fila apagada, que es lo que llenaba la tabla de basura.
+          es_obligatorio: true,
           vigencia_max_dias: r.vigencia_max_dias,
           umbral_deuda_max: r.umbral_deuda_max ?? 0,
         })
       }
+      for (const id of quitados) {
+        await api.delete(`/api/v1/mandantes/${mandanteId}/perfiles/${perfilId}/requisitos/${id}`)
+      }
       setDirties(new Set())
+      setQuitados(new Set())
+      // El conteo por perfil alimenta el selector de plantillas del alta.
+      if (mandanteId) cargarPerfiles(mandanteId)
       setGuardado(true)
       setTimeout(() => setGuardado(false), 2500)
     } catch (e) {
@@ -786,8 +957,9 @@ export default function PerfilesPage() {
     .flatMap(p => p.requisitos)
     .filter(r => r.entidad === "TRABAJADOR" && r.es_obligatorio)
 
-  const cuentaEntidad = (e: "EMPRESA" | "TRABAJADOR") =>
-    pilares.flatMap(p => p.requisitos).filter(r => r.entidad === e).length
+  // Solo lo exigido. El "6 de 38" de antes tenia sentido cuando la lista era el
+  // catalogo entero; con la vista reducida, ese 38 nombra algo que no esta en
+  // pantalla y hace parecer que faltan 32 por marcar.
   const exigidosEntidad = (e: "EMPRESA" | "TRABAJADOR") =>
     pilares.flatMap(p => p.requisitos).filter(r => r.entidad === e && r.es_obligatorio).length
 
@@ -822,6 +994,7 @@ export default function PerfilesPage() {
 
   const perfilActivo = perfiles.find(p => p.id === perfilId)
   const totalExigidos = pilares.flatMap(p => p.requisitos).filter(r => r.es_obligatorio).length
+  const pendientes = dirties.size + quitados.size
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -841,18 +1014,18 @@ export default function PerfilesPage() {
             </div>
             <button
               onClick={handleGuardar}
-              disabled={dirties.size === 0 || guardando}
+              disabled={pendientes === 0 || guardando}
               className={cn(
                 "flex items-center gap-2 text-strong font-medium px-4 py-2 rounded-lg transition-all",
                 guardado
                   ? "bg-ok-ink text-white"
-                  : dirties.size === 0
+                  : pendientes === 0
                     ? "bg-surface-sunken text-ink-subtle cursor-not-allowed"
                     : "bg-surface-inverse text-white hover:bg-surface-inverse-hover"
               )}
             >
               <Save size={14} />
-              {guardando ? "Guardando..." : guardado ? "¡Guardado!" : `Guardar${dirties.size > 0 ? ` (${dirties.size})` : ""}`}
+              {guardando ? "Guardando..." : guardado ? "¡Guardado!" : `Guardar${pendientes > 0 ? ` (${pendientes})` : ""}`}
             </button>
           </div>
         </div>
@@ -904,7 +1077,7 @@ export default function PerfilesPage() {
               >
                 {t.label}
                 <span className="ml-2 text-meta text-ink-subtle">
-                  {exigidosEntidad(t.v)} de {cuentaEntidad(t.v)}
+                  {exigidosEntidad(t.v)}
                 </span>
               </button>
             ))}
@@ -997,39 +1170,83 @@ export default function PerfilesPage() {
             pilar={pilar}
             dirties={dirties}
             onChange={handleChange}
-            onEditRequisito={(req) => setPanel({
+            onQuitar={handleQuitar}
+          />
+        ))}
+
+        {/* Agregar es la accion principal de esta pantalla ahora, asi que vive
+            en el flujo de la lista y no escondida en una barra. */}
+        {perfilId && totalExigidos > 0 && (
+          <button
+            onClick={() => setDialogAgregar(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-line-strong text-body font-medium text-ink-muted hover:text-ink hover:bg-surface transition-colors"
+          >
+            <Plus size={14} /> Agregar requisitos a este perfil
+          </button>
+        )}
+
+        {perfilesCargados && perfiles.length === 0 && (
+          <div className="py-14 text-center bg-surface rounded-xl border border-line px-6">
+            <div className="space-y-3">
+              <p className="text-strong font-medium text-ink">Todavía no tienes perfiles de exigencias</p>
+              <p className="text-meta text-ink-subtle max-w-md mx-auto leading-relaxed">
+                Un perfil define qué documentos exiges por tipo de servicio. Necesitas al
+                menos uno para poder crear servicios y contratar empresas.
+              </p>
+              <button
+                onClick={() => setDialogPerfil(true)}
+                className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-micro font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+              >
+                <Plus size={13} /> Crear mi primer perfil
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Un perfil que no exige nada ya NO es lo mismo que uno cargando: con
+            la lista reducida a lo exigido, cero es un estado legitimo. */}
+        {perfilId && requisitosCargados && totalExigidos === 0 && (
+          <div className="py-14 text-center bg-surface rounded-xl border border-dashed border-line px-6">
+            <p className="text-strong font-medium text-ink">Este perfil no exige ningún documento</p>
+            <p className="text-meta text-ink-subtle mt-1 max-w-md mx-auto leading-relaxed">
+              Cualquier contratista con un servicio que use este perfil va a figurar en
+              regla sin haber entregado nada.
+            </p>
+            <button
+              onClick={() => setDialogAgregar(true)}
+              className="mt-4 inline-flex items-center gap-2 bg-surface-inverse text-white text-body font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+            >
+              <Plus size={14} /> Agregar requisitos
+            </button>
+          </div>
+        )}
+
+        {perfilId && !requisitosCargados && (
+          <div className="py-14 text-center bg-surface rounded-xl border border-line px-6">
+            <p className="text-body text-ink-subtle">Cargando configuración del perfil...</p>
+          </div>
+        )}
+      </div>
+
+      {dialogAgregar && (
+        <AgregarRequisitosDialog
+          pilares={pilares}
+          onClose={() => setDialogAgregar(false)}
+          onAgregar={handleAgregar}
+          onCrearPropio={(pilar) => { setDialogAgregar(false); setPanel({ pilar, requisito: null }) }}
+          onEditarPropio={(pilar, req) => {
+            setDialogAgregar(false)
+            setPanel({
               pilar,
               requisito: {
                 id: req.id, codigo: req.codigo, nombre: req.nombre, descripcion: req.descripcion,
                 entidad_tipo: req.entidad, alcance: req.alcance, max_archivos: req.max_archivos,
               },
-            })}
-            onDeleteRequisito={handleEliminarPropio}
-            onCrearPropio={() => setPanel({ pilar, requisito: null })}
-          />
-        ))}
-        {pilares.length === 0 && (
-          <div className="py-14 text-center bg-surface rounded-xl border border-line px-6">
-            {perfilesCargados && perfiles.length === 0 ? (
-              <div className="space-y-3">
-                <p className="text-strong font-medium text-ink">Todavía no tienes perfiles de exigencias</p>
-                <p className="text-meta text-ink-subtle max-w-md mx-auto leading-relaxed">
-                  Un perfil define qué documentos exiges por tipo de servicio. Necesitas al
-                  menos uno para poder crear servicios y contratar empresas.
-                </p>
-                <button
-                  onClick={() => setDialogPerfil(true)}
-                  className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-micro font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
-                >
-                  <Plus size={13} /> Crear mi primer perfil
-                </button>
-              </div>
-            ) : (
-              <p className="text-body text-ink-subtle">Cargando configuración del perfil...</p>
-            )}
-          </div>
-        )}
-      </div>
+            })
+          }}
+          onEliminarPropio={handleEliminarPropio}
+        />
+      )}
 
       {dialogPerfil && mandanteId && (
         <CrearPerfilDialog
