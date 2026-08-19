@@ -672,6 +672,252 @@ CATALOGO = [
              "checklist de rechazo hasta confirmarlo. "
              "REVISOR: que identifique a las partes, la finalidad del tratamiento, las "
              "categorías de datos y las medidas de seguridad, con firma y fecha."),
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Incorporados desde los documentos oficiales de Constructora del Mar II
+    # (procedimiento PR-MA-PRC-00-15 rev. agosto 2025 e instructivo de RRHH).
+    # Ver docs/COMPARACION-REQUISITOS-CDM.md para el mapeo completo.
+    #
+    # El NIVEL sale del respaldo normativo, no de lo que pida el cliente: si una
+    # norma chilena lo exige es BASE, si lo exige bajo un supuesto es AMPLIADO, y
+    # si es costumbre del rubro es OPCIONAL y se dice.
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # ── LEGAL · Cumplimiento laboral y previsional ───────────────────────────
+    Req("AFILIACION_PREVISIONAL", "LEGAL_EMPRESA",
+        "Certificado de afiliación a AFP y a salud (Fonasa o ISAPRE)",
+        "TRABAJADOR", Alcance.ENTIDAD, "BASE", vigencia=365, max_archivos=2,
+        desc="Acredita que el trabajador está afiliado al sistema de pensiones y al de "
+             "salud. Fundamento: DL 3.500 (afiliación previsional obligatoria) y DFL 1 de "
+             "2005 del MINSAL. Se piden juntos y se obtienen igual —certificado de "
+             "afiliación en el portal de la AFP y en Fonasa o la ISAPRE—, por eso es UN "
+             "requisito con dos archivos y no dos. "
+             "LÍMITE: acredita la AFILIACIÓN, no que las cotizaciones estén pagadas; eso "
+             "lo prueba el certificado de imposiciones. "
+             "REVISOR: RUT del trabajador, nombre de la institución y fecha de emisión."),
+
+    Req("IMPOSICIONES_PAGADAS", "LEGAL_EMPRESA",
+        "Certificado de imposiciones pagadas por trabajador",
+        "TRABAJADOR", Alcance.ENTIDAD, "BASE", vigencia=30,
+        desc="Es el documento que sostiene el derecho de información del art. 183-C del "
+             "Código del Trabajo y con el que la empresa principal se defiende de la "
+             "responsabilidad solidaria: sin pedirlo periódicamente, responde solidariamente "
+             "por las deudas previsionales de su contratista. Se emite en Previred o en cada "
+             "AFP. Vigencia 30 días porque el ciclo es mensual. "
+             "REVISOR: período cubierto, RUT del trabajador y del empleador, y que el "
+             "período sea el del mes anterior al estado de pago."),
+
+    Req("LIQ_SUELDO", "LEGAL_EMPRESA",
+        "Liquidaciones de sueldo",
+        "TRABAJADOR", Alcance.ENTIDAD, "BASE", vigencia=30, sensible=True,
+        desc="Fundamento: art. 54 del Código del Trabajo — el empleador debe entregar "
+             "comprobante con el detalle de haberes y descuentos. El mandante las pide para "
+             "cruzar lo cotizado con lo remunerado. "
+             "SENSIBLE: contiene la remuneración de una persona identificada. No se comparte "
+             "entre mandantes sin decisión explícita del contratista. "
+             "REVISOR: mes, RUT del trabajador, firma o acuse, y que los descuentos "
+             "previsionales cuadren con el certificado de imposiciones del mismo período."),
+
+    Req("REGISTRO_ASISTENCIA", "LEGAL_EMPRESA",
+        "Registro de asistencia del personal",
+        "EMPRESA", Alcance.SERVICIO, "BASE", vigencia=30,
+        desc="Fundamento: art. 33 del Código del Trabajo y DS 75 — todo empleador debe "
+             "llevar registro de asistencia, sea libro o reloj control. Alcance SERVICIO "
+             "porque el registro es de la faena, no de la empresa en abstracto. "
+             "REVISOR: período, identificación de la obra, y que las personas listadas "
+             "coincidan con la nómina asignada al servicio."),
+
+    Req("FINIQUITO", "LEGAL_VINCULO",
+        "Finiquito ratificado ante ministro de fe o anexo de desvinculación",
+        "TRABAJADOR", Alcance.ENTIDAD, "BASE", vigencia=0, sin_vencimiento=True,
+        desc="Fundamento: art. 177 del Código del Trabajo — el finiquito debe ratificarse "
+             "ante ministro de fe para ser invocable. Sin vencimiento: acredita un hecho "
+             "puntual que no caduca. Se pide al término del servicio o cuando alguien deja "
+             "la obra durante su ejecución. "
+             "REVISOR: firma del trabajador, ratificación ante notario, inspector del "
+             "trabajo o presidente del sindicato, y fecha de término."),
+
+    Req("PACTO_HORAS_EXTRA", "LEGAL_VINCULO",
+        "Pacto de horas extraordinarias",
+        "TRABAJADOR", Alcance.ENTIDAD, "AMPLIADO", vigencia=90,
+        desc="SUPUESTO DE ACTIVACIÓN: el trabajador hace sobretiempo. Fundamento: art. 32 "
+             "del Código del Trabajo — el sobretiempo requiere pacto escrito, por escrito y "
+             "por un máximo de tres meses renovables, y solo para atender situaciones "
+             "temporales. Por eso la vigencia es 90 días y no un año. "
+             "REVISOR: firma de ambas partes, vigencia del pacto y que no supere dos horas "
+             "diarias."),
+
+    Req("CERT_ANTECEDENTES", "LEGAL_VINCULO",
+        "Certificado de antecedentes para fines particulares",
+        "TRABAJADOR", Alcance.ENTIDAD, "OPCIONAL", vigencia=30, sensible=True,
+        desc="Práctica de mercado: NINGUNA norma laboral chilena obliga al contratista a "
+             "entregarlo, y exigirlo de forma general roza el art. 2 del Código del Trabajo "
+             "—que prohíbe condicionar la contratación a antecedentes que no sean idoneidad "
+             "para el cargo— y la Ley 19.628 de datos personales. Se ofrece porque los "
+             "mandantes de obra lo piden, pero se declara como lo que es. "
+             "SENSIBLE: dato personal del trabajador, no se reutiliza entre mandantes. "
+             "REVISOR: emisión del Registro Civil de menos de 30 días y RUT del trabajador."),
+
+    # ── HSE · Gestión preventiva y documentos del sistema ────────────────────
+    Req("POLITICA_SSO", "HSE_GESTION",
+        "Política de Seguridad y Salud Ocupacional",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=0, sin_vencimiento=True,
+        desc="Práctica de mercado: la exige ISO 45001 cláusula 5.2, no una norma chilena. "
+             "Es la declaración firmada por la alta dirección sobre su compromiso con la "
+             "seguridad. Sin vencimiento: se actualiza cuando cambia, no cada año. "
+             "REVISOR: firma del representante legal o gerente general, y fecha."),
+
+    Req("SISTEMA_GESTION_SST", "HSE_GESTION",
+        "Sistema de gestión de seguridad y salud en el trabajo",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=730,
+        desc="Práctica de mandantes con contratistas permanentes: el manual o descripción "
+             "del sistema con el que la empresa gestiona la prevención. No lo exige el DS 44, "
+             "que obliga a instrumentos concretos (matriz y programa) y no a un manual. "
+             "REVISOR: que describa responsabilidades, procesos y revisión por la dirección."),
+
+    Req("PROCEDIMIENTO_IPER", "HSE_GESTION",
+        "Procedimiento IPER — método de identificación de peligros y evaluación de riesgos",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=730,
+        desc="DISTINTO de la MIPER: la matriz es el RESULTADO, este es el MÉTODO — con qué "
+             "criterios se identifican peligros, qué escalas de probabilidad y severidad se "
+             "usan, quién participa y cada cuánto se revisa. "
+             "Práctica de mercado: ninguna norma chilena lo exige. El DS 44 art. 7 remite el "
+             "método a la «Guía Técnica para la identificación y evaluación primaria de "
+             "riesgos» del ISP en vez de pedirle a cada empresa que escriba el suyo. Viene de "
+             "OHSAS 18001, que sí pedía procedimiento documentado; ISO 45001 lo eliminó pero "
+             "el nombre quedó pegado en la industria. "
+             "REVISOR: que declare la metodología y las escalas, no que repita la matriz."),
+
+    Req("PROC_ACCIDENTES", "HSE_GESTION",
+        "Procedimiento ante accidentes, incidentes y enfermedades profesionales",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=730,
+        desc="Práctica de mercado como documento, aunque se cruza con una obligación real: "
+             "el DS 44 obliga a investigar los accidentes, y la Ley 16.744 a denunciarlos al "
+             "organismo administrador. Este documento describe cómo lo hace la empresa. "
+             "REVISOR: que cubra la atención inmediata, la denuncia (DIAT/DIEP) y la "
+             "investigación con responsables y plazos."),
+
+    Req("ORGANIGRAMA_SERVICIO", "HSE_GESTION",
+        "Organigrama del servicio con fechas de inicio y término",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=365,
+        desc="Práctica de carpeta de arranque: identifica quién responde por qué en la faena "
+             "—administrador, supervisor y asesor en prevención— y en qué período. Alcance "
+             "SERVICIO porque cambia con cada contrato. "
+             "REVISOR: que nombre al menos al responsable de obra y al asesor en prevención, "
+             "con las fechas del servicio."),
+
+    Req("REGISTRO_CAMBIO_EPP", "HSE_GESTION",
+        "Registro de cambio y reposición de EPP",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=180,
+        desc="Complementa a EPP_ENTREGA, que acredita la entrega inicial: este acredita la "
+             "REPOSICIÓN cuando el elemento se deteriora. Práctica de faena; el DS 594 obliga "
+             "a proporcionar EPP en buen estado, no a llevar este registro. "
+             "REVISOR: fecha, trabajador, elemento repuesto y motivo."),
+
+    Req("MANTENCION_EQUIPOS", "HSE_GESTION",
+        "Registro de mantención de herramientas eléctricas, maquinaria y vehículos",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=365,
+        desc="Práctica de faena que se apoya en el DS 594, que exige que los equipos estén "
+             "en buen estado; el registro es la evidencia. Junta lo que el procedimiento del "
+             "cliente pide en dos partes: herramientas eléctricas al arranque y maquinaria "
+             "durante la obra. "
+             "REVISOR: identificación del equipo, fecha de la última mantención y quién la "
+             "ejecutó."),
+
+    Req("REGISTROS_OPERATIVOS_OBRA", "HSE_GESTION",
+        "Registros operativos de faena: ATS, charla de cinco minutos y check list",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=30,
+        desc="Práctica de construcción y minería. Son evidencia CONTINUA del día a día en "
+             "faena, no de acreditación de ingreso: se entregan durante toda la obra, no una "
+             "vez. Vigencia 30 días porque el mandante los revisa por período. "
+             "ADVERTENCIA: si el mandante los exige como requisito de acreditación, el "
+             "contratista queda bloqueado por no haber subido el ATS de hoy. Conviene "
+             "configurarlos como RECURRENTE, nunca como ARRANQUE. "
+             "REVISOR: período cubierto y firma de los participantes."),
+
+    # ── HSE · Organización preventiva y seguro Ley 16.744 ────────────────────
+    Req("INFORMES_MUTUALIDAD", "HSE_ORGANIZACION",
+        "Informes de la mutualidad: evaluación cualitativa, cuantitativa y hoja de visitas",
+        "EMPRESA", Alcance.ENTIDAD, "OPCIONAL", vigencia=365, max_archivos=3,
+        desc="Los emite el ORGANISMO ADMINISTRADOR (ACHS, Mutual, IST o ISL), no el "
+             "contratista: él solo los reenvía. Documentan las visitas de asistencia técnica "
+             "y las evaluaciones de riesgo en terreno. Práctica de mercado. "
+             "REVISOR: membrete del organismo administrador, RUT del contratista y fecha de "
+             "la visita o evaluación."),
+
+    # ── HSE · Salud ocupacional y agentes de riesgo ──────────────────────────
+    Req("PROTOCOLOS_MINSAL", "HSE_SALUD",
+        "Protocolos y guías técnicas del MINSAL: programación, difusión y avances",
+        "EMPRESA", Alcance.SERVICIO, "AMPLIADO", vigencia=365, max_archivos=3,
+        desc="SUPUESTO DE ACTIVACIÓN: la faena presenta el agente de riesgo del protocolo. "
+             "Cubre TMERT (trastornos musculoesqueléticos), MMC (manejo manual de carga), "
+             "radiación UV, sílice, PREXOR (ruido), riesgo psicosocial y altas temperaturas. "
+             "Fundamento: cada protocolo se dicta por resolución exenta del MINSAL en el "
+             "marco de la Ley 16.744 y el DS 594, y su implementación la fiscaliza la SEREMI "
+             "de Salud. Lo que es práctica de mercado es entregarlos como carta gantt con "
+             "avances. Junta las tres líneas que "
+             "el cliente pide por separado —programación, difusión y avance— porque son "
+             "momentos del mismo paquete. "
+             "REVISOR: que los protocolos listados correspondan a los agentes presentes en la "
+             "faena, y que la programación tenga responsables y plazos."),
+
+    # ── HSE · Protección e información de las personas ───────────────────────
+    Req("DIFUSION_TRABAJADOR", "HSE_PERSONAS",
+        "Registro de difusión al trabajador",
+        "TRABAJADOR", Alcance.SERVICIO, "OPCIONAL", vigencia=365, max_archivos=10,
+        desc="Constancia firmada de que al trabajador se le comunicaron los documentos del "
+             "sistema: matriz de riesgos, procedimiento de trabajo seguro de su labor, "
+             "procedimiento ante accidentes, programa preventivo, sistema de gestión, "
+             "procedimiento IPER, procedimiento de EPP, protocolo Ley Karin, plan de "
+             "emergencia y protocolos MINSAL. "
+             "Es UN requisito con varios archivos y no diez: el procedimiento del cliente lo "
+             "lista en diez líneas, pero todas acreditan el mismo acto y suelen ir en la "
+             "misma hoja de firmas. Se cruza con la obligación de informar del DS 44 art. 15, "
+             "que se acredita con la IRL. "
+             "REVISOR: nombre y RUT del trabajador, qué se le difundió, fecha y firma."),
+
+    Req("ACUSO_RECIBO_TRABAJADOR", "HSE_PERSONAS",
+        "Acuso de recibo del trabajador: reglamento interno y bloqueador solar",
+        "TRABAJADOR", Alcance.ENTIDAD, "OPCIONAL", vigencia=365, max_archivos=2,
+        desc="El art. 156 del Código del Trabajo SÍ obliga a entregar el reglamento interno "
+             "gratuitamente a cada trabajador; lo que es práctica es guardar el acuse como "
+             "prueba. El del bloqueador solar viene de la guía de radiación UV del MINSAL. "
+             "REVISOR: firma del trabajador y fecha."),
+
+    Req("CAPACITACION_TRABAJADOR", "HSE_PERSONAS",
+        "Capacitación al trabajador en uso de EPP y de extintores",
+        "TRABAJADOR", Alcance.ENTIDAD, "OPCIONAL", vigencia=365, max_archivos=2,
+        desc="DISTINTA de CAPACITACION_SST, que es el curso de 8 horas por empresa: esta es "
+             "por PERSONA y sobre dos temas concretos. El DS 594 art. 51 exige personal "
+             "instruido en el uso de extintores; el certificado individual es práctica. "
+             "REVISOR: nombre del trabajador, contenido, fecha y quién la impartió."),
+
+    Req("REGISTRO_DIFUSIONES", "HSE_PERSONAS",
+        "Registro consolidado de difusiones realizadas al personal",
+        "EMPRESA", Alcance.SERVICIO, "OPCIONAL", vigencia=180,
+        desc="El consolidado que guarda la EMPRESA, distinto del acuse individual de cada "
+             "trabajador: sirve para ver cobertura, no cumplimiento persona a persona. "
+             "El procedimiento del cliente lo pide dos veces, al arranque y durante la obra. "
+             "REVISOR: qué se difundió, a cuántas personas y en qué fechas."),
+
+    Req("LICENCIA_CONDUCIR", "HSE_PERSONAS",
+        "Licencia de conducir de la clase que corresponda",
+        "TRABAJADOR", Alcance.ENTIDAD, "AMPLIADO", vigencia=0, sin_vencimiento=True,
+        desc="SUPUESTO DE ACTIVACIÓN: el trabajador conduce un vehículo o maquinaria en la "
+             "faena. Fundamento: Ley 18.290 de tránsito — la clase debe corresponder al "
+             "vehículo (clase B para automóvil, A para transporte de pasajeros o carga, D "
+             "para maquinaria automotriz). "
+             "Sin vencimiento propio: la fecha de control la trae el documento. "
+             "REVISOR: que la CLASE corresponda al vehículo que conducirá, y que la fecha de "
+             "control no esté pasada."),
+
+    Req("CURSO_MANEJO_DEFENSIVO", "HSE_PERSONAS",
+        "Curso de manejo a la defensiva",
+        "TRABAJADOR", Alcance.ENTIDAD, "OPCIONAL", vigencia=730,
+        desc="Práctica estándar de minería y construcción para quien conduce en faena. "
+             "Ninguna norma lo exige. Suele impartirlo la mutualidad o un OTEC. "
+             "REVISOR: nombre del trabajador, institución que lo impartió y fecha; dos años "
+             "es la vigencia habitual del rubro."),
 ]
 
 VIGENCIA_DEFAULT = 90
