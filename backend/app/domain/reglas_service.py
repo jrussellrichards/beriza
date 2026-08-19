@@ -70,7 +70,23 @@ def configs_para_requisito(
     )
     if contratista_id:
         query = query.filter(ContratistaMandante.contratista_id == contratista_id)
-    return query.distinct().all()
+
+    # Los joins con servicios duplican la misma config cuando el perfil está en
+    # varios servicios activos, así que hay que deduplicar. Pero NO con
+    # .distinct(): PostgreSQL no tiene operador de igualdad para `json`, y esta
+    # tabla tiene la columna parametros_extra. La consulta muere con
+    # "could not identify an equality operator for type json" —verificado contra
+    # la base de producción—. En SQLite pasa sin chistar, que es por lo que
+    # ningún test lo vio: la suite entera corre sobre SQLite.
+    #
+    # Deduplicar por id en Python da el mismo resultado y no depende del motor.
+    vistos: set[uuid.UUID] = set()
+    unicas: list[PerfilRequisitoConfig] = []
+    for cfg in query.all():
+        if cfg.id not in vistos:
+            vistos.add(cfg.id)
+            unicas.append(cfg)
+    return unicas
 
 
 def validar_documento(
