@@ -110,10 +110,15 @@ SCHEMAS_POR_REQUISITO: dict[str, type[BaseModel]] = {
     "LIQ_SUELDO":         CamposLiquidacionSueldo,
     "EXAM_MED":           CamposExamenMedico,
     "DAS":                CamposDAS,
-    "EPP":                CamposEPP,
+    # Los codigos tienen que coincidir EXACTO con los del catalogo: extractor.py
+    # declara como precondicion que el codigo exista aca, y tres de estos no
+    # existian —EPP, CARP_TRIB y VIG_SOCIEDAD— porque el catalogo los llama
+    # EPP_GESTION, CARPETA_TRIBUTARIA y VIGENCIA_SOCIEDAD. Lo cubre
+    # tests/test_catalogo.py.
+    "EPP_GESTION":        CamposEPP,
     "MIPER":              CamposMIPER,
     "RIOHS":              CamposRIOHS,
-    "CARP_TRIB":          CamposCarpetaTributaria,
-    "VIG_SOCIEDAD":       CamposVigenciaSociedad,
+    "CARPETA_TRIBUTARIA": CamposCarpetaTributaria,
+    "VIGENCIA_SOCIEDAD":  CamposVigenciaSociedad,
     "DJ_CONFLICTO":       CamposDJConflicto,
 }

@@ -107,7 +107,12 @@ def validar_documento(
     validadores = {
         "F30_1": lambda c: _validar_f30_1(c, vigencia_max_dias, umbral_deuda_max),
         "F30": lambda c: _validar_f30(c, vigencia_max_dias),
-        "EXAMEN_MEDICO": lambda c: _validar_examen_medico(c, vigencia_max_dias),
+        # El codigo del catalogo es EXAM_MED, no EXAMEN_MEDICO. Con el nombre
+        # equivocado esta funcion NUNCA se ejecutaba, y como el despacho falla
+        # ABIERTO —codigo desconocido devuelve aprobado=True sin log ni
+        # excepcion— todo examen ocupacional se aprobaba solo, incluido uno que
+        # dijera NO APTO y estuviera vencido. Lo cubre tests/test_catalogo.py.
+        "EXAM_MED": lambda c: _validar_examen_medico(c, vigencia_max_dias),
         "CONTRATO": lambda c: _validar_contrato(c),
     }
 
