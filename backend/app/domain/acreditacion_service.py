@@ -22,6 +22,7 @@ from app.domain.estados import (
     EstadoAcreditacion,
     EstadoDocumento,
     EstadoServicio,
+    MomentoRequisito,
 )
 from app.domain import reutilizacion_service
 from app.models.cargo import Cargo
@@ -173,7 +174,13 @@ def obtener_avance_servicio(db: Session, servicio_id: uuid.UUID) -> AvanceServic
     empresa_id = servicio.relacion.contratista_id
     mandante_id = servicio.relacion.mandante_id
 
-    configs = _configs_de_perfil(db, servicio.perfil_requisitos_id)
+    # Solo lo que a ESTE servicio, HOY, ya se le puede pedir. Un requisito
+    # RECURRENTE de un servicio que parte hoy todavia no existe.
+    hoy = date.today()
+    configs = [
+        c for c in _configs_de_perfil(db, servicio.perfil_requisitos_id)
+        if _ya_es_exigible(c, servicio, hoy)
+    ]
     configs_empresa = [c for c in configs if c.requisito.entidad_tipo == EntidadTipo.EMPRESA]
     configs_trabajador = [c for c in configs if c.requisito.entidad_tipo == EntidadTipo.TRABAJADOR]
 
@@ -251,8 +258,13 @@ def evaluar_relacion(
 
     # Configs de cada servicio activo, deduplicadas por requisito para el
     # alcance ENTIDAD; para el alcance SERVICIO se genera un item por servicio.
+    # Mismo filtro que en el avance por servicio: lo que aun no es exigible no
+    # puede contar como brecha del contratista.
+    hoy = date.today()
     configs_por_servicio: dict[uuid.UUID, list[PerfilRequisitoConfig]] = {
-        s.id: _configs_de_perfil(db, s.perfil_requisitos_id) for s in servicios_activos
+        s.id: [c for c in _configs_de_perfil(db, s.perfil_requisitos_id)
+               if _ya_es_exigible(c, s, hoy)]
+        for s in servicios_activos
     }
     todas_configs: list[PerfilRequisitoConfig] = [
         c for cfgs in configs_por_servicio.values() for c in cfgs
@@ -384,6 +396,36 @@ def cumple_por_pilar(evaluacion: EvaluacionRelacion) -> dict[str, bool]:
 
 
 # ── Helpers privados ──────────────────────────────────────────────────────────
+
+def _ya_es_exigible(config: PerfilRequisitoConfig, servicio: Servicio, hoy: date) -> bool:
+    """
+    Si a este servicio, hoy, ya se le puede pedir este documento.
+
+    Sin esto todo se exigia desde el dia cero, incluidos documentos que en el dia
+    cero NO PUEDEN EXISTIR: el F30-1 del mes anterior de una obra que parte hoy,
+    las liquidaciones del mes en curso. El contratista figuraba incompleto por no
+    entregar algo imposible y el mandante veia una brecha que no lo era.
+
+    - ARRANQUE   se exige siempre. Es el default y el comportamiento de siempre.
+    - RECURRENTE no se exige hasta que cierra el primer periodo. El largo del
+      periodo se toma de `vigencia_max_dias`, que es lo que ya configura el
+      mandante; modelar frecuencias de verdad es otro cambio.
+    - TERMINO    solo cuando el servicio esta terminado.
+    """
+    momento = config.momento or MomentoRequisito.ARRANQUE
+
+    if momento == MomentoRequisito.TERMINO:
+        return servicio.estado == EstadoServicio.TERMINADO
+
+    if momento == MomentoRequisito.RECURRENTE:
+        # Un servicio ya terminado tiene todos sus periodos cerrados.
+        if servicio.estado == EstadoServicio.TERMINADO:
+            return True
+        dias = servicio.fecha_inicio and (hoy - servicio.fecha_inicio).days
+        return bool(dias is not None and dias >= (config.vigencia_max_dias or 0))
+
+    return True
+
 
 def _configs_de_perfil(db: Session, perfil_id: uuid.UUID) -> list[PerfilRequisitoConfig]:
     return (
