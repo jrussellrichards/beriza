@@ -40,6 +40,12 @@ class PerfilRequisitoConfig(ModelBase):
     perfil_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("perfiles_requisitos.id"), nullable=False)
     requisito_documental_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("requisitos_documentales.id"), nullable=False)
     es_obligatorio: Mapped[bool] = mapped_column(Boolean, default=True)
+    # CUÁNDO se exige: ARRANQUE | RECURRENTE | TERMINO. Ver MomentoRequisito.
+    # Va acá y no en el catálogo global porque es decisión de cada mandante: el
+    # mismo F30 puede ser de arranque para uno y mensual para otro.
+    momento: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="ARRANQUE", server_default="ARRANQUE"
+    )
     vigencia_max_dias: Mapped[int] = mapped_column(Integer, nullable=False)
     umbral_deuda_max: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
     # Parámetros de reglas futuras sin migración de esquema; reglas_service los lee por clave

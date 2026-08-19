@@ -29,6 +29,8 @@ interface Requisito {
   max_archivos: number
   es_obligatorio: boolean
   vigencia_max_dias: number
+  /** CUANDO se exige: ARRANQUE | RECURRENTE | TERMINO. */
+  momento: "ARRANQUE" | "RECURRENTE" | "TERMINO"
   umbral_deuda_max: number | null
   es_propio: boolean
   nivel: "BASE" | "AMPLIADO" | "OPCIONAL"
@@ -67,6 +69,12 @@ const COLOR_MAP: Record<string, { border: string; bg: string; dot: string; text:
   purple: { border: "border-excepcion-line", bg: "bg-excepcion-soft", dot: "bg-excepcion-ink", text: "text-excepcion-ink", badge: "bg-excepcion-soft text-excepcion-ink border-excepcion-line" },
   slate:  { border: "border-line",  bg: "bg-surface-app",  dot: "bg-ink-muted",  text: "text-ink-secondary",  badge: "bg-surface-sunken text-ink-muted border-line" },
 }
+
+const MOMENTO_OPCIONES: { v: "ARRANQUE" | "RECURRENTE" | "TERMINO"; label: string; ayuda: string }[] = [
+  { v: "ARRANQUE",   label: "Al arranque",  ayuda: "Se exige antes de empezar el servicio" },
+  { v: "RECURRENTE", label: "Periódico",    ayuda: "Se entrega cada período. No se exige antes de que cierre el primero: el F30-1 del mes anterior de una obra que parte hoy todavía no existe" },
+  { v: "TERMINO",    label: "Al término",   ayuda: "Solo al cerrar el servicio (finiquitos, F30 final)" },
+]
 
 // ── Crear perfil ──────────────────────────────────────────────────────────────
 
@@ -227,7 +235,25 @@ function RequisitoRow({ req, color, dirty, onChange, onQuitar }: {
 
           <div className="flex items-center gap-4 flex-wrap mt-2">
               <div className="flex items-center gap-2">
-                <label className="text-meta text-ink-muted whitespace-nowrap">Vigencia máx. (días)</label>
+                <label className="text-meta text-ink-muted whitespace-nowrap" htmlFor={`mom-${req.id}`}>
+                  Se exige
+                </label>
+                <select
+                  id={`mom-${req.id}`}
+                  value={req.momento ?? "ARRANQUE"}
+                  onChange={(e) => onChange(req.id, { momento: e.target.value as Requisito["momento"] })}
+                  title={MOMENTO_OPCIONES.find(o => o.v === (req.momento ?? "ARRANQUE"))?.ayuda}
+                  className="text-meta border border-line rounded px-2 py-1 bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+                >
+                  {MOMENTO_OPCIONES.map(o => (
+                    <option key={o.v} value={o.v}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-meta text-ink-muted whitespace-nowrap">
+                  {(req.momento ?? "ARRANQUE") === "RECURRENTE" ? "Cada (días)" : "Vigencia máx. (días)"}
+                </label>
                 <input
                   type="number"
                   min={1}
@@ -894,6 +920,7 @@ export default function PerfilesPage() {
           // Todo lo que esta en la lista se exige. Ya no existe el caso de
           // guardar una fila apagada, que es lo que llenaba la tabla de basura.
           es_obligatorio: true,
+          momento: r.momento ?? "ARRANQUE",
           vigencia_max_dias: r.vigencia_max_dias,
           umbral_deuda_max: r.umbral_deuda_max ?? 0,
         })

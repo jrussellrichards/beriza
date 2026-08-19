@@ -82,6 +82,30 @@ class Alcance(StrEnum):
     SERVICIO = "SERVICIO"
 
 
+class MomentoRequisito(StrEnum):
+    """
+    CUÁNDO se le exige un documento al contratista dentro de la vida del servicio.
+
+    Es una decisión del mandante y por eso vive en `PerfilRequisitoConfig`, junto a
+    la vigencia, y no en el catálogo global: el mismo F30 puede ser de arranque
+    para un cliente y mensual para otro.
+
+    Sin esto todo se exige desde el día cero, y hay documentos que en el día cero
+    NO PUEDEN EXISTIR: el F30-1 del mes anterior de una obra que parte hoy, las
+    liquidaciones del mes en curso, el registro de asistencia. El contratista
+    figura incompleto por no entregar algo imposible y el mandante ve una brecha
+    que no lo es.
+
+    - ARRANQUE:   antes de empezar. Es el comportamiento de siempre y el default.
+    - RECURRENTE: se entrega periódicamente durante el servicio. No se exige antes
+      de que cierre el primer período, cuyo largo se toma de `vigencia_max_dias`.
+    - TERMINO:    solo al cerrar el servicio (finiquitos, F30 final).
+    """
+    ARRANQUE = "ARRANQUE"
+    RECURRENTE = "RECURRENTE"
+    TERMINO = "TERMINO"
+
+
 class NivelRequisito(StrEnum):
     """
     Naturaleza normativa de un requisito. Es un hecho sobre la ley chilena, y por

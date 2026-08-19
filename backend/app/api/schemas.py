@@ -264,6 +264,9 @@ class CrearPerfilRequest(BaseModel):
 class ConfigurarRequisitoPerfilRequest(BaseModel):
     requisito_documental_id: uuid.UUID
     es_obligatorio: bool = True
+    # ARRANQUE | RECURRENTE | TERMINO. Por defecto ARRANQUE, que es el
+    # comportamiento de siempre: se exige desde el día uno del servicio.
+    momento: str = "ARRANQUE"
     vigencia_max_dias: int
     umbral_deuda_max: float = 0.0
     parametros_extra: dict | None = None

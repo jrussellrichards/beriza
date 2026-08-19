@@ -528,6 +528,7 @@ def listar_requisitos_mandante(
                     "cargo_ids": [str(pc.cargo_id) for pc in cfg.cargos] if cfg else [],
                     # Sin config en el perfil = el requisito NO se exige en él
                     "es_obligatorio": cfg.es_obligatorio if cfg else False,
+                    "momento": cfg.momento if cfg else "ARRANQUE",
                     "vigencia_max_dias": cfg.vigencia_max_dias if cfg else VIGENCIA_DEFAULT_DIAS,
                     "umbral_deuda_max": float(cfg.umbral_deuda_max) if cfg and cfg.umbral_deuda_max is not None else None,
                 })
@@ -614,6 +615,7 @@ def configurar_requisito_perfil(
         perfil_id=perfil_id,
         requisito_documental_id=body.requisito_documental_id,
         es_obligatorio=body.es_obligatorio,
+        momento=body.momento,
         vigencia_max_dias=body.vigencia_max_dias,
         umbral_deuda_max=body.umbral_deuda_max,
         parametros_extra=body.parametros_extra,

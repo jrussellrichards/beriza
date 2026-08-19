@@ -20,7 +20,7 @@ from app.core.exceptions import (
     ServicioNoEncontrado,
     TrabajadorNoEncontrado,
 )
-from app.domain.estados import EstadoServicio
+from app.domain.estados import EstadoServicio, MomentoRequisito
 from app.models.contratista import ContratistaMandante
 from app.models.centro_trabajo import CentroTrabajo
 from app.models.pilar import RequisitoDocumental
@@ -76,6 +76,7 @@ def crear_perfil(
                 vigencia_max_dias=cfg.vigencia_max_dias,
                 umbral_deuda_max=cfg.umbral_deuda_max,
                 parametros_extra=cfg.parametros_extra,
+                momento=cfg.momento,
             ))
 
     db.commit()
@@ -129,8 +130,20 @@ def configurar_requisito_perfil(
     vigencia_max_dias: int,
     umbral_deuda_max: Decimal | float = 0,
     parametros_extra: dict | None = None,
+    momento: str = MomentoRequisito.ARRANQUE,
 ) -> PerfilRequisitoConfig:
-    """Agrega o actualiza (upsert) la parametrización de un requisito en el perfil."""
+    """
+    Agrega o actualiza (upsert) la parametrización de un requisito en el perfil.
+
+    `momento` por defecto en ARRANQUE: es el comportamiento que tenía la app antes
+    de que el campo existiera, así que ningún perfil ya configurado cambia de
+    resultado por esto.
+    """
+    if momento not in set(MomentoRequisito):
+        raise AsignacionInvalida(
+            f"«{momento}» no es un momento válido. "
+            f"Debe ser uno de: {', '.join(sorted(MomentoRequisito))}."
+        )
     obtener_perfil(db, perfil_id)
     config = db.query(PerfilRequisitoConfig).filter_by(
         perfil_id=perfil_id, requisito_documental_id=requisito_documental_id
@@ -141,6 +154,7 @@ def configurar_requisito_perfil(
         config.vigencia_max_dias = vigencia_max_dias
         config.umbral_deuda_max = umbral_deuda_max
         config.parametros_extra = parametros_extra
+        config.momento = momento
     else:
         config = PerfilRequisitoConfig(
             perfil_id=perfil_id,
@@ -148,6 +162,7 @@ def configurar_requisito_perfil(
             es_obligatorio=es_obligatorio,
             vigencia_max_dias=vigencia_max_dias,
             umbral_deuda_max=umbral_deuda_max,
+            momento=momento,
             parametros_extra=parametros_extra,
         )
         db.add(config)
