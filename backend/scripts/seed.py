@@ -1285,9 +1285,14 @@ def _servicio_general(session: Session, mandante_id, empresa_id):
     ).first()
     if not perfil:
         return None
-    return session.query(Servicio).filter_by(
-        contratista_mandante_id=rel.id, perfil_requisitos_id=perfil.id
-    ).first()
+    # Excluye archivados: el seed corre en CADA despliegue, y sin esto un
+    # servicio que alguien archivo volveria a recibir expedientes nuevos.
+    return (
+        session.query(Servicio)
+        .filter_by(contratista_mandante_id=rel.id, perfil_requisitos_id=perfil.id)
+        .filter(Servicio.archivado_en.is_(None))
+        .first()
+    )
 
 
 def _crear_expediente(session: Session, req: RequisitoDocumental, mandante_id,
@@ -1931,6 +1936,9 @@ def _showcase_centros_trabajo(session: Session):
         session.query(Servicio)
         .join(ContratistaMandante, Servicio.contratista_mandante_id == ContratistaMandante.id)
         .filter(ContratistaMandante.mandante_id == codelco.id)
+        # Un archivado no se toca: esto corre en cada despliegue y reescribe
+        # centro_trabajo_id y el NOMBRE del servicio.
+        .filter(Servicio.archivado_en.is_(None))
         .order_by(Servicio.created_at)
         .all()
     )

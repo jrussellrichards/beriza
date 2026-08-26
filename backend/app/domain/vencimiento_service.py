@@ -15,9 +15,11 @@ eso lo orquesta el cron con el resultado.
 """
 from datetime import date, timedelta
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.domain.estados import EstadoDocumento, TipoEvento, validar_transicion
+from app.models.servicio import Servicio
 from app.models.expediente import Acreditacion, AcreditacionEvento, Entrega, Expediente
 from app.models.pilar import RequisitoDocumental
 
@@ -35,12 +37,19 @@ def procesar_vencimientos(db: Session, hoy: date | None = None) -> dict[str, int
         .join(Entrega, Acreditacion.entrega_id == Entrega.id)
         .join(Expediente, Acreditacion.expediente_id == Expediente.id)
         .join(RequisitoDocumental, Expediente.requisito_id == RequisitoDocumental.id)
+        .outerjoin(Servicio, Expediente.servicio_id == Servicio.id)
         .filter(
             Acreditacion.estado == EstadoDocumento.APROBADO,
             Acreditacion.eliminado_en.is_(None),
             RequisitoDocumental.sin_vencimiento.is_(False),
             Entrega.fecha_vigencia_hasta.isnot(None),
             Entrega.fecha_vigencia_hasta < hoy,
+            # Una faena archivada no genera vencimientos. Sin esto el cron vence
+            # documentos de faenas que ya nadie ve y llama recalcular_estado_global
+            # de noche, así que el mandante se encuentra en la mañana con un
+            # cambio de estado que nadie provocó ese día. El outerjoin + or_ deja
+            # pasar los de alcance ENTIDAD, que no tienen servicio.
+            or_(Expediente.servicio_id.is_(None), Servicio.archivado_en.is_(None)),
         )
         .all()
     )
