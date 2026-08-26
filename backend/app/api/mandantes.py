@@ -355,7 +355,10 @@ def _aplicar_datos_empresa(db, empresa, body) -> None:
         )
     }
     if any(v is not None for v in campos.values()):
-        contratista_service.actualizar_empresa(db, empresa.id, **campos)
+        # commit=False: la invitacion todavia tiene que vincular al mandante y
+        # crear el usuario administrador. Commitear aca dejaria una empresa
+        # suelta si cualquiera de esos dos pasos falla.
+        contratista_service.actualizar_empresa(db, empresa.id, commit=False, **campos)
 
 
 @router.patch("/{mandante_id}/contratistas/{contratista_id}", response_model=EmpresaContratistaResponse)

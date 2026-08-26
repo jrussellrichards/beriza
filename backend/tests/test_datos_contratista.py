@@ -130,6 +130,26 @@ def run():
     assert emp.razon_social == "Contratista Demo Ltda"
     print("PASS: la razon social no se puede dejar vacia")
 
+    # ── 6. commit=False no persiste hasta que el llamador commitee ──────────
+    # Esto no es un detalle de implementacion: la invitacion de contratista crea
+    # la empresa, la vincula al mandante y crea su usuario administrador. Si
+    # actualizar_empresa commitea al medio y uno de esos pasos falla despues,
+    # queda una empresa suelta sin vinculo ni administrador —que nadie puede
+    # usar y que ademas deja el RUT tomado para el siguiente intento—.
+    emp2 = EmpresaContratista(rut="78.222.333-1", razon_social="Atomica SpA")
+    db.add(emp2)
+    db.flush()
+    contratista_service.actualizar_empresa(
+        db, emp2.id, mutualidad="IST", direccion="Sin commit", commit=False,
+    )
+    # Simula que un paso posterior de la invitacion revienta
+    db.rollback()
+    sobrevivio = db.query(EmpresaContratista).filter_by(rut="78.222.333-1").first()
+    assert sobrevivio is None, (
+        "la empresa sobrevivio a un rollback: actualizar_empresa commiteo por su "
+        "cuenta dentro de una transaccion mas grande y dejo una empresa huerfana.")
+    print("PASS: con commit=False, un fallo posterior no deja la empresa a medias")
+
     db.close()
     print("TODOS LOS TESTS DE DATOS DEL CONTRATISTA PASARON")
 

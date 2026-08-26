@@ -27,6 +27,7 @@ def actualizar_empresa(
     representante_legal_nombre: str | None = None,
     representante_legal_rut: str | None = None,
     representante_legal_telefono: str | None = None,
+    commit: bool = True,
 ) -> EmpresaContratista:
     """
     Edición parcial de la ficha: solo se pasan los campos a cambiar, el resto
@@ -36,6 +37,12 @@ def actualizar_empresa(
     El RUT de la empresa no se edita a propósito: es único en la plataforma y es
     la llave con la que el contratista existe frente a TODOS sus mandantes.
     Cambiarlo no es corregir una empresa, es convertirla en otra.
+
+    `commit=False` existe para quien ya está dentro de una transacción más
+    grande. La invitación de contratista crea la empresa, la vincula al mandante
+    y crea su usuario administrador: si esta función commitea al medio y algo
+    falla después, queda una empresa suelta sin vínculo ni administrador, que
+    nadie puede usar y que además bloquea el RUT para el siguiente intento.
     """
     empresa = db.get(EmpresaContratista, empresa_id)
     if not empresa:
@@ -85,6 +92,11 @@ def actualizar_empresa(
     if representante_legal_telefono is not None:
         empresa.representante_legal_telefono = representante_legal_telefono.strip() or None
 
-    db.commit()
-    db.refresh(empresa)
+    if commit:
+        db.commit()
+        db.refresh(empresa)
+    else:
+        # Flush para que las validaciones de la base salten acá y no más tarde,
+        # cuando ya no se sabría cuál de los pasos las provocó.
+        db.flush()
     return empresa
