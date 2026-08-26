@@ -32,6 +32,9 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
   onSensibilidad: (d: DocumentoContratista) => void
   onResolver: (d: DocumentoContratista, m: EstadoPorMandante) => void
 }) {
+  // 1 = ENVIADO: entregado y esperando que el mandante lo mire.
+  const enRevision = doc.mandantes.some(m => m.estado === 1)
+
   return (
     <div className="bg-surface border border-line rounded-xl px-4 py-3.5">
       <div className="flex items-start justify-between gap-4">
@@ -77,12 +80,26 @@ function DocumentoRow({ doc, onSubir, onHistorial, onSensibilidad, onResolver }:
               {doc.sensible ? <Lock size={14} /> : <LockOpen size={14} />}
             </button>
           )}
+          {/* El rotulo dice lo que va a pasar. Cuando el documento esta
+              esperando revision, subir otro lo REEMPLAZA: la version anterior
+              queda en el historial y el mandante pasa a revisar la nueva.
+              Decir "Subir" ahi escondia justo la salida que la gente reclamaba
+              no tener —se creia obligada a esperar el rechazo—.
+
+              Un documento puede estar en revision con un mandante y aprobado
+              con otro, asi que basta con que uno lo tenga en revision: para ese
+              es un reemplazo, y es la parte que no era evidente. */}
           <button
             onClick={() => onSubir(doc)}
+            title={
+              enRevision
+                ? "Sube otra versión: reemplaza la que está esperando revisión y queda registro de ambas"
+                : undefined
+            }
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-micro font-medium bg-surface-inverse text-white hover:bg-surface-inverse-hover transition-colors"
           >
             <Upload size={12} />
-            Subir
+            {enRevision ? "Reemplazar" : "Subir"}
           </button>
         </div>
       </div>
