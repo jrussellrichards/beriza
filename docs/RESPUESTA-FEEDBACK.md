@@ -11,13 +11,41 @@ Análisis de las 6 observaciones de [`feedback_2026_08_25.pdf`](./feedback_2026_
 | # | Observación | Veredicto | Costo |
 |---|---|---|---|
 | 1a | Editar servicios | **Aceptar** — ya existe en backend | Bajo (solo frontend) |
-| 1b | Eliminar servicios | **El problema sí, la solución no** | Medio |
-| 1c | Reactivar un servicio TERMINADO | **Aceptar con matiz** | Bajo |
+| 1b | Eliminar servicios | **Aprobado** — borrado solo si está vacío | Medio |
+| 1c | Reactivar un servicio TERMINADO | **Pendiente de decisión** | Bajo |
 | 2 | Carga masiva de servicios | **Aceptar**, cuestionar prioridad | Alto |
 | 3 | Más datos del contratista | **Aceptar sin reservas** | Medio |
 | 4 | Click en trabajador → su ficha | **Aceptar** — mejor costo/beneficio | Bajo (solo frontend) |
-| 5 | Contratista pueda eliminar documento | **La mecánica no, el problema sí** | Medio |
-| 6 | Más datos del trabajador | **Aceptar**, con reparo de privacidad | Medio |
+| 5 | Contratista pueda eliminar documento | **Aprobado** — reemplazar, no borrar | Medio |
+| 6 | Más datos del trabajador | **Aprobado** — el reparo legal queda diferido | Medio |
+
+---
+
+## Decisiones tomadas — 25 de agosto de 2026
+
+Javier revisó el análisis y resolvió:
+
+| Punto | Decisión |
+|---|---|
+| **#5** reemplazar en vez de borrar | **Aprobado.** Se implementa el reemplazo de entrega. |
+| **#1b** eliminar servicios | **Aprobado.** Borrado real solo si el servicio está vacío; archivado en el resto. |
+| **#6** datos del trabajador | **Aprobado.** Los campos se agregan ahora. |
+| **#1c** reactivar un TERMINADO | **Pendiente.** Ver más abajo. |
+
+### Sobre el reparo legal del punto #6 — diferido, no descartado
+
+Los campos del trabajador se implementan **sin** el control de visibilidad por rol, para no bloquear la entrega.
+
+**Esto queda como deuda explícita, no como algo resuelto.** El razonamiento del punto 6 sigue vigente palabra por palabra: son datos personales de un tercero, y la Ley 21.719 entra en vigencia plena el **1 de diciembre de 2026**. Al momento de tomar esta decisión faltaban poco más de tres meses.
+
+Lo que hay que retomar antes de esa fecha:
+
+1. Decidir **qué campos ve el mandante** y cuáles quedan solo para el contratista, que es el empleador. El domicilio particular y el teléfono personal son los casos claros a revisar.
+2. Colgar esa distinción de `usuario_pilar_permisos`, que ya existe.
+3. Declarar la finalidad de cada campo — la ley la exige por dato, no por sistema.
+
+Quien retome esto: el trabajo no es agregar los campos (ya están), es decidir quién los ve.
+
 
 ---
 
@@ -57,7 +85,20 @@ La intención es defendible: al terminar se cierran los requisitos de `momento =
 
 **Pero un botón irreversible de un clic, sin deshacer, es un mal diseño.** Nadie confirma nada y no hay vuelta atrás.
 
-**Propuesta:** permitir reactivar dejando registro como evento (`TipoEvento`), restringido a `mandante_admin`.
+### Qué significa en la práctica
+
+*Terminar* es un botón de un clic, **al lado de *Suspender***, y no tiene vuelta atrás nunca. Comprobado en local mientras se probaba el punto #1a: al apretarlo, el servicio quedó sin ningún botón de estado, de forma permanente.
+
+Dos situaciones reales donde eso duele:
+
+1. **Alguien aprieta *Terminar* queriendo *Suspender*.** Están uno junto al otro y la diferencia no está explicada en la interfaz.
+2. **Un contrato terminado se reactiva** — se extendió la obra, volvió el contratista a la misma faena.
+
+En ambos casos la única salida hoy es **crear un servicio nuevo desde cero**, y con eso se pierde el historial de acreditación del anterior: quién estaba habilitado, qué documentos se aprobaron y cuándo. Se pierde justo lo que el producto existe para conservar.
+
+**Propuesta:** permitir reactivar dejando registro como evento (`TipoEvento`) de quién lo hizo y cuándo, restringido a `mandante_admin`. El historial no se pierde y el error se puede corregir.
+
+**Estado: pendiente de decisión de producto.**
 
 **Y algo que el feedback no menciona:** `SUSPENDIDO` **ya existe y sí es reversible**. Parte del problema puede ser que la UI no distingue bien "pausar" de "cerrar", y la gente aprieta *Terminar* queriendo pausar. Antes de tocar la regla, mirar si el problema es de etiquetas.
 
