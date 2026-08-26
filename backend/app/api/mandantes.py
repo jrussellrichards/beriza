@@ -18,14 +18,18 @@ from app.api.schemas import (
     DefinirCargosRequisitoRequest,
     CrearMandanteRequest,
     CrearPerfilRequest,
+    ActualizarEmpresaContratistaRequest,
+    EmpresaContratistaResponse,
     InvitarContratistaRequest,
     MandanteResponse,
     PerfilResponse,
 )
 from app.core.config import settings
-from app.core.exceptions import AsignacionInvalida, PermisoInsuficiente
+from app.core.exceptions import AsignacionInvalida, PermisoInsuficiente, RutInvalido
 from app.core.exceptions import PerfilNoEncontrado
-from app.domain import permiso_service, acreditacion_service, servicio_service, usuario_service
+from app.domain import (
+    acreditacion_service, contratista_service, permiso_service, servicio_service, usuario_service,
+)
 from app.domain.estados import EntidadTipo, EstadoDocumento
 from app.domain.reglas_service import VIGENCIA_DEFAULT_DIAS
 from app.models.cargo import Cargo
@@ -250,6 +254,11 @@ def invitar_contratista(
         empresa = EmpresaContratista(rut=body.rut, razon_social=body.razon_social)
         db.add(empresa)
         db.flush()
+        # Los datos de fiscalizacion solo se aplican cuando la empresa se CREA
+        # aca. Si ya estaba en la plataforma son suyos y los comparte con sus
+        # otros mandantes: una invitacion no puede pisar la mutualidad que otro
+        # cargo. Para eso esta el PATCH.
+        _aplicar_datos_empresa(db, empresa, body)
 
     db.add(ContratistaMandante(contratista_id=empresa.id, mandante_id=mandante_id))
 
@@ -327,6 +336,63 @@ def listar_contratistas(
 # Si vuelve a hacer falta un tablero, se escribe contra la evaluacion actual
 # de acreditacion_service, que es la unica fuente que hoy dice la verdad.
 
+def _aplicar_datos_empresa(db, empresa, body) -> None:
+    """
+    Vuelca los datos de fiscalizacion que vengan en el body sobre la empresa.
+
+    Delega en contratista_service para no duplicar la validacion: la mutualidad
+    tiene que estar en la lista cerrada y el RUT del representante tiene que
+    tener el digito verificador correcto, vengan de una invitacion o de una
+    edicion posterior. Escribirlo dos veces garantiza que una de las dos se
+    quede atras.
+    """
+    campos = {
+        c: getattr(body, c, None)
+        for c in (
+            "mutualidad", "direccion", "telefono_emergencia",
+            "representante_legal_nombre", "representante_legal_rut",
+            "representante_legal_telefono",
+        )
+    }
+    if any(v is not None for v in campos.values()):
+        contratista_service.actualizar_empresa(db, empresa.id, **campos)
+
+
+@router.patch("/{mandante_id}/contratistas/{contratista_id}", response_model=EmpresaContratistaResponse)
+def actualizar_datos_contratista(
+    mandante_id: uuid.UUID,
+    contratista_id: uuid.UUID,
+    body: ActualizarEmpresaContratistaRequest,
+    db: Session = Depends(get_db),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Completa o corrige la ficha de un contratista.
+
+    Existe porque la invitacion pide estos datos opcionales y muchas veces el
+    mandante no los tiene en ese momento: sin una forma de completarlos despues,
+    "opcional" habria significado "nunca".
+
+    Se exige que el contratista este vinculado a ESTE mandante. Sin esa
+    comprobacion, cualquier mandante_admin podria editar la ficha de una empresa
+    con la que no trabaja con solo conocer su id.
+    """
+    vinculo = db.query(ContratistaMandante).filter_by(
+        mandante_id=mandante_id, contratista_id=contratista_id,
+    ).first()
+    if not vinculo:
+        raise HTTPException(
+            status_code=404,
+            detail="Ese contratista no esta vinculado a tu organizacion.",
+        )
+    try:
+        return contratista_service.actualizar_empresa(
+            db, contratista_id, **body.model_dump(exclude_unset=True)
+        )
+    except (AsignacionInvalida, RutInvalido) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/{mandante_id}/contratistas-detalle")
 def contratistas_detalle(
     mandante_id: uuid.UUID,
@@ -396,6 +462,14 @@ def contratistas_detalle(
             "razon_social": empresa.razon_social,
             "rut": empresa.rut,
             "giro": empresa.giro,
+            # Lo que hace falta tener a mano en una fiscalizacion, sin salir de
+            # la ficha del contratista a buscarlo a otra parte.
+            "mutualidad": empresa.mutualidad,
+            "direccion": empresa.direccion,
+            "telefono_emergencia": empresa.telefono_emergencia,
+            "representante_legal_nombre": empresa.representante_legal_nombre,
+            "representante_legal_rut": empresa.representante_legal_rut,
+            "representante_legal_telefono": empresa.representante_legal_telefono,
             "estado_acreditacion": rel.estado_acreditacion,
             "total_trabajadores": len(trabajadores_data),
             "pilares": pilares_data,
