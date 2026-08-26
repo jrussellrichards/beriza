@@ -13,7 +13,7 @@ Análisis de las 6 observaciones de [`feedback_2026_08_25.pdf`](./feedback_2026_
 | 1a | Editar servicios | **Aceptar** — ya existe en backend | Bajo (solo frontend) |
 | 1b | Eliminar servicios | **Aprobado** — borrado solo si está vacío | Medio |
 | 1c | Reactivar un servicio TERMINADO | **Pendiente de decisión** | Bajo |
-| 2 | Carga masiva de servicios | **Aceptar**, cuestionar prioridad | Alto |
+| 2 | Carga masiva de servicios | **Aceptar**, cuestionar prioridad | Medio |
 | 3 | Más datos del contratista | **Aceptar sin reservas** | Medio |
 | 4 | Click en trabajador → su ficha | **Aceptar** — mejor costo/beneficio | Bajo (solo frontend) |
 | 5 | Contratista pueda eliminar documento | **Aprobado** — reemplazar, no borrar | Medio |
@@ -106,13 +106,21 @@ En ambos casos la única salida hoy es **crear un servicio nuevo desde cero**, y
 
 ## 2. Carga masiva de servicios
 
-**Verificado:** no existe ninguna funcionalidad de importación en el repositorio.
+> **Corrección — 25 de agosto de 2026.** La primera versión de este documento decía que "no existe ninguna funcionalidad de importación en el repositorio". **Eso era falso.** El grep que lo respaldaba buscaba `masiv|bulk|csv|import` y se ahogó en los `import` de Python, así que devolvió ruido y se leyó como ausencia. Lo que sigue está corregido.
 
-**El hueco es real.** El reparo es de prioridad: **¿cuántos servicios crean de una vez?** Si son 5, un importador CSV es sobreingeniería.
+**La carga masiva de TRABAJADORES ya existe y está bien construida:**
 
-El volumen alto real probablemente sea **trabajadores** — un contratista con 80 personas cargándolas de a una. Ese es el mismo mecanismo.
+- `backend/app/domain/nomina_service.py` — importación desde CSV o Excel
+- Endpoint en `backend/app/api/trabajadores.py`, con plantilla descargable (`GET /plantilla-nomina`)
+- `frontend/src/features/agregar-trabajador/cargar-nomina-dialog.tsx` en el portal del contratista
 
-**Propuesta:** preguntar el volumen antes de construirlo, y si se construye, hacerlo genérico para servir a servicios **y** trabajadores.
+Y está pensada: la importación es parcial y no todo-o-nada (con 80 filas siempre hay tres malas), un RUT repetido es "ya existía" y no un error para que recargar el archivo corregido sea seguro, y valida dígito verificador.
+
+**Lo que NO existe es la carga masiva de SERVICIOS**, que es exactamente lo que pide el feedback. El hueco es real.
+
+**Esto refuerza el caso en vez de debilitarlo:** el patrón ya está establecido, probado y con interfaz. Construir el importador de servicios es seguir un camino hecho, no inventarlo. El costo estimado baja de **alto** a **medio**.
+
+**Propuesta:** sigue en pie preguntar cuántos servicios crean de una vez —si son 5, no se justifica—, pero si se construye, se copia la forma de `nomina_service`: parcial, idempotente y con reporte fila por fila.
 
 ---
 
