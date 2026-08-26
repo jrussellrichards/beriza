@@ -209,6 +209,48 @@ class InvitarContratistaRequest(BaseModel):
     razon_social: str
     rut: str
 
+    # Datos para fiscalizacion. Opcionales a proposito: el mandante muchas veces
+    # invita con lo que tiene a mano —RUT y razon social del contrato— y el resto
+    # lo consigue despues. Exigirlos convertiria la invitacion en un tramite y
+    # la respuesta seria inventar valores para poder avanzar.
+    #
+    # Solo se aplican si la empresa se CREA en esta invitacion. Si ya estaba en
+    # la plataforma, sus datos son suyos y los pisa quien corresponda con el
+    # PATCH, no una invitacion de otro mandante.
+    mutualidad: str | None = None
+    direccion: str | None = None
+    telefono_emergencia: str | None = None
+    representante_legal_nombre: str | None = None
+    representante_legal_rut: str | None = None
+    representante_legal_telefono: str | None = None
+
+
+class ActualizarEmpresaContratistaRequest(BaseModel):
+    """Edicion parcial de los datos de la empresa: solo viajan los que cambian."""
+    razon_social: str | None = None
+    giro: str | None = None
+    mutualidad: str | None = None
+    direccion: str | None = None
+    telefono_emergencia: str | None = None
+    representante_legal_nombre: str | None = None
+    representante_legal_rut: str | None = None
+    representante_legal_telefono: str | None = None
+
+
+class EmpresaContratistaResponse(BaseModel):
+    id: uuid.UUID
+    rut: str
+    razon_social: str
+    giro: str | None
+    mutualidad: str | None
+    direccion: str | None
+    telefono_emergencia: str | None
+    representante_legal_nombre: str | None
+    representante_legal_rut: str | None
+    representante_legal_telefono: str | None
+
+    model_config = {"from_attributes": True}
+
 
 
 

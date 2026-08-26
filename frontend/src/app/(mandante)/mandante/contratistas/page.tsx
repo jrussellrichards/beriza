@@ -11,6 +11,7 @@ import {
 } from "@/shared/ui/estado-badge"
 import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
+import { etiquetaMutualidad } from "@/entities/contratista/mutualidades"
 import { InvitarContratistaDialog } from "@/features/invitar-contratista/invitar-contratista-dialog"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
 import type { Servicio } from "@/entities/servicio/types"
@@ -62,6 +63,13 @@ interface Contratista {
   razon_social: string
   rut: string
   giro: string | null
+  // Lo que hay que tener a mano cuando llega una fiscalizacion.
+  mutualidad: string | null
+  direccion: string | null
+  telefono_emergencia: string | null
+  representante_legal_nombre: string | null
+  representante_legal_rut: string | null
+  representante_legal_telefono: string | null
   estado_acreditacion: EstadoGlobal
   total_trabajadores: number
   pilares: PilarDetalle[]
@@ -260,6 +268,58 @@ function ServiciosTab({ contratistaId }: { contratistaId: string }) {
   )
 }
 
+/**
+ * Datos de la empresa que hacen falta cuando llega una fiscalizacion: a que
+ * mutualidad esta afiliada, donde queda, a quien llamar y quien la representa.
+ *
+ * Va al tope de la pestana Estado y no en una pestana propia a proposito: si
+ * hay que buscarlo, en una fiscalizacion no se encuentra. Lo que falta se marca
+ * como faltante en vez de esconder la fila, porque el hueco es justamente la
+ * informacion util — dice que hay que pedirle al contratista.
+ */
+function FichaEmpresa({ c }: { c: Contratista }) {
+  const rep = [c.representante_legal_nombre, c.representante_legal_rut]
+    .filter(Boolean).join(" · ")
+  const filas: { etiqueta: string; valor: string | null }[] = [
+    { etiqueta: "Mutualidad", valor: etiquetaMutualidad(c.mutualidad) },
+    { etiqueta: "Giro", valor: c.giro },
+    { etiqueta: "Dirección", valor: c.direccion },
+    { etiqueta: "Tel. emergencia", valor: c.telefono_emergencia },
+    { etiqueta: "Rep. legal", valor: rep || null },
+    { etiqueta: "Tel. rep. legal", valor: c.representante_legal_telefono },
+  ]
+  const faltantes = filas.filter(f => !f.valor).length
+
+  return (
+    <div className="rounded-lg border border-line-subtle bg-surface-app p-3">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] text-ink-subtle font-medium uppercase tracking-wide">
+          Datos de la empresa
+        </p>
+        {faltantes > 0 && (
+          <span className="text-[10px] text-accion-ink">
+            {faltantes} sin completar
+          </span>
+        )}
+      </div>
+      <dl className="space-y-1">
+        {filas.map(f => (
+          <div key={f.etiqueta} className="flex items-start gap-2">
+            <dt className="text-[10px] text-ink-subtle w-28 shrink-0 pt-px">{f.etiqueta}</dt>
+            <dd className={cn(
+              "text-micro flex-1 min-w-0",
+              f.valor ? "text-ink" : "text-ink-subtle italic",
+            )}>
+              {f.valor ?? "sin registrar"}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
+
 function DetailPanel({ c, onClose, onCambio }: {
   c: Contratista
   onClose: () => void
@@ -337,6 +397,7 @@ function DetailPanel({ c, onClose, onCambio }: {
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {tab === "estado" && (
           <div className="space-y-3">
+            <FichaEmpresa c={c} />
             {c.pilares.map(pilar => {
               // `pilar.documentos` trae SOLO los de la empresa; lo que se le exige
               // a cada persona vive en `c.trabajadores`. Contar únicamente los

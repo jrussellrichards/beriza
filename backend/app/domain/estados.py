@@ -106,6 +106,27 @@ class MomentoRequisito(StrEnum):
     TERMINO = "TERMINO"
 
 
+class Mutualidad(StrEnum):
+    """
+    Organismo administrador del seguro de la Ley 16.744 al que está afiliada la
+    empresa contratista.
+
+    Es una lista cerrada porque en Chile lo es: tres mutualidades privadas más
+    el ISL, que es el administrador estatal para quien no está afiliado a
+    ninguna. Texto libre acá produciría "ACHS", "A.C.H.S.", "Achs" y "Asociación
+    Chilena de Seguridad" como cuatro organismos distintos, y con eso no se puede
+    ni filtrar ni reportar.
+
+    No es un dato administrativo: define A QUIÉN se le denuncia un accidente, y
+    el catálogo ya exige INFORMES_MUTUALIDAD y PPA_MUTUALIDAD, que hasta ahora
+    colgaban de una mutualidad que el sistema no sabía cuál era.
+    """
+    ACHS = "ACHS"                    # Asociación Chilena de Seguridad
+    MUTUAL_CCHC = "MUTUAL_CCHC"      # Mutual de Seguridad CChC
+    IST = "IST"                      # Instituto de Seguridad del Trabajo
+    ISL = "ISL"                      # Instituto de Seguridad Laboral (estatal)
+
+
 class NivelRequisito(StrEnum):
     """
     Naturaleza normativa de un requisito. Es un hecho sobre la ley chilena, y por
