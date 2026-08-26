@@ -61,6 +61,16 @@ class PerfilNoEncontrado(AcreditaError):
     pass
 
 
+class ServicioNoVacio(AcreditaError):
+    """
+    El servicio tiene historial y no puede borrarse fisicamente.
+
+    Se archiva en su lugar: borrarlo destruiria el registro de que se le exigio
+    al contratista y que entrego, que es lo que hace defendible la acreditacion
+    ante una fiscalizacion.
+    """
+
+
 class AsignacionInvalida(AcreditaError):
     """
     Asignación incoherente entre entidades de distinto tenant.
