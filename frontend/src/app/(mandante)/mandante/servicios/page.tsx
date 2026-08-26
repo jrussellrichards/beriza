@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Briefcase, ChevronRight, MapPin, Pause, Play, Plus, Search, Square, X } from "lucide-react"
+import { Briefcase, ChevronRight, MapPin, Pause, Pencil, Play, Plus, Search, Square, X } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { EstadoServicioBadge, LABEL_SERVICIO } from "@/shared/ui/estado-badge"
 import { api } from "@/shared/lib/api"
@@ -9,6 +9,7 @@ import { AvancePanel } from "@/entities/servicio/avance-panel"
 import type { EstadoServicio, Servicio } from "@/entities/servicio/types"
 import { CrearServicioDialog } from "@/features/crear-servicio/crear-servicio-dialog"
 import { AsignarCentroDialog } from "@/features/crear-servicio/asignar-centro-dialog"
+import { EditarServicioDialog } from "@/features/crear-servicio/editar-servicio-dialog"
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
@@ -24,6 +25,7 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
   const [cambiando, setCambiando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [asignandoCentro, setAsignandoCentro] = useState(false)
+  const [editando, setEditando] = useState(false)
 
   async function cambiarEstado(estado: EstadoServicio) {
     setCambiando(true)
@@ -83,9 +85,21 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
           </button>
         </div>
 
-        {/* Acciones de estado */}
+        {/* Acciones. Editar va aparte del bloque de estado a proposito: ese se
+            oculta cuando el servicio esta TERMINADO, y corregir el nombre o el
+            codigo de contrato de un servicio ya cerrado tiene que seguir siendo
+            posible — es justo cuando alguien revisa y encuentra el error. */}
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => setEditando(true)}
+            className="flex items-center gap-1.5 text-micro font-medium text-ink-muted border border-line bg-surface hover:bg-surface-app px-2.5 py-1.5 rounded-md transition-colors"
+          >
+            <Pencil size={11} /> Editar
+          </button>
+        </div>
+
         {s.estado !== "TERMINADO" && (
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2 mt-2">
             {s.estado === "ACTIVO" ? (
               <button
                 onClick={() => cambiarEstado("SUSPENDIDO")}
@@ -127,6 +141,14 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
           centroActualId={s.centro_trabajo_id}
           onClose={() => setAsignandoCentro(false)}
           onGuardado={() => { setAsignandoCentro(false); onEstadoCambiado() }}
+        />
+      )}
+
+      {editando && (
+        <EditarServicioDialog
+          servicioId={s.id}
+          onClose={() => setEditando(false)}
+          onGuardado={() => { setEditando(false); onEstadoCambiado() }}
         />
       )}
     </div>
