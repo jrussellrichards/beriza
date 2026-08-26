@@ -390,6 +390,20 @@ def cambiar_estado_servicio(db: Session, servicio_id: uuid.UUID, nuevo_estado: s
         servicio.fecha_termino = date.today()
     db.commit()
     db.refresh(servicio)
+
+    # El agregado que ve el mandante depende de los servicios ACTIVOS, así que
+    # cambiar el estado de uno lo invalida. Se recalculaba solo al mover un
+    # DOCUMENTO —subida, cron de vencimientos, pipeline de IA— y nunca al mover
+    # un servicio, así que terminar la última faena dejaba al contratista
+    # figurando BLOQUEADO hasta que alguien subiera cualquier papel. Y entonces
+    # el cambio quedaba atribuido a esa subida, no a quien cerró la faena.
+    #
+    # Import local: acreditacion_service importa de este módulo, y arriba se
+    # haría circular.
+    from app.domain import acreditacion_service
+    acreditacion_service.recalcular_estado_global(
+        db, servicio.relacion.contratista_id, servicio.relacion.mandante_id
+    )
     return servicio
 
 
