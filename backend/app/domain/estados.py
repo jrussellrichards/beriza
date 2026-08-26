@@ -28,6 +28,11 @@ TRANSICIONES_VALIDAS: dict[EstadoDocumento, frozenset[EstadoDocumento]] = {
         EstadoDocumento.EN_ANALISIS,   # pipeline IA
         EstadoDocumento.OBSERVADO,     # revisión manual del mandante
         EstadoDocumento.APROBADO,      # revisión manual del mandante
+        # REEMPLAZO: el contratista sube otra versión antes de que nadie revise.
+        # No es un ciclo raro, es el caso normal de haberse equivocado de archivo.
+        # La entrega anterior queda en el expediente; solo cambia a cuál apunta
+        # la acreditación.
+        EstadoDocumento.ENVIADO,
     }),
     EstadoDocumento.EN_ANALISIS: frozenset({EstadoDocumento.OBSERVADO, EstadoDocumento.APROBADO}),
     # Desde OBSERVADO: re-subida (nueva versión → ENVIADO) o aprobación por excepción del mandante

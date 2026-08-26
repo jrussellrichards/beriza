@@ -110,12 +110,33 @@ def subir_entrega(
     expediente = _resolver_expediente(db, requisito, empresa_id, trabajador_id, servicio_id)
     acred = _resolver_acreditacion(db, expediente, mandante_id)
 
-    # Re-entrega: solo desde OBSERVADO (corrección) o APROBADO (renovación).
+    # Re-entrega. Desde ENVIADO es un REEMPLAZO: el contratista se dio cuenta de
+    # que subió el documento equivocado y nadie lo ha revisado todavía.
+    #
+    # Antes estaba prohibido y había que esperar a que el mandante rechazara algo
+    # que el contratista ya sabía que estaba malo. Eso hacía perder el tiempo a
+    # los dos: el mandante revisaba un documento muerto.
+    #
+    # Lo que se pidió fue poder BORRARLO. No se puede, y no por prolijidad: este
+    # producto existe para responder qué entregó el contratista y cuándo. Si se
+    # puede borrar, quien subió un documento adulterado lo hace desaparecer. El
+    # reemplazo resuelve el mismo dolor sin ese costo — la entrega anterior queda
+    # en el expediente y sus dos eventos en la bitácora; lo único que cambia es a
+    # cuál apunta la acreditación.
     if acred.entrega_id is not None:
-        if acred.estado in (EstadoDocumento.ENVIADO, EstadoDocumento.EN_ANALISIS):
+        if acred.estado == EstadoDocumento.EN_ANALISIS:
+            # Este sí se queda bloqueado, y no por olvido: hay una tarea de IA
+            # corriendo sobre la entrega vieja que, al terminar, escribe su
+            # resultado en la acreditación. Si se reemplaza mientras tanto, ese
+            # veredicto se aplica al documento equivocado.
+            #
+            # La forma correcta de abrirlo es que procesar_documento compruebe
+            # que acred.entrega_id sigue siendo la entrega que analizó antes de
+            # escribir. Mientras el pipeline esté apagado no hace falta, pero
+            # quien lo encienda tiene que resolver esto primero.
             raise EntregaInvalida(
-                f"Ya existe una entrega de {requisito.codigo} pendiente de revisión. "
-                "Espere el resultado antes de subir una nueva versión."
+                f"El {requisito.codigo} que subiste se está analizando en este "
+                "momento. Espera a que termine para subir otra versión."
             )
         validar_transicion(acred.estado, EstadoDocumento.ENVIADO)
 
