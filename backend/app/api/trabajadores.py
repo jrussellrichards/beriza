@@ -5,10 +5,12 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
-    AgregarTrabajadorRequest, ReporteImportacionResponse, TrabajadorHabilitacionResponse,
+    ActualizarTrabajadorRequest, AgregarTrabajadorRequest, ReporteImportacionResponse,
+    TrabajadorHabilitacionResponse,
     TrabajadorResponse,
 )
-from app.domain import acreditacion_service, nomina_service
+from app.core.exceptions import AsignacionInvalida, RutInvalido
+from app.domain import acreditacion_service, nomina_service, trabajador_service
 from app.infrastructure.database import get_db
 from app.middleware.auth import exigir_acceso_a_contratista, require_rol
 from app.models.trabajador import Trabajador
@@ -46,21 +48,52 @@ def agregar_trabajador(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(require_rol(["contratista_admin", "prevencionista"])),
 ):
-    """Registra un nuevo trabajador en la empresa del usuario autenticado."""
+    """
+    Registra un nuevo trabajador en la empresa del usuario autenticado.
+
+    Delega en trabajador_service para seguir las MISMAS reglas que la carga
+    masiva. Antes construía el modelo acá y no validaba el RUT, así que la misma
+    persona se aceptaba de a una y se rechazaba por nómina.
+    """
     if not usuario.contratista_id:
         raise HTTPException(status_code=400, detail="El usuario no está asociado a una empresa")
 
-    trabajador = Trabajador(
-        empresa_id=usuario.contratista_id,
-        rut=body.rut,
-        nombre_completo=body.nombre_completo,
-        cargo=body.cargo,
-        activo=True,
-    )
-    db.add(trabajador)
-    db.commit()
-    db.refresh(trabajador)
-    return trabajador
+    try:
+        return trabajador_service.crear_trabajador(
+            db, usuario.contratista_id, **body.model_dump()
+        )
+    except RutInvalido as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except AsignacionInvalida as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/{trabajador_id}", response_model=TrabajadorResponse)
+def actualizar_trabajador(
+    trabajador_id: uuid.UUID,
+    body: ActualizarTrabajadorRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["contratista_admin", "prevencionista"])),
+):
+    """
+    Completa o corrige la ficha de un trabajador de la propia empresa.
+
+    Existe porque los datos personales son opcionales al darlo de alta y porque
+    la carga masiva solo trae RUT, nombre y cargo: sin esto, todo el que entró
+    por nómina se quedaría para siempre sin contacto de emergencia.
+    """
+    if not usuario.contratista_id:
+        raise HTTPException(status_code=400, detail="El usuario no está asociado a una empresa")
+
+    try:
+        return trabajador_service.actualizar_trabajador(
+            db, trabajador_id, usuario.contratista_id,
+            **body.model_dump(exclude_unset=True),
+        )
+    except AsignacionInvalida as e:
+        # "No pertenece a tu empresa" cubre tanto que no exista como que sea de
+        # otra: distinguirlos le confirmaria a un curioso que el id existe.
+        raise HTTPException(status_code=404 if "pertenece" in str(e) else 400, detail=str(e))
 
 
 @router.get("/plantilla-nomina")
