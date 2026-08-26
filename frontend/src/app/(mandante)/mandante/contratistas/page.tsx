@@ -268,6 +268,10 @@ function DetailPanel({ c, onClose, onCambio }: {
   const [tab, setTab] = useState<PanelTab>("estado")
   const [excepcionDoc, setExcepcionDoc] = useState<DocDetalle | null>(null)
   const [historialDoc, setHistorialDoc] = useState<DocDetalle | null>(null)
+  // Qué trabajador está desplegado. Uno a la vez: el panel mide w-96 y con
+  // varios abiertos hay que scrollear para comparar dos personas, que es
+  // justamente lo que se viene a hacer acá.
+  const [trabajadorAbierto, setTrabajadorAbierto] = useState<string | null>(null)
 
   const trabajadoresOk = c.trabajadores.filter(t => t.cumple).length
   const docsEmpresa = c.pilares.flatMap(p => p.documentos)
@@ -421,18 +425,92 @@ function DetailPanel({ c, onClose, onCambio }: {
             <p className="text-meta text-ink-subtle mb-3">
               {trabajadoresOk}/{c.trabajadores.length} trabajadores evaluados cumplen todos los requisitos
             </p>
-            {c.trabajadores.map(t => (
-              <div key={t.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-app border border-line-subtle">
-                <div>
-                  <p className="text-strong font-medium text-ink">{t.nombre}</p>
-                  <p className="text-meta text-ink-subtle font-mono">{t.rut}{t.cargo ? ` · ${t.cargo}` : ""}</p>
+            {c.trabajadores.map(t => {
+              const abierto = trabajadorAbierto === t.id
+              const brechas = t.documentos.filter(d => d.estado !== 4).length
+              // Los documentos de la persona agrupados por pilar. Es la misma
+              // informacion que ya estaba en la pestana Documentos, pero ahi
+              // esta ordenada por pilar y hay que recorrer los cinco para
+              // reconstruir a una persona. Aca se arma al reves.
+              const porPilar = t.documentos.reduce<Record<string, { nombre: string; color: string; docs: DocDetalle[] }>>(
+                (acc, d) => {
+                  const pilar = c.pilares.find(p => p.codigo === d.pilar_codigo)
+                  acc[d.pilar_codigo] ??= {
+                    nombre: d.pilar_nombre,
+                    color: pilar?.color ?? "",
+                    docs: [],
+                  }
+                  acc[d.pilar_codigo].docs.push(d)
+                  return acc
+                },
+                {},
+              )
+
+              return (
+                <div key={t.id} className="rounded-lg bg-surface-app border border-line-subtle overflow-hidden">
+                  <button
+                    onClick={() => setTrabajadorAbierto(abierto ? null : t.id)}
+                    aria-expanded={abierto}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-surface-sunken transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ChevronRight
+                        size={13}
+                        className={cn(
+                          "text-ink-subtle shrink-0 transition-transform",
+                          abierto && "rotate-90",
+                        )}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-strong font-medium text-ink truncate">{t.nombre}</p>
+                        <p className="text-meta text-ink-subtle font-mono truncate">
+                          {t.rut}{t.cargo ? ` · ${t.cargo}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] text-ink-subtle">
+                        {t.documentos.length - brechas}/{t.documentos.length}
+                      </span>
+                      {t.cumple
+                        ? <CheckCircle2 size={14} className="text-ok-ink" />
+                        : <AlertCircle size={14} className="text-bloqueo-ink" />
+                      }
+                    </div>
+                  </button>
+
+                  {abierto && (
+                    <div className="px-3 pb-3 pt-1 border-t border-line-subtle space-y-2.5">
+                      {Object.entries(porPilar).map(([codigo, grupo]) => (
+                        <div key={codigo}>
+                          <span className={cn(
+                            "text-[10px] font-semibold px-2 py-0.5 rounded border",
+                            PILAR_COLOR[grupo.color] ?? "bg-surface-sunken text-ink-muted border-line",
+                          )}>
+                            {grupo.nombre}
+                          </span>
+                          <div className="space-y-1.5 mt-1.5">
+                            {grupo.docs.map((doc, i) => (
+                              <DocRow
+                                key={`${doc.requisito_id}-${i}`}
+                                doc={doc}
+                                onExcepcion={setExcepcionDoc}
+                                onVerArchivos={setHistorialDoc}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      {t.documentos.length === 0 && (
+                        <p className="text-meta text-ink-subtle">
+                          El perfil de sus servicios no exige documentos por trabajador.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {t.cumple
-                  ? <CheckCircle2 size={14} className="text-ok-ink" />
-                  : <AlertCircle size={14} className="text-bloqueo-ink" />
-                }
-              </div>
-            ))}
+              )
+            })}
             {c.trabajadores.length === 0 && (
               <p className="text-meta text-ink-subtle bg-surface-app border border-line-subtle rounded-md px-3 py-2">
                 Sin trabajadores asignados a servicios activos.
