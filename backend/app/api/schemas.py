@@ -538,6 +538,27 @@ class AgregarTrabajadorRequest(BaseModel):
     nombre_completo: str
     cargo: str | None = None
 
+    # Datos personales. Opcionales: son de un TERCERO —la persona, no la empresa
+    # contratante— y muchas veces quien carga la nomina no los tiene todos.
+    fecha_nacimiento: date | None = None
+    email: str | None = None
+    telefono: str | None = None
+    direccion: str | None = None
+    contacto_emergencia_nombre: str | None = None
+    contacto_emergencia_telefono: str | None = None
+
+
+class ActualizarTrabajadorRequest(BaseModel):
+    """Edicion parcial de la ficha: solo viajan los campos que cambian."""
+    nombre_completo: str | None = None
+    cargo: str | None = None
+    fecha_nacimiento: date | None = None
+    email: str | None = None
+    telefono: str | None = None
+    direccion: str | None = None
+    contacto_emergencia_nombre: str | None = None
+    contacto_emergencia_telefono: str | None = None
+
 
 class TrabajadorResponse(BaseModel):
     id: uuid.UUID
@@ -547,6 +568,17 @@ class TrabajadorResponse(BaseModel):
     # participa de ninguna regla.
     cargo: str | None
     activo: bool
+
+    # Datos personales. Los ve el contratista, que es el empleador y el dueno
+    # del dato. Que el mandante deba ver el domicilio particular y el telefono
+    # personal de alguien de otra empresa es una decision pendiente — ver
+    # docs/RESPUESTA-FEEDBACK.md, seccion del punto 6.
+    fecha_nacimiento: date | None = None
+    email: str | None = None
+    telefono: str | None = None
+    direccion: str | None = None
+    contacto_emergencia_nombre: str | None = None
+    contacto_emergencia_telefono: str | None = None
 
     model_config = {"from_attributes": True}
 
