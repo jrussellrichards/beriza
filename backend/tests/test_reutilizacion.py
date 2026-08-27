@@ -25,7 +25,6 @@ os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_reuso_")
 
 from fastapi import HTTPException
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -41,6 +40,8 @@ from app.api import reutilizacion as api_reuso
 from app.domain import reutilizacion_service
 from app.core.exceptions import DocumentoNoEncontrado, EstadoDocumentoInvalido
 from app.domain.estados import EstadoAcreditacion, EstadoDocumento, EstadoServicio
+
+from tests._db import engine_sqlite
 
 # El servicio usa date.today() (no recibe `hoy`), así que las fechas del test
 # son relativas al día real — si no, el test caduca solo.
@@ -72,7 +73,7 @@ def _acred_de(db, exp, mandante):
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 

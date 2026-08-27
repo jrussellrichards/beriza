@@ -16,7 +16,6 @@ os.environ.setdefault("JWT_SECRET", "test")
 os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_test_")
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401 — registra todos los modelos
@@ -31,6 +30,8 @@ from app.api import documentos as api_doc
 from app.domain import acreditacion_service, documento_service
 from app.domain.archivo_service import ArchivoEntrada
 from app.domain.estados import EstadoAcreditacion, EstadoDocumento
+
+from tests._db import engine_sqlite
 
 
 def _seed(db):
@@ -60,7 +61,7 @@ def _file(contenido=b"%PDF-1.4 f30 original"):
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
     m, c, u, req = _seed(db)

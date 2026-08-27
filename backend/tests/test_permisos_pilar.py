@@ -19,7 +19,6 @@ os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_perm_")
 
 from fastapi import HTTPException
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -38,6 +37,8 @@ from app.domain import permiso_service
 from app.domain.estados import EstadoDocumento
 from app.middleware.auth import require_rol
 
+from tests._db import engine_sqlite
+
 
 def _acred(db, mandante, req, empresa):
     exp = Expediente(requisito_id=req.id, empresa_id=empresa.id); db.add(exp); db.flush()
@@ -49,7 +50,7 @@ def _acred(db, mandante, req, empresa):
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 

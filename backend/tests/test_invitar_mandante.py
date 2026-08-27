@@ -19,7 +19,6 @@ os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_inv_")
 
 from fastapi import HTTPException
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -31,9 +30,11 @@ from app.api import mandantes as api_mandantes
 from app.api import usuarios as api_usuarios
 from app.api.schemas import ActivarCuentaRequest, InvitarMandanteRequest
 
+from tests._db import engine_sqlite
+
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 

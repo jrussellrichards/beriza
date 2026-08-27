@@ -31,7 +31,6 @@ os.environ.setdefault("JWT_SECRET", "test")
 os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_contratista_")
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401
@@ -40,9 +39,11 @@ from app.domain import contratista_service
 from app.models.base import Base
 from app.models.contratista import EmpresaContratista
 
+from tests._db import engine_sqlite
+
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = sessionmaker(bind=eng)()
 

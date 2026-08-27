@@ -21,7 +21,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 os.environ.setdefault("DATABASE_URL", "postgresql://x:x@localhost/x")
 os.environ.setdefault("JWT_SECRET", "test")
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401 — registra los modelos
@@ -32,6 +31,8 @@ from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.domain.estados import EstadoDocumento
 from app.domain import vencimiento_service
+
+from tests._db import engine_sqlite
 
 HOY = date(2026, 8, 12)
 AYER = HOY - timedelta(days=1)
@@ -69,7 +70,7 @@ def _mundo(db, *, vigencia, sin_vencimiento=False, estado=EstadoDocumento.APROBA
 
 
 def _db():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    engine = engine_sqlite(connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     return Session(engine)
 

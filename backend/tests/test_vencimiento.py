@@ -17,7 +17,6 @@ os.environ.setdefault("JWT_SECRET", "test")
 os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_venc_")
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -28,6 +27,8 @@ from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.domain import vencimiento_service
 from app.domain.estados import EstadoAcreditacion, EstadoDocumento
+
+from tests._db import engine_sqlite
 
 HOY = date(2026, 7, 24)
 AYER = HOY - timedelta(days=1)
@@ -57,7 +58,7 @@ def _expediente_aprobado(db, req, empresa, mandante, vig_vigente, con_sucesora=F
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 

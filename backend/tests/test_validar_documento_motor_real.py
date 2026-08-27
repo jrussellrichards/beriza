@@ -11,7 +11,7 @@ consulta muere con:
 O sea: el dia que se encienda el pipeline de IA, TODA validacion de documento
 revienta con 500 en produccion.
 
-Por que ningun test lo vio: la suite entera hace create_engine("sqlite://") a
+Por que ningun test lo vio: la suite entera hace engine_sqlite() a
 mano, y SQLite acepta ese DISTINCT sin chistar. CI levanta un Postgres real,
 pero solo lo usaban alembic y el seed —ningun test lo tocaba, y de hecho ningun
 test llamaba nunca a validar_documento—.
@@ -46,12 +46,14 @@ from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servici
 from app.domain import reglas_service
 from app.domain.estados import EstadoServicio, EstadoDocumento
 
+from tests._db import engine_sqlite
+
 
 def _motor():
     """El motor que diga DATABASE_URL. En CI es PostgreSQL; en local, SQLite."""
     url = os.environ["DATABASE_URL"]
     if url.startswith("sqlite"):
-        return create_engine("sqlite://"), "sqlite", None
+        return engine_sqlite(), "sqlite", None
     # Postgres: esquema aparte para no pisar lo que dejaron alembic y el seed
     esquema = f"t_{uuid.uuid4().hex[:12]}"
     eng = create_engine(url)

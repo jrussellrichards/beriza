@@ -19,7 +19,6 @@ os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_vista_")
 
 from fastapi import HTTPException
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -33,6 +32,8 @@ from app.models.usuario import Usuario
 from app.api import documentos as api_doc
 from app.domain import acreditacion_service
 from app.domain.estados import EstadoAcreditacion, EstadoDocumento, EstadoServicio
+
+from tests._db import engine_sqlite
 
 HOY = date.today()
 
@@ -54,7 +55,7 @@ def _perfil_con(db, mandante, nombre, requisitos):
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 

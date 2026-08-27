@@ -19,7 +19,6 @@ os.environ.setdefault("JWT_SECRET", "test")
 os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_portal_")
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -39,11 +38,13 @@ from app.domain.estados import (
     EstadoAcreditacion, EstadoDocumento, EstadoServicio,
 )
 
+from tests._db import engine_sqlite
+
 HOY = date.today()
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 

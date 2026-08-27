@@ -23,7 +23,6 @@ os.environ.setdefault("JWT_SECRET", "test")
 os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_centro_")
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -38,9 +37,11 @@ from app.domain import servicio_service
 from app.domain.centro_trabajo_service import CentroTrabajoInvalido, CentroTrabajoNoEncontrado
 from app.domain.estados import EstadoServicio
 
+from tests._db import engine_sqlite
+
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 
