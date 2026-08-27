@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.api.schemas import (
     ActualizarServicioRequest,
+    ReactivarServicioRequest,
+    ServicioEventoResponse,
     AsignarTrabajadorServicioRequest,
     AvanceServicioResponse,
     CambiarEstadoServicioRequest,
@@ -244,11 +246,67 @@ def cambiar_estado_servicio(
         servicio = servicio_service.obtener_servicio(db, servicio_id)
         if usuario.mandante_id and servicio.relacion.mandante_id != usuario.mandante_id:
             raise HTTPException(status_code=403, detail="El servicio no pertenece a su mandante")
-        return servicio_service.cambiar_estado_servicio(db, servicio_id, body.estado)
+        return servicio_service.cambiar_estado_servicio(
+            db, servicio_id, body.estado, actor_usuario_id=usuario.id
+        )
     except ServicioNoEncontrado as e:
         raise HTTPException(status_code=404, detail=str(e))
     except EstadoServicioInvalido as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{servicio_id}/reactivar", response_model=ServicioResponse)
+def reactivar_servicio(
+    servicio_id: uuid.UUID,
+    body: ReactivarServicioRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Reabre un servicio TERMINADO. El motivo queda en la bitácora del servicio.
+
+    Restringido a mandante_admin: reabrir un contrato cerrado devuelve el
+    servicio a la evaluación y cambia quién puede entrar a faena.
+    """
+    mandante_id = _resolver_mandante_id(usuario, None)
+    try:
+        return servicio_service.reactivar_servicio(
+            db, servicio_id, mandante_id, body.motivo, usuario.id
+        )
+    except ServicioNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        codigo = 400 if "por qué" in str(e) else 403
+        raise HTTPException(status_code=codigo, detail=str(e))
+    except EstadoServicioInvalido as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{servicio_id}/historial", response_model=list[ServicioEventoResponse])
+def historial_servicio(
+    servicio_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """Bitácora del servicio. Sin esto, el registro existiría y nadie podría verlo."""
+    mandante_id = _resolver_mandante_id(usuario, None)
+    try:
+        servicio = servicio_service.obtener_servicio(db, servicio_id)
+    except ServicioNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if servicio.relacion.mandante_id != mandante_id:
+        raise HTTPException(status_code=403, detail="El servicio no pertenece a tu organización")
+    return [
+        ServicioEventoResponse(
+            tipo_evento=e.tipo_evento,
+            estado_anterior=e.estado_anterior,
+            estado_nuevo=e.estado_nuevo,
+            motivo=e.motivo,
+            actor_nombre=e.actor.nombre if e.actor else None,
+            created_at=e.created_at,
+        )
+        for e in servicio_service.historial_servicio(db, servicio_id)
+    ]
 
 
 @router.post("/{servicio_id}/archivar", response_model=ServicioResponse)
