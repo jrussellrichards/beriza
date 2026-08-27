@@ -15,9 +15,15 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 
 
-def engine_sqlite() -> Engine:
-    """SQLite en memoria con PRAGMA foreign_keys=ON en cada conexion."""
-    eng = create_engine("sqlite://")
+def engine_sqlite(**kwargs) -> Engine:
+    """
+    SQLite en memoria con PRAGMA foreign_keys=ON en cada conexion.
+
+    `kwargs` pasa a create_engine sin tocar. Lo usan los tests que levantan un
+    TestClient de FastAPI: necesitan connect_args={"check_same_thread": False}
+    porque el cliente corre el request en otro hilo.
+    """
+    eng = create_engine("sqlite://", **kwargs)
 
     @event.listens_for(eng, "connect")
     def _encender_fks(dbapi_conn, _record):  # noqa: ANN001

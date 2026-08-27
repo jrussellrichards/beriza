@@ -38,7 +38,6 @@ os.environ.setdefault("JWT_SECRET", "test")
 os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_reemplazo_")
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401
@@ -50,6 +49,8 @@ from app.models.contratista import ContratistaMandante, EmpresaContratista
 from app.models.expediente import Acreditacion, Entrega, Expediente
 from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
+
+from tests._db import engine_sqlite
 
 
 class _ArchivoFalso:
@@ -82,7 +83,7 @@ def _armar(db):
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = sessionmaker(bind=eng)()
     man, emp, req = _armar(db)

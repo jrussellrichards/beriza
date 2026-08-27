@@ -18,7 +18,6 @@ os.environ.setdefault("DATABASE_URL", "postgresql://x:x@localhost/x")
 os.environ.setdefault("JWT_SECRET", "test")
 
 import pytest
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401 — registra los modelos
@@ -27,9 +26,11 @@ from app.models.token_recuperacion import TokenRecuperacion
 from app.models.usuario import Usuario
 from app.domain import recuperacion_service as rec
 
+from tests._db import engine_sqlite
+
 
 def _db():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    engine = engine_sqlite(connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     return Session(engine)
 

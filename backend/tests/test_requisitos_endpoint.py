@@ -20,7 +20,6 @@ os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_reqs_")
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -32,6 +31,8 @@ from app.models.mandante import Mandante
 from app.models.pilar import Pilar, RequisitoDocumental, Subpilar
 from app.models.servicio import PerfilRequisitos
 from app.models.usuario import Usuario
+
+from tests._db import engine_sqlite
 from main import app
 
 
@@ -40,8 +41,7 @@ def run():
     # app en OTRO hilo, y sqlite en memoria con el pool por defecto le daria a
     # ese hilo una base vacia distinta. Sin esto el test falla con "no such
     # table: usuarios" aunque las tablas existan.
-    eng = create_engine(
-        "sqlite://",
+    eng = engine_sqlite(
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )

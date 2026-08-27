@@ -19,7 +19,6 @@ os.environ.setdefault("JWT_SECRET", "test")
 os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_nomina_")
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -29,13 +28,15 @@ from app.models.contratista import EmpresaContratista
 from app.models.trabajador import Trabajador
 from app.domain import nomina_service, rut_service
 
+from tests._db import engine_sqlite
+
 
 def _csv(texto: str, encoding: str = "utf-8") -> bytes:
     return texto.encode(encoding)
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 

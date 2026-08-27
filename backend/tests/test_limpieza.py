@@ -21,7 +21,7 @@ os.environ.setdefault("JWT_SECRET", "test")
 os.environ["FILE_STORAGE"] = "local"
 os.environ["LOCAL_STORAGE_PATH"] = tempfile.mkdtemp(prefix="acredita_limp_")
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
@@ -34,6 +34,8 @@ from app.models.servicio import PerfilRequisitos, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
 from app.models.usuario import Usuario
 from app.domain.estados import EstadoDocumento
+
+from tests._db import engine_sqlite
 
 from scripts import limpiar_datos_prueba as limp
 
@@ -116,7 +118,7 @@ def _huerfanos(db) -> list[str]:
 
 
 def run():
-    eng = create_engine("sqlite://")
+    eng = engine_sqlite()
     Base.metadata.create_all(eng)
     db = Session(eng)
 
