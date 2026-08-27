@@ -25,6 +25,9 @@ export interface Servicio {
   centro_trabajo_direccion: string | null
   centro_trabajo_encargado: string | null
   centro_trabajo_encargado_email: string | null
+  /** Cuándo se archivó, o null si está visible. Archivar es ortogonal al
+   *  estado: un servicio archivado conserva si estaba SUSPENDIDO o TERMINADO. */
+  archivado_en: string | null
 }
 
 export interface Perfil {

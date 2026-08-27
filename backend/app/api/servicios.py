@@ -26,6 +26,7 @@ from app.core.exceptions import (
     EstadoServicioInvalido,
     PerfilNoEncontrado,
     ServicioNoEncontrado,
+    ServicioNoVacio,
     TrabajadorNoEncontrado,
 )
 from app.domain import acreditacion_service, servicio_service
@@ -110,6 +111,7 @@ def crear_servicio(
 @router.get("/", response_model=list[ServicioListItemResponse])
 def listar_servicios(
     contratista_id: uuid.UUID | None = None,
+    incluir_archivados: bool = False,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin", "contratista_admin", "prevencionista"])),
 ):
@@ -117,12 +119,20 @@ def listar_servicios(
     Lista servicios según el tenant del usuario:
     mandante ve los suyos (opcionalmente filtrados por contratista),
     contratista ve solo los de su empresa.
+
+    `incluir_archivados` es solo del mandante: archivar es una decisión suya
+    sobre su propia lista, y el contratista no tiene por qué ver una faena que
+    su cliente decidió esconder. Se fuerza a False para el contratista en vez
+    de confiar en que no mande el parámetro.
     """
     if usuario.contratista_id:
-        servicios = servicio_service.listar_servicios(db, contratista_id=usuario.contratista_id)
+        servicios = servicio_service.listar_servicios(
+            db, contratista_id=usuario.contratista_id, incluir_archivados=False
+        )
     else:
         servicios = servicio_service.listar_servicios(
-            db, mandante_id=usuario.mandante_id, contratista_id=contratista_id
+            db, mandante_id=usuario.mandante_id, contratista_id=contratista_id,
+            incluir_archivados=incluir_archivados,
         )
     return [
         ServicioListItemResponse(
@@ -141,6 +151,7 @@ def listar_servicios(
             trabajadores_asignados=sum(1 for a in s.trabajadores_asignados if a.activo),
             centro_trabajo_id=s.centro_trabajo_id,
             centro_trabajo_nombre=s.centro_trabajo.nombre if s.centro_trabajo else None,
+            archivado_en=s.archivado_en,
             centro_trabajo_direccion=s.centro_trabajo.direccion if s.centro_trabajo else None,
             # El encargado es un usuario del MANDANTE y este listado lo lee
             # también el contratista. Se expone a propósito: es el contacto de la
@@ -238,6 +249,63 @@ def cambiar_estado_servicio(
         raise HTTPException(status_code=404, detail=str(e))
     except EstadoServicioInvalido as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{servicio_id}/archivar", response_model=ServicioResponse)
+def archivar_servicio(
+    servicio_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """Saca el servicio de las listas sin tocar su historial."""
+    mandante_id = _resolver_mandante_id(usuario, None)
+    try:
+        return servicio_service.archivar_servicio(db, servicio_id, mandante_id, usuario.id)
+    except ServicioNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except EstadoServicioInvalido as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{servicio_id}/desarchivar", response_model=ServicioResponse)
+def desarchivar_servicio(
+    servicio_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """Devuelve el servicio a las listas, con el estado que tenía."""
+    mandante_id = _resolver_mandante_id(usuario, None)
+    try:
+        return servicio_service.desarchivar_servicio(db, servicio_id, mandante_id)
+    except ServicioNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.delete("/{servicio_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_servicio(
+    servicio_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Borra un servicio que no dejó rastro. Si dejó, responde 409 explicando qué
+    lo retiene y ofreciendo archivar — un 400 sonaría a "mandaste algo mal",
+    y acá el pedido está bien formado, es el estado del servicio el que no
+    permite la acción.
+    """
+    mandante_id = _resolver_mandante_id(usuario, None)
+    try:
+        servicio_service.eliminar_servicio(db, servicio_id, mandante_id)
+    except ServicioNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ServicioNoVacio as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 @router.get("/{servicio_id}/cargos-disponibles")

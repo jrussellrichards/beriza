@@ -18,6 +18,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -104,6 +105,14 @@ def subir_entrega(
             or servicio.relacion.contratista_id != empresa_efectiva_id
         ):
             raise EntregaInvalida("El servicio indicado no corresponde a esta empresa y mandante.")
+        if servicio.archivado_en is not None:
+            # Sin esto se le podrían seguir subiendo documentos a una faena que
+            # ya nadie ve en ninguna lista, y esos documentos quedarían en la
+            # cola de revisión del mandante sin forma de llegar a ellos.
+            raise EntregaInvalida(
+                f"«{servicio.nombre}» está archivado y no admite documentos nuevos. "
+                "Desarchívalo si hace falta entregar algo más."
+            )
     else:
         servicio_id = None
 
@@ -490,10 +499,18 @@ def obtener_documento(db: Session, documento_id: uuid.UUID) -> Acreditacion:
 
 def listar_pendientes_revision(db: Session, mandante_id: uuid.UUID) -> list[Acreditacion]:
     """Cola de revisión manual del mandante: acreditaciones Enviadas o En Análisis."""
+    # El outerjoin y el or_ son necesarios: un expediente de alcance ENTIDAD no
+    # tiene servicio (servicio_id NULL) y un inner join lo dejaría fuera, que es
+    # la mayoría de la cola. Sin este filtro, los documentos de una faena
+    # archivada se quedan en la cola del mandante PARA SIEMPRE, y nadie puede
+    # abrirlos porque la faena ya no aparece en ninguna lista.
     return (
         db.query(Acreditacion)
-        .filter_by(mandante_id=mandante_id, eliminado_en=None)
+        .join(Expediente, Acreditacion.expediente_id == Expediente.id)
+        .outerjoin(Servicio, Expediente.servicio_id == Servicio.id)
+        .filter(Acreditacion.mandante_id == mandante_id, Acreditacion.eliminado_en.is_(None))
         .filter(Acreditacion.estado.in_([EstadoDocumento.ENVIADO, EstadoDocumento.EN_ANALISIS]))
+        .filter(or_(Expediente.servicio_id.is_(None), Servicio.archivado_en.is_(None)))
         .order_by(Acreditacion.updated_at.asc())
         .all()
     )

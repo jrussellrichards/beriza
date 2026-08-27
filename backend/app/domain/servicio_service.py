@@ -7,7 +7,7 @@ que define qué documentos se exigen y con qué parámetros.
 """
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy.orm import Session, joinedload
@@ -18,11 +18,13 @@ from app.core.exceptions import (
     EstadoServicioInvalido,
     PerfilNoEncontrado,
     ServicioNoEncontrado,
+    ServicioNoVacio,
     TrabajadorNoEncontrado,
 )
 from app.domain.estados import EstadoServicio, MomentoRequisito
 from app.models.contratista import ContratistaMandante
 from app.models.centro_trabajo import CentroTrabajo
+from app.models.expediente import Expediente
 from app.models.pilar import RequisitoDocumental
 from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
 from app.models.trabajador import Trabajador
@@ -290,8 +292,16 @@ def listar_servicios(
     db: Session,
     mandante_id: uuid.UUID | None = None,
     contratista_id: uuid.UUID | None = None,
+    incluir_archivados: bool = False,
 ) -> list[Servicio]:
-    """Lista servicios filtrando por mandante y/o contratista vía la relación."""
+    """
+    Lista servicios filtrando por mandante y/o contratista vía la relación.
+
+    Es el ÚNICO listado de servicios del backend y alimenta los dos portales, así
+    que este filtro es el que hace que archivar sirva de algo. El default es
+    False —fail-closed—: si alguien agrega un llamador nuevo y se olvida del
+    parámetro, el archivado se esconde, que es el comportamiento seguro.
+    """
     query = (
         db.query(Servicio)
         .join(ContratistaMandante)
@@ -308,6 +318,8 @@ def listar_servicios(
         query = query.filter(ContratistaMandante.mandante_id == mandante_id)
     if contratista_id:
         query = query.filter(ContratistaMandante.contratista_id == contratista_id)
+    if not incluir_archivados:
+        query = query.filter(Servicio.archivado_en.is_(None))
     return query.order_by(Servicio.created_at.desc()).all()
 
 
@@ -382,6 +394,12 @@ def cambiar_estado_servicio(db: Session, servicio_id: uuid.UUID, nuevo_estado: s
     except ValueError:
         raise EstadoServicioInvalido(f"Estado de servicio desconocido: {nuevo_estado}")
 
+    if servicio.archivado_en is not None:
+        # Sin esto se podría cambiarle el estado a algo que ya nadie ve, y peor:
+        # reactivar un archivado lo devolvería a la evaluación en silencio.
+        raise EstadoServicioInvalido(
+            "Ese servicio está archivado. Desarchívalo antes de cambiarle el estado."
+        )
     if servicio.estado == EstadoServicio.TERMINADO:
         raise EstadoServicioInvalido("Un servicio terminado no puede cambiar de estado.")
 
@@ -405,6 +423,129 @@ def cambiar_estado_servicio(db: Session, servicio_id: uuid.UUID, nuevo_estado: s
         db, servicio.relacion.contratista_id, servicio.relacion.mandante_id
     )
     return servicio
+
+
+def motivos_no_eliminable(db: Session, servicio_id: uuid.UUID) -> list[str]:
+    """
+    Por qué NO se puede borrar físicamente este servicio. Lista vacía = se puede.
+
+    Solo existen DOS claves foráneas hacia servicios.id en todo el esquema
+    —ServicioTrabajador.servicio_id y Expediente.servicio_id— y todo el historial
+    documental cuelga en segundo grado del expediente (entregas, archivos,
+    acreditaciones, eventos). Por eso bastan dos conteos.
+
+    Los dos son CRUDOS, sin filtrar por ningún flag, y eso es lo importante:
+
+    - ServicioTrabajador SIN filtrar `activo`. Desasignar es SOFT: pone
+      activo=False y deja la fila, que es el único registro de que esa persona
+      pisó esa faena. Y `listar_trabajadores_servicio` filtra activo=True, así
+      que un servicio que la interfaz muestra con CERO trabajadores puede tener
+      N filas vivas. Contar solo las activas sería exactamente el borrado que
+      destruye el rastro.
+
+    - Expediente SIN filtrar `eliminado_en`. Un expediente borrado lógicamente
+      sigue existiendo y sigue colgando sus entregas y archivos.
+
+    Además, `Expediente.servicio_id` es nullable: un DELETE no fallaría por FK,
+    dejaría expedientes huérfanos apuntando a la nada, en silencio. Por eso el
+    guard vive acá y no se delega a la base.
+    """
+    motivos: list[str] = []
+
+    n_asignaciones = (
+        db.query(ServicioTrabajador).filter_by(servicio_id=servicio_id).count()
+    )
+    if n_asignaciones:
+        motivos.append(
+            f"tiene {n_asignaciones} asignación(es) de trabajadores en su historial"
+        )
+
+    n_expedientes = db.query(Expediente).filter_by(servicio_id=servicio_id).count()
+    if n_expedientes:
+        motivos.append(f"tiene {n_expedientes} expediente(s) documental(es)")
+
+    return motivos
+
+
+def archivar_servicio(
+    db: Session,
+    servicio_id: uuid.UUID,
+    mandante_id: uuid.UUID,
+    usuario_id: uuid.UUID | None = None,
+) -> Servicio:
+    """
+    Saca el servicio de las listas sin tocar su historial ni su estado.
+
+    Solo se archiva lo que YA NO está ACTIVO, y esa invariante es lo que hace
+    que archivar sea seguro: el servicio ya estaba fuera de la evaluación antes
+    de archivarse, así que archivarlo no puede mover ningún número derivado.
+
+    Si se permitiera archivar un servicio ACTIVO, se lo estaría sacando de
+    `evaluar_relacion` y el contratista podría pasar de BLOQUEADA a ACREDITADA
+    sin que nadie subiera un documento.
+    """
+    servicio = obtener_servicio(db, servicio_id)
+    if servicio.relacion.mandante_id != mandante_id:
+        raise AsignacionInvalida("El servicio no pertenece a tu organización.")
+    if servicio.archivado_en is not None:
+        return servicio  # idempotente
+
+    if servicio.estado == EstadoServicio.ACTIVO:
+        raise EstadoServicioInvalido(
+            "Un servicio activo no se archiva: primero suspéndelo o termínalo. "
+            "Archivar solo lo esconde de la lista, no cierra el contrato."
+        )
+
+    servicio.archivado_en = datetime.now(timezone.utc)
+    servicio.archivado_por_usuario_id = usuario_id
+    db.commit()
+    db.refresh(servicio)
+    return servicio
+
+
+def desarchivar_servicio(
+    db: Session, servicio_id: uuid.UUID, mandante_id: uuid.UUID
+) -> Servicio:
+    """
+    Devuelve el servicio a las listas. El `estado` nunca se tocó, así que sigue
+    siendo el que era —SUSPENDIDO o TERMINADO— y desarchivar tampoco mueve nada
+    derivado.
+    """
+    servicio = obtener_servicio(db, servicio_id)
+    if servicio.relacion.mandante_id != mandante_id:
+        raise AsignacionInvalida("El servicio no pertenece a tu organización.")
+    servicio.archivado_en = None
+    servicio.archivado_por_usuario_id = None
+    db.commit()
+    db.refresh(servicio)
+    return servicio
+
+
+def eliminar_servicio(db: Session, servicio_id: uuid.UUID, mandante_id: uuid.UUID) -> None:
+    """
+    Borra físicamente un servicio que no dejó rastro.
+
+    Existe para el caso real que motivó la petición: un servicio creado por
+    error, con el nombre equivocado o duplicado, que ensucia la lista para
+    siempre. Ahí no hay nada que proteger.
+
+    Todo lo demás se ARCHIVA. Borrar un servicio con acreditaciones destruiría el
+    registro de qué se le exigió al contratista y qué entregó, que es lo que hace
+    defendible la acreditación ante una fiscalización.
+    """
+    servicio = obtener_servicio(db, servicio_id)
+    if servicio.relacion.mandante_id != mandante_id:
+        raise AsignacionInvalida("El servicio no pertenece a tu organización.")
+
+    motivos = motivos_no_eliminable(db, servicio_id)
+    if motivos:
+        raise ServicioNoVacio(
+            f"«{servicio.nombre}» no se puede eliminar porque {' y '.join(motivos)}. "
+            "Archívalo: sale de la lista y conserva el historial."
+        )
+
+    db.delete(servicio)
+    db.commit()
 
 
 # ── Asignación de trabajadores ────────────────────────────────────────────────

@@ -1,6 +1,9 @@
 import uuid
-from datetime import date
-from sqlalchemy import String, Boolean, Date, ForeignKey, Index, Integer, JSON, Numeric, Text, UniqueConstraint
+from datetime import date, datetime
+from sqlalchemy import (
+    and_, Boolean, Date, DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from decimal import Decimal
 from app.models.base import ModelBase
@@ -113,6 +116,29 @@ class Servicio(ModelBase):
     fecha_termino: Mapped[date | None] = mapped_column(Date, nullable=True)
     estado: Mapped[str] = mapped_column(String(20), default=EstadoServicio.ACTIVO, index=True)
 
+    # Archivado = "sácamelo de la lista". Es ORTOGONAL al estado y por eso NO es
+    # un cuarto EstadoServicio:
+    #
+    #   - TERMINADO es terminal (cambiar_estado_servicio lo bloquea), así que
+    #     como estado nunca se podría archivar un contrato terminado, que es
+    #     justamente el caso principal.
+    #   - Archivar pisaría el hecho de que el contrato terminó, y al desarchivar
+    #     no habría a qué volver.
+    #   - Y lo más grave: si archivar cambiara el estado, sacaría al servicio de
+    #     la evaluación y podría llevar al contratista de BLOQUEADA a ACREDITADA
+    #     sin que nadie subiera un documento.
+    #
+    # La invariante que impone servicio_service.archivar_servicio —solo se
+    # archiva lo que YA NO está ACTIVO— es lo que hace que archivar no pueda
+    # mover ningún número derivado: el servicio ya estaba fuera de la evaluación
+    # antes de archivarse.
+    archivado_en: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    archivado_por_usuario_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("usuarios.id"), nullable=True
+    )
+
     relacion: Mapped["ContratistaMandante"] = relationship(back_populates="servicios")
     centro_trabajo: Mapped["CentroTrabajo | None"] = relationship(back_populates="servicios")
     perfil: Mapped["PerfilRequisitos"] = relationship(back_populates="servicios")
@@ -120,12 +146,17 @@ class Servicio(ModelBase):
 
 
 # El código de referencia (n° de contrato/OC) es único por relación cuando existe
+# Un servicio archivado ya no ocupa su número de contrato: si se archivó el
+# duplicado creado por error, el bueno tiene que poder usar ese mismo código.
 Index(
     "uq_servicio_codigo_referencia",
     Servicio.contratista_mandante_id,
     Servicio.codigo_referencia,
     unique=True,
-    postgresql_where=Servicio.codigo_referencia.isnot(None),
+    postgresql_where=and_(
+        Servicio.codigo_referencia.isnot(None),
+        Servicio.archivado_en.is_(None),
+    ),
 )
 
 

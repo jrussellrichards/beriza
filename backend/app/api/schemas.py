@@ -442,6 +442,9 @@ class ServicioListItemResponse(BaseModel):
     # los centros; la UI los marca como "sin asignar" para que se completen.
     centro_trabajo_id: uuid.UUID | None = None
     centro_trabajo_nombre: str | None = None
+    # Cuando se archivo, o None si esta visible. El front lo usa para marcar la
+    # fila y para ofrecer desarchivar en vez de archivar.
+    archivado_en: datetime | None = None
     # Para el contratista el nombre del centro no basta: tiene que llevar gente
     # a un lugar físico y avisarle a alguien cuando llega. La dirección y el
     # encargado son datos que hoy se piden por WhatsApp fuera del sistema.

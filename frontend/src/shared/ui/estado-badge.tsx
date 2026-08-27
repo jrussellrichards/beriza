@@ -17,8 +17,17 @@ export type EstadoDoc =
 /** Estado agregado de la relación contratista ↔ mandante. */
 export type EstadoAgregado = "PENDIENTE" | "EN_PROCESO" | "ACREDITADA" | "BLOQUEADA"
 
-/** Ciclo de vida de un servicio. */
-export type EstadoServicio = "ACTIVO" | "SUSPENDIDO" | "TERMINADO"
+/**
+ * Ciclo de vida de un servicio.
+ *
+ * Se RE-EXPORTA en vez de declararse acá. Estaba escrito dos veces —aquí y en
+ * entities/servicio/types.ts— con los mismos tres valores, y eso hace que los
+ * `Record<EstadoServicio, …>` de este archivo no protejan lo que parece: al
+ * agregar un estado a una de las dos copias, la otra sigue compilando y el
+ * mapa de estilos se queda corto en silencio.
+ */
+export type { EstadoServicio } from "@/entities/servicio/types"
+import type { EstadoServicio } from "@/entities/servicio/types"
 
 export const ESTADO_NUM: Record<number, EstadoDoc> = {
   1: "ENVIADO",
@@ -252,7 +261,15 @@ export function EstadoServicioBadge({
   estado: EstadoServicio
   className?: string
 }) {
-  const e = ESTILO_SERVICIO[estado] ?? ESTILO_SERVICIO.TERMINADO
+  // Ojo con el fallback: antes era `?? ESTILO_SERVICIO.TERMINADO`, así que un
+  // estado desconocido se pintaba como "Terminado" —una afirmación falsa sobre
+  // un contrato, no un detalle visual—. Es la misma forma del despacho que
+  // fallaba abierto y aprobaba exámenes médicos solo. Ahora se muestra el valor
+  // crudo: feo a propósito, para que se note y se arregle.
+  const e: Estilo = ESTILO_SERVICIO[estado] ?? {
+    ...ESTILO_SERVICIO.SUSPENDIDO,
+    label: String(estado),
+  }
   return (
     <span
       className={cn(
