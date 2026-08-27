@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.schemas import (
@@ -28,7 +28,8 @@ from app.core.config import settings
 from app.core.exceptions import AsignacionInvalida, PermisoInsuficiente, RutInvalido
 from app.core.exceptions import PerfilNoEncontrado
 from app.domain import (
-    acreditacion_service, contratista_service, permiso_service, servicio_service, usuario_service,
+    acreditacion_service, contratista_service, permiso_service, rut_service,
+    servicio_service, usuario_service,
 )
 from app.domain.estados import EntidadTipo, EstadoDocumento
 from app.domain.reglas_service import VIGENCIA_DEFAULT_DIAS
@@ -209,6 +210,27 @@ def invitar_contratista(
     if not mandante:
         raise HTTPException(status_code=404, detail="Mandante no encontrado")
 
+    # El RUT se valida y se NORMALIZA antes de cualquier otra cosa. Las dos
+    # mitades importan:
+    #
+    # - Validar: sin esto se aceptaba un RUT con el dígito verificador cambiado,
+    #   y un RUT que no existe no sirve para contrastar contra ningún documento
+    #   oficial, que es exactamente para lo que el mandante lo guarda. Ya hay una
+    #   empresa así en producción.
+    #
+    # - Normalizar: la búsqueda de más abajo era `filter_by(rut=body.rut)`, un
+    #   string exacto, así que "77777777-7" y "77.777.777-7" eran dos empresas
+    #   DISTINTAS. Todo el modelo de reutilización depende de que una empresa sea
+    #   UNA fila: con dos, el contratista sube todo dos veces y sus documentos no
+    #   se comparten entre mandantes. Producción ya tiene los dos formatos
+    #   mezclados, así que el caso está vivo.
+    try:
+        rut_normalizado = rut_service.validar(body.rut)
+    except RutInvalido as e:
+        # El mensaje trae el motivo exacto —"debería terminar en 4"— y eso es lo
+        # que hay que mostrarle a quien está tecleando.
+        raise HTTPException(status_code=400, detail=str(e))
+
     # El RUT se resuelve ANTES que el email a propósito. Al revés —que es como
     # estaba— un mandante no podía sumar a su cartera a una empresa que ya
     # trabajaba para otro cliente: el email de su administrador ya existía y el
@@ -217,7 +239,18 @@ def invitar_contratista(
     # que un documento se suba una vez y sirva para todos los mandantes que lo
     # exijan: para eso el segundo mandante tiene que engancharse a la MISMA
     # empresa, no a una copia.
-    empresa_existente = db.query(EmpresaContratista).filter_by(rut=body.rut).first()
+    #
+    # Se busca por el normalizado Y por el crudo: las empresas dadas de alta
+    # antes de esta validación quedaron guardadas como las tecleó quien las
+    # invitó, y no encontrarlas crearía justamente el duplicado que esto evita.
+    empresa_existente = (
+        db.query(EmpresaContratista)
+        .filter(or_(
+            EmpresaContratista.rut == rut_normalizado,
+            EmpresaContratista.rut == body.rut.strip(),
+        ))
+        .first()
+    )
     usuario_existente = db.query(Usuario).filter_by(email=body.email).first()
 
     if empresa_existente:
@@ -251,7 +284,7 @@ def invitar_contratista(
         )
 
     if not empresa_existente:
-        empresa = EmpresaContratista(rut=body.rut, razon_social=body.razon_social)
+        empresa = EmpresaContratista(rut=rut_normalizado, razon_social=body.razon_social)
         db.add(empresa)
         db.flush()
         # Los datos de fiscalizacion solo se aplican cuando la empresa se CREA
