@@ -143,6 +143,10 @@ class Servicio(ModelBase):
     centro_trabajo: Mapped["CentroTrabajo | None"] = relationship(back_populates="servicios")
     perfil: Mapped["PerfilRequisitos"] = relationship(back_populates="servicios")
     trabajadores_asignados: Mapped[list["ServicioTrabajador"]] = relationship(back_populates="servicio")
+    eventos: Mapped[list["ServicioEvento"]] = relationship(
+        back_populates="servicio", order_by="ServicioEvento.created_at",
+        cascade="all, delete-orphan",
+    )
 
 
 # El código de referencia (n° de contrato/OC) es único por relación cuando existe
@@ -158,6 +162,39 @@ Index(
         Servicio.archivado_en.is_(None),
     ),
 )
+
+
+class ServicioEvento(ModelBase):
+    """
+    Bitácora append-only de un servicio: quién le cambió el estado, quién lo
+    archivó y quién lo reactivó.
+
+    No existía. Los documentos tenían su bitácora desde el principio
+    (AcreditacionEvento), pero el servicio —el contrato mismo— no dejaba rastro
+    de nada: se podía terminar una faena y nadie sabía después quién ni cuándo.
+
+    Hace falta ahora porque reactivar un servicio TERMINADO reabre un contrato
+    cerrado, y eso es exactamente la clase de acción por la que alguien pregunta
+    seis meses después. Sin registro, la respuesta sería "no sé".
+    """
+    __tablename__ = "servicio_eventos"
+
+    servicio_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("servicios.id"), nullable=False, index=True
+    )
+    tipo_evento: Mapped[str] = mapped_column(String(40), nullable=False)
+    estado_anterior: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    estado_nuevo: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    actor_usuario_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("usuarios.id"), nullable=True
+    )
+    # Por qué. Obligatorio solo al reactivar: reabrir un contrato cerrado es la
+    # acción por la que después preguntan, y "alguien lo reactivó" sin el motivo
+    # es medio registro.
+    motivo: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    servicio: Mapped["Servicio"] = relationship(back_populates="eventos")
+    actor: Mapped["Usuario | None"] = relationship()
 
 
 class ServicioTrabajador(ModelBase):

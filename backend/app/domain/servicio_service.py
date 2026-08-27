@@ -26,7 +26,9 @@ from app.models.contratista import ContratistaMandante
 from app.models.centro_trabajo import CentroTrabajo
 from app.models.expediente import Expediente
 from app.models.pilar import RequisitoDocumental
-from app.models.servicio import PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioTrabajador
+from app.models.servicio import (
+    PerfilRequisitos, PerfilRequisitoConfig, Servicio, ServicioEvento, ServicioTrabajador,
+)
 from app.models.trabajador import Trabajador
 
 logger = logging.getLogger("acredita")
@@ -386,7 +388,32 @@ def actualizar_servicio(
     return servicio
 
 
-def cambiar_estado_servicio(db: Session, servicio_id: uuid.UUID, nuevo_estado: str) -> Servicio:
+def _registrar_evento(
+    db: Session,
+    servicio: Servicio,
+    tipo: str,
+    estado_anterior: str | None = None,
+    estado_nuevo: str | None = None,
+    actor_usuario_id: uuid.UUID | None = None,
+    motivo: str | None = None,
+) -> None:
+    """Deja constancia en la bitácora del servicio. No commitea: lo hace el llamador."""
+    db.add(ServicioEvento(
+        servicio_id=servicio.id,
+        tipo_evento=tipo,
+        estado_anterior=estado_anterior,
+        estado_nuevo=estado_nuevo,
+        actor_usuario_id=actor_usuario_id,
+        motivo=motivo,
+    ))
+
+
+def cambiar_estado_servicio(
+    db: Session,
+    servicio_id: uuid.UUID,
+    nuevo_estado: str,
+    actor_usuario_id: uuid.UUID | None = None,
+) -> Servicio:
     """Cambia el estado del servicio. Un servicio TERMINADO no puede reactivarse."""
     servicio = obtener_servicio(db, servicio_id)
     try:
@@ -403,9 +430,15 @@ def cambiar_estado_servicio(db: Session, servicio_id: uuid.UUID, nuevo_estado: s
     if servicio.estado == EstadoServicio.TERMINADO:
         raise EstadoServicioInvalido("Un servicio terminado no puede cambiar de estado.")
 
+    anterior = servicio.estado
     servicio.estado = nuevo
     if nuevo == EstadoServicio.TERMINADO and servicio.fecha_termino is None:
         servicio.fecha_termino = date.today()
+    _registrar_evento(
+        db, servicio, "CAMBIO_ESTADO",
+        estado_anterior=anterior, estado_nuevo=nuevo,
+        actor_usuario_id=actor_usuario_id,
+    )
     db.commit()
     db.refresh(servicio)
 
@@ -423,6 +456,97 @@ def cambiar_estado_servicio(db: Session, servicio_id: uuid.UUID, nuevo_estado: s
         db, servicio.relacion.contratista_id, servicio.relacion.mandante_id
     )
     return servicio
+
+
+def reactivar_servicio(
+    db: Session,
+    servicio_id: uuid.UUID,
+    mandante_id: uuid.UUID,
+    motivo: str,
+    actor_usuario_id: uuid.UUID | None = None,
+) -> Servicio:
+    """
+    Reabre un servicio TERMINADO.
+
+    Existe por dos situaciones reales que antes no tenían salida:
+
+      1. Alguien apretó «Terminar» queriendo «Suspender». Están uno al lado del
+         otro y no había vuelta atrás.
+      2. El contrato se reactivó de verdad: se extendió la obra, volvió el
+         contratista a la misma faena.
+
+    En los dos casos la única alternativa era crear un servicio nuevo desde
+    cero, y con eso se perdía el historial de acreditación del anterior —quién
+    estaba habilitado, qué documentos se aprobaron y cuándo—. Se perdía justo lo
+    que el producto existe para conservar.
+
+    EL MOTIVO ES OBLIGATORIO. Reabrir un contrato cerrado es la clase de acción
+    por la que alguien pregunta seis meses después, y "alguien lo reactivó" sin
+    el porqué es medio registro. Son cinco segundos de escribir contra una
+    pregunta que no se va a poder responder nunca más.
+
+    Vuelve a ACTIVO y no al estado que tenía antes de terminarse: reactivar
+    significa que la faena opera otra vez. Si lo que se quiere es dejarlo en
+    pausa, se reactiva y después se suspende — dos pasos explícitos en vez de
+    uno que adivina.
+
+    Al volver a ACTIVO, el servicio vuelve a la evaluación y sus exigencias
+    vuelven a contar. cambiar_estado_servicio ya recalcula el agregado, así que
+    un contratista con brechas vuelve a figurar bloqueado de inmediato: eso es
+    lo correcto, y es la razón de que reactivar no sea gratis.
+    """
+    motivo = (motivo or "").strip()
+    if not motivo:
+        raise AsignacionInvalida(
+            "Para reabrir un contrato cerrado hay que decir por qué. "
+            "Queda en la bitácora del servicio."
+        )
+
+    servicio = obtener_servicio(db, servicio_id)
+    if servicio.relacion.mandante_id != mandante_id:
+        raise AsignacionInvalida("El servicio no pertenece a tu organización.")
+    if servicio.archivado_en is not None:
+        raise EstadoServicioInvalido(
+            "Ese servicio está archivado. Desarchívalo antes de reactivarlo."
+        )
+    if servicio.estado != EstadoServicio.TERMINADO:
+        raise EstadoServicioInvalido(
+            f"«{servicio.nombre}» no está terminado, así que no hay nada que reabrir. "
+            "Para volver a activarlo desde suspendido, usa Reactivar en las acciones "
+            "de estado."
+        )
+
+    servicio.estado = EstadoServicio.ACTIVO
+    # La fecha de término se limpia: si el contrato volvió a estar vigente, la
+    # fecha en que se cerró ya no describe nada. Queda en la bitácora.
+    fecha_cierre = servicio.fecha_termino
+    servicio.fecha_termino = None
+    _registrar_evento(
+        db, servicio, "REACTIVADO",
+        estado_anterior=EstadoServicio.TERMINADO,
+        estado_nuevo=EstadoServicio.ACTIVO,
+        actor_usuario_id=actor_usuario_id,
+        motivo=f"{motivo} (cerrado el {fecha_cierre})" if fecha_cierre else motivo,
+    )
+    db.commit()
+    db.refresh(servicio)
+
+    # Volvió a la evaluación: sus exigencias cuentan otra vez.
+    from app.domain import acreditacion_service
+    acreditacion_service.recalcular_estado_global(
+        db, servicio.relacion.contratista_id, servicio.relacion.mandante_id
+    )
+    return servicio
+
+
+def historial_servicio(db: Session, servicio_id: uuid.UUID) -> list[ServicioEvento]:
+    """Bitácora del servicio, de lo más antiguo a lo más nuevo."""
+    return (
+        db.query(ServicioEvento)
+        .filter_by(servicio_id=servicio_id)
+        .order_by(ServicioEvento.created_at.asc())
+        .all()
+    )
 
 
 def motivos_no_eliminable(db: Session, servicio_id: uuid.UUID) -> list[str]:
@@ -498,6 +622,7 @@ def archivar_servicio(
 
     servicio.archivado_en = datetime.now(timezone.utc)
     servicio.archivado_por_usuario_id = usuario_id
+    _registrar_evento(db, servicio, "ARCHIVADO", actor_usuario_id=usuario_id)
     db.commit()
     db.refresh(servicio)
     return servicio
@@ -516,6 +641,7 @@ def desarchivar_servicio(
         raise AsignacionInvalida("El servicio no pertenece a tu organización.")
     servicio.archivado_en = None
     servicio.archivado_por_usuario_id = None
+    _registrar_evento(db, servicio, "DESARCHIVADO")
     db.commit()
     db.refresh(servicio)
     return servicio

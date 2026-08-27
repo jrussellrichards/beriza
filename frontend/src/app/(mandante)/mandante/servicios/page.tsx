@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   Archive, ArchiveRestore, Briefcase, ChevronRight, MapPin, Pause, Pencil, Play, Plus,
-  Search, Square, Trash2, X,
+  RotateCcw, Search, Square, Trash2, X,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { EstadoServicioBadge, LABEL_SERVICIO } from "@/shared/ui/estado-badge"
@@ -20,6 +20,85 @@ function initials(name: string) {
 
 // ── Panel detalle ─────────────────────────────────────────────────────────────
 
+interface ServicioEvento {
+  tipo_evento: string
+  estado_anterior: string | null
+  estado_nuevo: string | null
+  motivo: string | null
+  actor_nombre: string | null
+  created_at: string
+}
+
+const LABEL_EVENTO: Record<string, string> = {
+  CAMBIO_ESTADO: "Cambio de estado",
+  REACTIVADO: "Reabierto",
+  ARCHIVADO: "Archivado",
+  DESARCHIVADO: "Desarchivado",
+}
+
+/**
+ * Bitácora del servicio: qué se le hizo, quién y cuándo.
+ *
+ * Se carga bajo demanda y no con el panel: es información de consulta, no algo
+ * que se mire en cada apertura, y traerla siempre sería una consulta por cada
+ * clic en la lista.
+ */
+function Bitacora({ servicioId }: { servicioId: string }) {
+  const [eventos, setEventos] = useState<ServicioEvento[] | null>(null)
+  const [abierta, setAbierta] = useState(false)
+
+  useEffect(() => {
+    if (!abierta || eventos) return
+    api.get<ServicioEvento[]>(`/api/v1/servicios/${servicioId}/historial`)
+      .then(setEventos)
+      .catch(() => setEventos([]))
+  }, [abierta, eventos, servicioId])
+
+  return (
+    <div className="border-t border-line-subtle pt-3 mt-3">
+      <button
+        onClick={() => setAbierta((v) => !v)}
+        aria-expanded={abierta}
+        className="flex items-center gap-1.5 text-micro font-medium text-ink-muted hover:text-ink transition-colors"
+      >
+        <ChevronRight size={13} className={cn("transition-transform", abierta && "rotate-90")} />
+        Bitácora del servicio
+      </button>
+
+      {abierta && (
+        <div className="mt-2.5 space-y-2">
+          {eventos === null && <p className="text-meta text-ink-subtle">Cargando...</p>}
+          {eventos?.length === 0 && (
+            <p className="text-meta text-ink-subtle">
+              Sin movimientos registrados. La bitácora empezó a llevarse en agosto de 2026.
+            </p>
+          )}
+          {eventos?.map((e, i) => (
+            <div key={i} className="text-[11px] border-l-2 border-line-subtle pl-2.5">
+              <p className="text-ink-muted font-medium">
+                {LABEL_EVENTO[e.tipo_evento] ?? e.tipo_evento}
+                {e.estado_anterior && e.estado_nuevo && (
+                  <span className="font-normal text-ink-subtle">
+                    {" "}· {LABEL_SERVICIO[e.estado_anterior as EstadoServicio] ?? e.estado_anterior}
+                    {" → "}
+                    {LABEL_SERVICIO[e.estado_nuevo as EstadoServicio] ?? e.estado_nuevo}
+                  </span>
+                )}
+              </p>
+              <p className="text-ink-subtle">
+                {new Date(e.created_at).toLocaleString("es-CL")}
+                {e.actor_nombre ? ` · ${e.actor_nombre}` : ""}
+              </p>
+              {e.motivo && <p className="text-ink-muted mt-0.5 italic">«{e.motivo}»</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 function DetailPanel({ s, onClose, onEstadoCambiado }: {
   s: Servicio
   onClose: () => void
@@ -31,6 +110,23 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
   const [editando, setEditando] = useState(false)
 
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false)
+  const [reabriendo, setReabriendo] = useState(false)
+  const [motivo, setMotivo] = useState("")
+
+  async function reabrir() {
+    setCambiando(true)
+    setError(null)
+    try {
+      await api.post(`/api/v1/servicios/${s.id}/reactivar`, { motivo })
+      setReabriendo(false)
+      setMotivo("")
+      onEstadoCambiado()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo reabrir")
+    } finally {
+      setCambiando(false)
+    }
+  }
 
   async function accion(cual: "archivar" | "desarchivar") {
     setCambiando(true)
@@ -163,6 +259,20 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
             </button>
           ) : null}
 
+          {/* Reabrir solo aparece en un TERMINADO no archivado. Antes, terminar
+              era irreversible y la única salida era crear un servicio nuevo,
+              perdiendo el historial de acreditación del anterior. */}
+          {s.estado === "TERMINADO" && !s.archivado_en && (
+            <button
+              onClick={() => setReabriendo(true)}
+              disabled={cambiando}
+              className="flex items-center gap-1.5 text-micro font-medium text-ok-ink border border-ok-line bg-ok-soft hover:bg-ok-soft px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
+              title="Vuelve a estar activo. Queda registrado quién y por qué."
+            >
+              <RotateCcw size={11} /> Reabrir
+            </button>
+          )}
+
           <button
             onClick={() => setConfirmandoBorrado(true)}
             disabled={cambiando}
@@ -207,6 +317,7 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
       {/* Avance */}
       <div className="flex-1 overflow-y-auto px-5 py-4">
         <AvancePanel servicioId={s.id} />
+        <Bitacora servicioId={s.id} />
       </div>
 
       {asignandoCentro && (
@@ -225,6 +336,66 @@ function DetailPanel({ s, onClose, onEstadoCambiado }: {
           onClose={() => setEditando(false)}
           onGuardado={() => { setEditando(false); onEstadoCambiado() }}
         />
+      )}
+
+      {/* Reabrir pide el motivo, y no es burocracia: es la pregunta que alguien
+          va a hacer seis meses después mirando por qué un contrato cerrado
+          volvió a estar vigente. Cinco segundos ahora contra una respuesta que
+          después no existe. */}
+      {reabriendo && (
+        <div
+          className="fixed inset-0 bg-surface-inverse/40 z-50 flex items-center justify-center p-4"
+          onClick={() => setReabriendo(false)}
+        >
+          <div className="bg-surface rounded-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-line-subtle">
+              <p className="text-strong font-semibold text-ink">Reabrir servicio</p>
+              <p className="text-meta text-ink-subtle mt-0.5 truncate">{s.nombre}</p>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-body text-ink-secondary">
+                Vuelve a estar activo y sus requisitos se exigen otra vez, así que el
+                contratista puede volver a figurar con brechas de inmediato.
+              </p>
+              <div className="space-y-1.5">
+                <label htmlFor="motivo-reabrir" className="text-strong font-medium text-ink-secondary block">
+                  ¿Por qué se reabre?
+                </label>
+                <textarea
+                  id="motivo-reabrir"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  rows={3}
+                  placeholder="Se extendió la obra hasta diciembre / se cerró por error"
+                  className="w-full px-3 py-2.5 text-body border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 resize-none"
+                />
+                <p className="text-[10px] text-ink-subtle">
+                  Queda en la bitácora del servicio, junto a quién y cuándo.
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-line-subtle flex gap-2">
+              <button
+                onClick={() => setReabriendo(false)}
+                className="flex-1 py-2.5 rounded-lg text-strong font-medium border border-line text-ink-muted hover:bg-surface-app transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={reabrir}
+                disabled={cambiando || motivo.trim() === ""}
+                className={cn(
+                  "flex-1 py-2.5 rounded-lg text-strong font-medium transition-colors",
+                  cambiando || motivo.trim() === ""
+                    ? "bg-line text-ink-subtle cursor-not-allowed"
+                    : "bg-surface-inverse text-white hover:bg-surface-inverse-hover",
+                )}
+              >
+                {cambiando ? "Reabriendo..." : "Reabrir"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Confirmación explícita: eliminar es lo único irreversible de esta

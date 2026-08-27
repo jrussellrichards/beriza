@@ -421,6 +421,22 @@ class ActualizarServicioRequest(BaseModel):
     fecha_termino: date | None = None
 
 
+class ReactivarServicioRequest(BaseModel):
+    """El motivo es obligatorio: reabrir un contrato cerrado es lo que despues preguntan."""
+    motivo: str
+
+
+class ServicioEventoResponse(BaseModel):
+    tipo_evento: str
+    estado_anterior: str | None
+    estado_nuevo: str | None
+    motivo: str | None
+    actor_nombre: str | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class ServicioListItemResponse(BaseModel):
     """Item del listado de servicios, enriquecido con contratista y perfil."""
     id: uuid.UUID
