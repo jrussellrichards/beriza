@@ -26,10 +26,10 @@ from app.api.schemas import (
 )
 from app.core.config import settings
 from app.core.exceptions import AsignacionInvalida, PermisoInsuficiente, RutInvalido
-from app.core.exceptions import PerfilNoEncontrado
+from app.core.exceptions import ContratistaNoEncontrado, PerfilNoEncontrado, VinculoEnUso
 from app.domain import (
     acreditacion_service, contratista_service, permiso_service, rut_service,
-    servicio_service, usuario_service,
+    servicio_service, usuario_service, vinculo_service,
 )
 from app.domain.estados import EntidadTipo, EstadoDocumento
 from app.domain.reglas_service import VIGENCIA_DEFAULT_DIAS
@@ -338,23 +338,23 @@ def invitar_contratista(
 @router.get("/{mandante_id}/contratistas")
 def listar_contratistas(
     mandante_id: uuid.UUID,
+    incluir_archivados: bool = False,
     db: Session = Depends(get_db),
     usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """Lista todas las empresas contratistas vinculadas a este mandante con su estado global."""
-    relaciones = (
-        db.query(ContratistaMandante)
-        .filter_by(mandante_id=mandante_id)
-        .all()
-    )
+    q = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id)
+    if not incluir_archivados:
+        q = q.filter(ContratistaMandante.archivado_en.is_(None))
     return [
         {
             "contratista_id": str(r.contratista_id),
             "razon_social": r.contratista.razon_social,
             "rut": r.contratista.rut,
             "estado_acreditacion": r.estado_acreditacion,
+            "archivado_en": r.archivado_en.isoformat() if r.archivado_en else None,
         }
-        for r in relaciones
+        for r in q.all()
     ]
 
 
@@ -429,17 +429,95 @@ def actualizar_datos_contratista(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/{mandante_id}/contratistas/{contratista_id}/archivar")
+def archivar_contratista(
+    mandante_id: uuid.UUID,
+    contratista_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Saca al contratista de la lista sin perder su historial.
+
+    Es la salida para la relación comercial que terminó. Solo se archiva un
+    vínculo SIN servicios activos: si los tiene, responde 409 — esconder de la
+    lista a una empresa que está en faena hoy es justo lo que no puede pasar.
+    """
+    try:
+        vinculo = vinculo_service.archivar(db, mandante_id, contratista_id, usuario.id)
+    except ContratistaNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except VinculoEnUso as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return {
+        "mensaje": f"{vinculo.contratista.razon_social} quedó archivado",
+        "archivado_en": vinculo.archivado_en.isoformat() if vinculo.archivado_en else None,
+    }
+
+
+@router.post("/{mandante_id}/contratistas/{contratista_id}/desarchivar")
+def desarchivar_contratista(
+    mandante_id: uuid.UUID,
+    contratista_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+):
+    """Devuelve el contratista a la lista. No toca su estado de acreditación."""
+    try:
+        vinculo = vinculo_service.desarchivar(db, mandante_id, contratista_id)
+    except ContratistaNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"mensaje": f"{vinculo.contratista.razon_social} volvió a la lista"}
+
+
+@router.delete(
+    "/{mandante_id}/contratistas/{contratista_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def eliminar_vinculo_contratista(
+    mandante_id: uuid.UUID,
+    contratista_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Elimina el vínculo con un contratista que nunca llegó a trabajar acá.
+
+    Borra el VÍNCULO, jamás la empresa: `EmpresaContratista` es una sola fila en
+    la plataforma y puede estar acreditándose con otros mandantes.
+
+    Si el vínculo dejó rastro —servicios o documentos acreditados— responde 409
+    diciendo qué lo retiene y ofreciendo archivar. Un 400 sonaría a "mandaste
+    algo mal", y acá el pedido está bien formado: es el estado del vínculo el que
+    no permite la acción.
+    """
+    try:
+        vinculo_service.eliminar(db, mandante_id, contratista_id)
+    except ContratistaNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except VinculoEnUso as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
 @router.get("/{mandante_id}/contratistas-detalle")
 def contratistas_detalle(
     mandante_id: uuid.UUID,
+    incluir_archivados: bool = False,
     db: Session = Depends(get_db),
     usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """
     Lista completa de contratistas con pilares, documentos y trabajadores,
     evaluados contra los perfiles de sus servicios activos.
+
+    Los archivados quedan fuera salvo que se pidan: un vínculo archivado no tiene
+    servicios activos —lo exige vinculo_service.archivar—, así que no aporta
+    brechas ni cambia ningún número; solo ensucia la lista.
     """
-    rels = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id).all()
+    q = db.query(ContratistaMandante).filter_by(mandante_id=mandante_id)
+    if not incluir_archivados:
+        q = q.filter(ContratistaMandante.archivado_en.is_(None))
+    rels = q.all()
     resultado = []
 
     def _doc_dict(item) -> dict:
@@ -507,6 +585,9 @@ def contratistas_detalle(
             "representante_legal_rut": empresa.representante_legal_rut,
             "representante_legal_telefono": empresa.representante_legal_telefono,
             "estado_acreditacion": rel.estado_acreditacion,
+            # Cuándo se archivó el vínculo, o null si está visible. Archivar es
+            # ortogonal al estado de acreditación, que se sigue calculando igual.
+            "archivado_en": rel.archivado_en.isoformat() if rel.archivado_en else None,
             "total_trabajadores": len(trabajadores_data),
             "pilares": pilares_data,
             "trabajadores": trabajadores_data,

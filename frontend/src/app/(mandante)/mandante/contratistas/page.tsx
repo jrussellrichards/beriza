@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  AlertCircle, Briefcase, CheckCircle2, ChevronRight,
-  FileText, History, Plus, Search, ShieldCheck, Users, X,
+  AlertCircle, Archive, ArchiveRestore, Briefcase, CheckCircle2, ChevronRight,
+  FileText, History, Plus, Search, ShieldCheck, Trash2, Users, X,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import {
@@ -71,6 +71,9 @@ interface Contratista {
   representante_legal_rut: string | null
   representante_legal_telefono: string | null
   estado_acreditacion: EstadoGlobal
+  /** Cuándo se archivó el vínculo, o null si está visible. Es ortogonal al
+   *  estado de acreditación, que se sigue calculando igual. */
+  archivado_en: string | null
   total_trabajadores: number
   pilares: PilarDetalle[]
   trabajadores: TrabajadorDetalle[]
@@ -320,6 +323,112 @@ function FichaEmpresa({ c }: { c: Contratista }) {
 }
 
 
+/**
+ * Archivar, desarchivar o eliminar el vínculo con este contratista.
+ *
+ * El hueco que cierra: un mandante podía invitar a una empresa y después no
+ * tenía cómo sacarla, ni cuando invitaba a la equivocada ni cuando la relación
+ * comercial terminaba.
+ *
+ * Toma el mandante de la sesión y no de una prop, igual que el resto de las
+ * pantallas: así el panel que la contiene no necesita saber que estas acciones
+ * existen.
+ */
+function AccionesVinculo({ c, onCambio }: { c: Contratista; onCambio: () => void }) {
+  const [confirmando, setConfirmando] = useState(false)
+  const [ocupado, setOcupado] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const mandanteId = getSession()?.mandante_id
+  const archivado = c.archivado_en !== null
+
+  if (!mandanteId) return null
+  const base = `/api/v1/mandantes/${mandanteId}/contratistas/${c.id}`
+
+  async function accion(fn: () => Promise<unknown>) {
+    setOcupado(true)
+    setError(null)
+    try {
+      await fn()
+      onCambio()
+    } catch (e) {
+      // El backend responde 409 con el motivo exacto —cuántos servicios o
+      // documentos lo retienen, o que está en faena hoy— y la salida. Se muestra
+      // tal cual porque es accionable.
+      setError(e instanceof Error ? e.message : "No se pudo completar la acción")
+    } finally {
+      setOcupado(false)
+      setConfirmando(false)
+    }
+  }
+
+  const botonCls = "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-micro font-medium border border-line text-ink-muted hover:text-ink hover:bg-surface disabled:opacity-50 transition-colors"
+
+  return (
+    <div className="rounded-lg border border-line-subtle bg-surface-app p-3 space-y-2">
+      <p className="text-[10px] text-ink-subtle font-medium uppercase tracking-wide">
+        Vínculo con tu organización
+      </p>
+
+      {error && (
+        <p className="text-meta text-bloqueo-ink bg-bloqueo-soft border border-bloqueo-line rounded-md px-2.5 py-2">
+          {error}
+        </p>
+      )}
+
+      {confirmando ? (
+        <div className="space-y-2">
+          <p className="text-meta text-ink-secondary">
+            Solo se elimina un contratista que nunca llegó a trabajar contigo: sin servicios
+            y sin documentos acreditados. Si dejó rastro no se borra y te decimos qué lo
+            retiene. <span className="font-medium text-ink">La empresa no se borra</span> —
+            solo se corta tu vínculo con ella.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => accion(() => api.delete(base))}
+              disabled={ocupado}
+              className="px-2.5 py-1.5 rounded-md text-micro font-medium bg-bloqueo-soft text-bloqueo-ink border border-bloqueo-line hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {ocupado ? "Eliminando..." : "Sí, eliminar"}
+            </button>
+            <button onClick={() => setConfirmando(false)} disabled={ocupado} className={botonCls}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => accion(() => api.post(`${base}/${archivado ? "desarchivar" : "archivar"}`, {}))}
+            disabled={ocupado}
+            className={botonCls}
+            title={archivado
+              ? "Vuelve a la lista de contratistas"
+              : "Sale de la lista y conserva todo su historial"}
+          >
+            {archivado ? <ArchiveRestore size={12} /> : <Archive size={12} />}
+            {archivado ? "Desarchivar" : "Archivar"}
+          </button>
+          <button
+            onClick={() => { setError(null); setConfirmando(true) }}
+            disabled={ocupado}
+            className={botonCls}
+          >
+            <Trash2 size={12} /> Eliminar
+          </button>
+        </div>
+      )}
+
+      <p className="text-[10px] text-ink-subtle">
+        {archivado
+          ? "Archivado: no aparece en la lista salvo que actives «Ver archivados»."
+          : "Archivar lo saca de la lista sin perder nada. Solo se puede si no tiene servicios activos."}
+      </p>
+    </div>
+  )
+}
+
+
 function DetailPanel({ c, onClose, onCambio }: {
   c: Contratista
   onClose: () => void
@@ -442,6 +551,7 @@ function DetailPanel({ c, onClose, onCambio }: {
                 Sin servicios activos — no hay requisitos exigibles para esta empresa todavía.
               </p>
             )}
+            <AccionesVinculo c={c} onCambio={onCambio} />
           </div>
         )}
 
@@ -619,13 +729,18 @@ export default function ContratistasPage() {
   const [mandanteId, setMandanteId] = useState<string | null>(null)
   const [invitado, setInvitado] = useState(false)
 
+  // Los archivados quedan fuera por defecto. Se piden explícitamente, igual que
+  // en la pantalla de servicios.
+  const [verArchivados, setVerArchivados] = useState(false)
+
   const cargar = useCallback((mid: string) => {
     setLoading(true)
-    api.get<Contratista[]>(`/api/v1/mandantes/${mid}/contratistas-detalle`)
+    const q = verArchivados ? "?incluir_archivados=true" : ""
+    api.get<Contratista[]>(`/api/v1/mandantes/${mid}/contratistas-detalle${q}`)
       .then((data) => { setContratistas(data); setError(null) })
       .catch((e) => setError(e instanceof Error ? e.message : "Error al cargar"))
       .finally(() => setLoading(false))
-  }, [])
+  }, [verArchivados])
 
   useEffect(() => {
     const s = getSession()
@@ -735,6 +850,18 @@ export default function ContratistasPage() {
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => setVerArchivados(v => !v)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-micro font-medium border transition-colors",
+                verArchivados
+                  ? "border-ink bg-surface-inverse text-white"
+                  : "border-line text-ink-muted hover:text-ink hover:border-line-strong",
+              )}
+            >
+              <Archive size={12} />
+              {verArchivados ? "Ocultar archivados" : "Ver archivados"}
+            </button>
             <p className="text-meta text-ink-subtle ml-auto">{filtrados.length} de {contratistas.length}</p>
           </div>
 
@@ -771,6 +898,13 @@ export default function ContratistasPage() {
                             {initials(c.razon_social)}
                           </div>
                           <span className="font-medium text-ink truncate max-w-[180px]">{c.razon_social}</span>
+                          {/* Solo aparecen con "Ver archivados" activo, pero sin
+                              la marca no se distinguen de los vigentes. */}
+                          {c.archivado_en && (
+                            <span className="inline-flex items-center gap-1 shrink-0 text-[10px] text-ink-subtle">
+                              <Archive size={10} /> archivado
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3.5 text-ink-muted font-mono text-meta">{c.rut}</td>
