@@ -61,6 +61,17 @@ class PerfilNoEncontrado(AcreditaError):
     pass
 
 
+class PerfilEnUso(AcreditaError):
+    """
+    El perfil lo referencia al menos un servicio y no puede borrarse.
+
+    Cada servicio necesita su perfil para saber qué documentos exige; borrarlo
+    dejaría al servicio apuntando a la nada. Los perfiles de prueba, que no tiene
+    ningún servicio, sí se pueden eliminar.
+    """
+    pass
+
+
 class ServicioNoVacio(AcreditaError):
     """
     El servicio tiene historial y no puede borrarse fisicamente.

@@ -303,6 +303,12 @@ class CrearPerfilRequest(BaseModel):
     copiar_de_perfil_id: uuid.UUID | None = None
 
 
+class ActualizarPerfilRequest(BaseModel):
+    """Renombrar un perfil o cambiar su descripción. Solo viaja lo que cambia."""
+    nombre: str | None = None
+    descripcion: str | None = None
+
+
 class ConfigurarRequisitoPerfilRequest(BaseModel):
     requisito_documental_id: uuid.UUID
     es_obligatorio: bool = True
