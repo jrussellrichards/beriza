@@ -584,7 +584,10 @@ def listar_requisitos_mandante(
     mandante_id: uuid.UUID,
     perfil_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
-    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+    # El prevencionista también lo LEE: revisa documentos contra estas exigencias
+    # y necesita ver qué se pide. Editar el perfil sigue siendo solo de los
+    # administradores —esos endpoints no cambian—, así que ver no habilita tocar.
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin", "prevencionista"])),
 ):
     """
     Catálogo de pilares/requisitos con la config del perfil superpuesta.
@@ -665,7 +668,9 @@ def listar_requisitos_mandante(
 def listar_perfiles(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+    # Lo lee también el prevencionista (ver listar_requisitos_mandante): ver los
+    # perfiles no habilita editarlos, que sigue siendo solo de administradores.
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin", "prevencionista"])),
 ):
     """Perfiles de requisitos del mandante (plantillas de exigencias por tipo de servicio)."""
     perfiles = servicio_service.listar_perfiles(db, mandante_id)
@@ -831,7 +836,7 @@ def definir_cargos_requisito(
     requisito_id: uuid.UUID,
     body: DefinirCargosRequisitoRequest,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario: Usuario = Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """
     A qué cargos aplica este requisito dentro del perfil.
@@ -850,8 +855,6 @@ def definir_cargos_requisito(
         raise HTTPException(status_code=404, detail=str(e))
     if perfil.mandante_id != mandante_id:
         raise HTTPException(status_code=403, detail="El perfil no pertenece a este mandante")
-    if usuario.mandante_id and usuario.mandante_id != mandante_id:
-        raise HTTPException(status_code=403, detail="Solo puede configurar perfiles de su propio mandante")
 
     requisito = db.get(RequisitoDocumental, requisito_id)
     if not requisito:
