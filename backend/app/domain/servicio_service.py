@@ -16,6 +16,7 @@ from app.core.exceptions import (
     AsignacionInvalida,
     ContratistaNoEncontrado,
     EstadoServicioInvalido,
+    PerfilEnUso,
     PerfilNoEncontrado,
     ServicioNoEncontrado,
     ServicioNoVacio,
@@ -108,6 +109,102 @@ def quitar_requisito_perfil(
     if config:
         db.delete(config)
         db.commit()
+
+
+def renombrar_perfil(
+    db: Session,
+    perfil_id: uuid.UUID,
+    mandante_id: uuid.UUID,
+    nombre: str | None = None,
+    descripcion: str | None = None,
+) -> PerfilRequisitos:
+    """
+    Cambia el nombre o la descripción de un perfil. Edición parcial: lo que no
+    viaja no se toca.
+
+    Existe porque un perfil creado con el nombre equivocado se quedaba así para
+    siempre —la única salida era crear otro y abandonar el primero, que además no
+    se podía borrar—. El nombre es único por mandante; un choque se rechaza con
+    su motivo en vez de reventar por integridad más tarde.
+
+    `mandante_id` no es decorativo: sin comprobarlo, cualquier mandante_admin
+    renombraría el perfil de otra organización conociendo su id.
+    """
+    perfil = obtener_perfil(db, perfil_id)
+    if perfil.mandante_id != mandante_id:
+        raise AsignacionInvalida("El perfil no pertenece a tu organización.")
+
+    if nombre is not None:
+        nombre = nombre.strip()
+        if not nombre:
+            raise AsignacionInvalida("El perfil necesita un nombre.")
+        choque = (
+            db.query(PerfilRequisitos)
+            .filter(
+                PerfilRequisitos.mandante_id == mandante_id,
+                PerfilRequisitos.nombre == nombre,
+                PerfilRequisitos.id != perfil_id,
+            )
+            .first()
+        )
+        if choque is not None:
+            raise AsignacionInvalida(f"Ya tienes un perfil llamado «{nombre}».")
+        perfil.nombre = nombre
+
+    if descripcion is not None:
+        perfil.descripcion = descripcion.strip() or None
+
+    db.commit()
+    db.refresh(perfil)
+    return perfil
+
+
+def servicios_que_usan_perfil(db: Session, perfil_id: uuid.UUID) -> int:
+    """
+    Cuántos servicios referencian este perfil, en cualquier estado.
+
+    Sin filtrar por estado ni por archivado a propósito: un servicio TERMINADO o
+    archivado sigue apuntando al perfil por su FK, y borrar el perfil lo dejaría
+    huérfano igual. La pregunta no es "¿está activo?", es "¿alguien lo apunta?".
+    """
+    return db.query(Servicio).filter_by(perfil_requisitos_id=perfil_id).count()
+
+
+def eliminar_perfil(db: Session, perfil_id: uuid.UUID, mandante_id: uuid.UUID) -> None:
+    """
+    Borra un perfil que ningún servicio usa.
+
+    Es el caso que motivó la petición: perfiles de prueba creados mientras se
+    aprendía la pantalla, que ensucian el selector y no se podían sacar. Ahí no
+    hay nada que proteger.
+
+    Si algún servicio lo referencia, se rechaza con PerfilEnUso: cada servicio
+    necesita su perfil para saber qué exige, y borrarlo lo dejaría apuntando a la
+    nada. Para corregir un nombre malo está renombrar, que no destruye nada.
+
+    Se borran primero las filas de configuración del perfil —y con ellas, por
+    cascade, su matriz de cargos— y después el perfil. En ese orden porque
+    PerfilRequisitoConfig.perfil_id no tiene ON DELETE en cascada: borrar el
+    perfil de frente dejaría configs colgando, que en Postgres falla por FK y en
+    el SQLite de los tests (con foreign_keys=ON) también.
+    """
+    perfil = obtener_perfil(db, perfil_id)
+    if perfil.mandante_id != mandante_id:
+        raise AsignacionInvalida("El perfil no pertenece a tu organización.")
+
+    n = servicios_que_usan_perfil(db, perfil_id)
+    if n:
+        raise PerfilEnUso(
+            f"«{perfil.nombre}» lo usa{'n' if n != 1 else ''} {n} "
+            f"servicio{'s' if n != 1 else ''} y no se puede eliminar: cada servicio "
+            "necesita su perfil. Si el nombre está mal, renómbralo."
+        )
+
+    for cfg in db.query(PerfilRequisitoConfig).filter_by(perfil_id=perfil_id).all():
+        db.delete(cfg)
+    db.flush()
+    db.delete(perfil)
+    db.commit()
 
 
 def listar_perfiles(db: Session, mandante_id: uuid.UUID) -> list[PerfilRequisitos]:

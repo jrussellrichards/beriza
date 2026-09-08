@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   AlertCircle, Briefcase, CheckCircle2, ChevronRight,
-  FileText, History, Plus, Search, ShieldCheck, Users, X,
+  FileText, History, Pencil, Plus, Search, ShieldCheck, Users, X,
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import {
@@ -13,6 +13,7 @@ import { getSession } from "@/shared/lib/auth"
 import { api } from "@/shared/lib/api"
 import { etiquetaMutualidad } from "@/entities/contratista/mutualidades"
 import { InvitarContratistaDialog } from "@/features/invitar-contratista/invitar-contratista-dialog"
+import { FichaEmpresaDialog } from "@/features/empresa/ficha-empresa-dialog"
 import { HistorialDialog } from "@/entities/documento/historial-dialog"
 import type { Servicio } from "@/entities/servicio/types"
 import type { EstadoGlobal } from "@/shared/types"
@@ -277,7 +278,12 @@ function ServiciosTab({ contratistaId }: { contratistaId: string }) {
  * como faltante en vez de esconder la fila, porque el hueco es justamente la
  * informacion util — dice que hay que pedirle al contratista.
  */
-function FichaEmpresa({ c }: { c: Contratista }) {
+function FichaEmpresa({ c, mandanteId, onCambio }: {
+  c: Contratista
+  mandanteId: string
+  onCambio: () => void
+}) {
+  const [editando, setEditando] = useState(false)
   const rep = [c.representante_legal_nombre, c.representante_legal_rut]
     .filter(Boolean).join(" · ")
   const filas: { etiqueta: string; valor: string | null }[] = [
@@ -296,11 +302,22 @@ function FichaEmpresa({ c }: { c: Contratista }) {
         <p className="text-[10px] text-ink-subtle font-medium uppercase tracking-wide">
           Datos de la empresa
         </p>
-        {faltantes > 0 && (
-          <span className="text-[10px] text-accion-ink">
-            {faltantes} sin completar
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {faltantes > 0 && (
+            <span className="text-[10px] text-accion-ink">
+              {faltantes} sin completar
+            </span>
+          )}
+          {/* El hueco de esta ficha era justamente que no había cómo llenarla:
+              se veía "6 sin completar" y ahí terminaba todo. */}
+          <button
+            onClick={() => setEditando(true)}
+            className="text-[10px] font-medium text-ink-muted hover:text-ink inline-flex items-center gap-1 transition-colors"
+          >
+            <Pencil size={10} />
+            {faltantes > 0 ? "Completar" : "Editar"}
+          </button>
+        </div>
       </div>
       <dl className="space-y-1">
         {filas.map(f => (
@@ -315,13 +332,35 @@ function FichaEmpresa({ c }: { c: Contratista }) {
           </div>
         ))}
       </dl>
+
+      {editando && (
+        <FichaEmpresaDialog
+          titulo={`Datos de ${c.razon_social}`}
+          valores={{
+            razon_social: c.razon_social,
+            giro: c.giro,
+            mutualidad: c.mutualidad,
+            direccion: c.direccion,
+            telefono_emergencia: c.telefono_emergencia,
+            representante_legal_nombre: c.representante_legal_nombre,
+            representante_legal_rut: c.representante_legal_rut,
+            representante_legal_telefono: c.representante_legal_telefono,
+          }}
+          onGuardar={async (cambios) => {
+            await api.patch(`/api/v1/mandantes/${mandanteId}/contratistas/${c.id}`, cambios)
+            onCambio()
+          }}
+          onClose={() => setEditando(false)}
+        />
+      )}
     </div>
   )
 }
 
 
-function DetailPanel({ c, onClose, onCambio }: {
+function DetailPanel({ c, mandanteId, onClose, onCambio }: {
   c: Contratista
+  mandanteId: string
   onClose: () => void
   onCambio: () => void
 }) {
@@ -397,7 +436,7 @@ function DetailPanel({ c, onClose, onCambio }: {
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {tab === "estado" && (
           <div className="space-y-3">
-            <FichaEmpresa c={c} />
+            <FichaEmpresa c={c} mandanteId={mandanteId} onCambio={onCambio} />
             {c.pilares.map(pilar => {
               // `pilar.documentos` trae SOLO los de la empresa; lo que se le exige
               // a cada persona vive en `c.trabajadores`. Contar únicamente los
@@ -854,6 +893,7 @@ export default function ContratistasPage() {
         {seleccionado && mandanteId && (
           <DetailPanel
             c={seleccionado}
+            mandanteId={mandanteId}
             onClose={() => setSeleccionadoId(null)}
             onCambio={() => cargar(mandanteId)}
           />

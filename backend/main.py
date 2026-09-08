@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.api import (
-    acreditacion, admin, cargos, centros_trabajo, documentos, mandantes, pilares,
-    reutilizacion, servicios, trabajadores, usuarios,
+    acreditacion, admin, cargos, centros_trabajo, contratistas, documentos, mandantes,
+    pilares, reutilizacion, servicios, trabajadores, usuarios,
 )
 
 logger = logging.getLogger("acredita")
@@ -42,6 +42,7 @@ async def error_interno(request: Request, exc: Exception) -> JSONResponse:
 app.include_router(acreditacion.router, prefix="/api/v1/acreditacion", tags=["acreditacion"])
 app.include_router(documentos.router,   prefix="/api/v1/documentos",   tags=["documentos"])
 app.include_router(mandantes.router,    prefix="/api/v1/mandantes",    tags=["mandantes"])
+app.include_router(contratistas.router, prefix="/api/v1/contratistas", tags=["contratistas"])
 app.include_router(servicios.router,    prefix="/api/v1/servicios",    tags=["servicios"])
 app.include_router(centros_trabajo.router, prefix="/api/v1/centros-trabajo", tags=["centros-trabajo"])
 app.include_router(trabajadores.router, prefix="/api/v1/trabajadores", tags=["trabajadores"])

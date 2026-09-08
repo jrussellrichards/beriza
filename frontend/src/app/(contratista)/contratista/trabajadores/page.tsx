@@ -5,6 +5,7 @@ import { CheckCircle2, ChevronDown, ChevronRight, FileSpreadsheet, MapPin, Plus,
 import { cn } from "@/shared/lib/utils"
 import { api } from "@/shared/lib/api"
 import { AgregarTrabajadorDialog } from "@/features/agregar-trabajador/agregar-trabajador-dialog"
+import { EditarTrabajadorDialog } from "@/features/agregar-trabajador/editar-trabajador-dialog"
 import { CargarNominaDialog } from "@/features/agregar-trabajador/cargar-nomina-dialog"
 import { type TrabajadorHabilitacion } from "@/entities/contratista/resumen"
 
@@ -19,6 +20,7 @@ import { type TrabajadorHabilitacion } from "@/entities/contratista/resumen"
 function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: () => void }) {
   const [abierto, setAbierto] = useState(false)
   const [ocupado, setOcupado] = useState(false)
+  const [editando, setEditando] = useState(false)
   const bloqueados = t.servicios.filter(s => !s.habilitado)
   const sinAsignar = t.servicios.length === 0
 
@@ -116,6 +118,12 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
               Subir sus documentos
             </button>
             <button
+              onClick={() => setEditando(true)}
+              className="px-3 py-1.5 rounded-lg text-micro font-medium border border-line text-ink-muted hover:bg-surface transition-colors"
+            >
+              Editar ficha
+            </button>
+            <button
               onClick={alternarActivo}
               disabled={ocupado}
               className="px-3 py-1.5 rounded-lg text-micro font-medium border border-line text-ink-muted hover:bg-surface disabled:opacity-50 transition-colors"
@@ -124,6 +132,14 @@ function TrabajadorCard({ t, onCambio }: { t: TrabajadorHabilitacion; onCambio: 
             </button>
           </div>
         </div>
+      )}
+
+      {editando && (
+        <EditarTrabajadorDialog
+          trabajadorId={t.trabajador_id}
+          onClose={() => setEditando(false)}
+          onGuardado={onCambio}
+        />
       )}
     </div>
   )
