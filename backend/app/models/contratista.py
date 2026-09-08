@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from datetime import datetime
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import ModelBase
 
@@ -53,6 +54,24 @@ class ContratistaMandante(ModelBase):
     mandante_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("mandantes.id"), nullable=False)
     # PENDIENTE | EN_PROCESO | ACREDITADA | BLOQUEADA
     estado_acreditacion: Mapped[str] = mapped_column(String(20), default="PENDIENTE")
+
+    # Archivado = "sácamelo de la lista de contratistas". Es una COLUMNA y no un
+    # quinto estado_acreditacion por la misma razón que en Servicio, y con una de
+    # más: `estado_acreditacion` NO es un campo administrativo, lo CALCULA y lo
+    # escribe acreditacion_service (ver _actualizar_estado_relacion). Un valor
+    # "ARCHIVADA" puesto a mano lo pisaría la siguiente evaluación.
+    #
+    # La invariante que lo hace seguro vive en vinculo_service.archivar: solo se
+    # archiva un vínculo SIN servicios activos. Y eso importa porque
+    # `evaluar_relacion` retorna temprano cuando no hay servicios activos, así
+    # que archivar no puede mover ningún número derivado — ni del contratista ni
+    # del mandante.
+    archivado_en: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    archivado_por_usuario_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("usuarios.id"), nullable=True
+    )
 
     contratista: Mapped["EmpresaContratista"] = relationship(back_populates="mandantes")
     mandante: Mapped["Mandante"] = relationship(back_populates="contratistas")

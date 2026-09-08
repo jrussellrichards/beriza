@@ -19,6 +19,18 @@ class ContratistaNoEncontrado(AcreditaError):
     pass
 
 
+class VinculoEnUso(AcreditaError):
+    """
+    El vínculo mandante–contratista no admite la acción por su estado.
+
+    Cubre los dos rechazos de vinculo_service, que comparten el 409 y se
+    distinguen por el mensaje: archivar un vínculo con servicios ACTIVOS
+    —escondería a una empresa que está en faena hoy— y eliminar uno que dejó
+    rastro —destruiría el registro de qué se le exigió y qué entregó—.
+    """
+    pass
+
+
 class TrabajadorNoEncontrado(AcreditaError):
     pass
 
