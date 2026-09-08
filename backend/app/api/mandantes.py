@@ -18,6 +18,7 @@ from app.api.schemas import (
     DefinirCargosRequisitoRequest,
     CrearMandanteRequest,
     CrearPerfilRequest,
+    ActualizarPerfilRequest,
     ActualizarEmpresaContratistaRequest,
     EmpresaContratistaResponse,
     InvitarContratistaRequest,
@@ -26,7 +27,9 @@ from app.api.schemas import (
 )
 from app.core.config import settings
 from app.core.exceptions import AsignacionInvalida, PermisoInsuficiente, RutInvalido
-from app.core.exceptions import ContratistaNoEncontrado, PerfilNoEncontrado, VinculoEnUso
+from app.core.exceptions import (
+    ContratistaNoEncontrado, PerfilEnUso, PerfilNoEncontrado, VinculoEnUso,
+)
 from app.domain import (
     acreditacion_service, contratista_service, permiso_service, rut_service,
     servicio_service, usuario_service, vinculo_service,
@@ -664,7 +667,10 @@ def listar_requisitos_mandante(
     mandante_id: uuid.UUID,
     perfil_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
-    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+    # El prevencionista también lo LEE: revisa documentos contra estas exigencias
+    # y necesita ver qué se pide. Editar el perfil sigue siendo solo de los
+    # administradores —esos endpoints no cambian—, así que ver no habilita tocar.
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin", "prevencionista"])),
 ):
     """
     Catálogo de pilares/requisitos con la config del perfil superpuesta.
@@ -745,7 +751,9 @@ def listar_requisitos_mandante(
 def listar_perfiles(
     mandante_id: uuid.UUID,
     db: Session = Depends(get_db),
-    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+    # Lo lee también el prevencionista (ver listar_requisitos_mandante): ver los
+    # perfiles no habilita editarlos, que sigue siendo solo de administradores.
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin", "prevencionista"])),
 ):
     """Perfiles de requisitos del mandante (plantillas de exigencias por tipo de servicio)."""
     perfiles = servicio_service.listar_perfiles(db, mandante_id)
@@ -783,6 +791,70 @@ def crear_perfil(
         raise HTTPException(status_code=404, detail=str(e))
     except AsignacionInvalida as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/{mandante_id}/perfiles/{perfil_id}", response_model=PerfilResponse)
+def renombrar_perfil(
+    mandante_id: uuid.UUID,
+    perfil_id: uuid.UUID,
+    body: ActualizarPerfilRequest,
+    db: Session = Depends(get_db),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Renombra un perfil o cambia su descripción.
+
+    Existe porque un perfil creado con el nombre equivocado no tenía arreglo: no
+    se podía editar ni borrar, solo abandonar. El conteo de requisitos viaja en
+    la respuesta para no dejar desactualizado el selector que lo usa.
+    """
+    try:
+        perfil = servicio_service.renombrar_perfil(
+            db, perfil_id, mandante_id, **body.model_dump(exclude_unset=True)
+        )
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    exigidos = (
+        db.query(func.count(PerfilRequisitoConfig.id))
+        .filter(
+            PerfilRequisitoConfig.perfil_id == perfil.id,
+            PerfilRequisitoConfig.es_obligatorio.is_(True),
+        )
+        .scalar()
+    )
+    return PerfilResponse(
+        id=perfil.id, mandante_id=perfil.mandante_id, nombre=perfil.nombre,
+        descripcion=perfil.descripcion, activo=perfil.activo,
+        requisitos_exigidos=exigidos or 0,
+    )
+
+
+@router.delete("/{mandante_id}/perfiles/{perfil_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_perfil(
+    mandante_id: uuid.UUID,
+    perfil_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario=Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
+):
+    """
+    Elimina un perfil que ningún servicio usa.
+
+    Si algún servicio lo referencia responde 409 explicando cuántos y por qué —un
+    400 sonaría a "mandaste algo mal", y acá el pedido está bien formado, es el
+    estado del perfil el que no permite borrarlo—. Para un nombre equivocado está
+    el PATCH: renombrar no destruye nada.
+    """
+    try:
+        servicio_service.eliminar_perfil(db, perfil_id, mandante_id)
+    except PerfilNoEncontrado as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except AsignacionInvalida as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except PerfilEnUso as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 @router.post("/{mandante_id}/perfiles/{perfil_id}/requisitos", status_code=status.HTTP_201_CREATED)
@@ -847,7 +919,7 @@ def definir_cargos_requisito(
     requisito_id: uuid.UUID,
     body: DefinirCargosRequisitoRequest,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(require_rol(["berisa_admin", "mandante_admin"])),
+    usuario: Usuario = Depends(mandante_propio(["berisa_admin", "mandante_admin"])),
 ):
     """
     A qué cargos aplica este requisito dentro del perfil.
@@ -866,8 +938,6 @@ def definir_cargos_requisito(
         raise HTTPException(status_code=404, detail=str(e))
     if perfil.mandante_id != mandante_id:
         raise HTTPException(status_code=403, detail="El perfil no pertenece a este mandante")
-    if usuario.mandante_id and usuario.mandante_id != mandante_id:
-        raise HTTPException(status_code=403, detail="Solo puede configurar perfiles de su propio mandante")
 
     requisito = db.get(RequisitoDocumental, requisito_id)
     if not requisito:

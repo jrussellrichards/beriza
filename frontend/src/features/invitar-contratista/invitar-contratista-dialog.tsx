@@ -154,8 +154,12 @@ export function InvitarContratistaDialog({ mandanteId, onClose, onSuccess }: Pro
               className="flex items-center gap-1.5 text-micro font-medium text-ink-muted hover:text-ink transition-colors"
             >
               <ChevronRight size={13} className={verFiscalizacion ? "rotate-90 transition-transform" : "transition-transform"} />
+              {/* La etiqueta nombra lo que hay adentro. Con "Datos para
+                  fiscalización" a secas, quien venía buscando justo la mutualidad
+                  o el representante legal no abría el desplegable y concluía que
+                  los campos no existían. */}
               Datos para fiscalización
-              <span className="text-ink-subtle font-normal">— opcional, se pueden completar después</span>
+              <span className="text-ink-subtle font-normal">— mutualidad, dirección, representante legal. Opcional, se completan después.</span>
             </button>
 
             {verFiscalizacion && (

@@ -186,12 +186,146 @@ function CrearPerfilDialog({ mandanteId, perfiles, onClose, onCreado }: {
   )
 }
 
+// ── Renombrar / eliminar perfil ───────────────────────────────────────────────
+
+/**
+ * Renombra el perfil o lo elimina. El hueco que cerraba: un perfil creado con el
+ * nombre equivocado o de prueba no se podía tocar —ni editar ni borrar—, solo
+ * abandonar.
+ *
+ * Borrar solo funciona si ningún servicio lo usa; si lo usan, el backend
+ * responde 409 con cuántos, y ese mensaje se muestra tal cual. Para un nombre
+ * malo está renombrar, que no destruye nada.
+ */
+function GestionarPerfilDialog({ mandanteId, perfil, onClose, onRenombrado, onEliminado }: {
+  mandanteId: string
+  perfil: Perfil
+  onClose: () => void
+  onRenombrado: () => void
+  onEliminado: (id: string) => void
+}) {
+  const [nombre, setNombre] = useState(perfil.nombre)
+  const [descripcion, setDescripcion] = useState(perfil.descripcion ?? "")
+  const [confirmando, setConfirmando] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const nombreVacio = nombre.trim() === ""
+  const hayCambios = nombre.trim() !== perfil.nombre || descripcion.trim() !== (perfil.descripcion ?? "")
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault()
+    if (nombreVacio || !hayCambios) return
+    setLoading(true); setError(null)
+    try {
+      const cambios: Record<string, string> = {}
+      if (nombre.trim() !== perfil.nombre) cambios.nombre = nombre.trim()
+      if (descripcion.trim() !== (perfil.descripcion ?? "")) cambios.descripcion = descripcion.trim()
+      await api.patch(`/api/v1/mandantes/${mandanteId}/perfiles/${perfil.id}`, cambios)
+      onRenombrado()
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo guardar")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function eliminar() {
+    setLoading(true); setError(null)
+    try {
+      await api.delete(`/api/v1/mandantes/${mandanteId}/perfiles/${perfil.id}`)
+      onEliminado(perfil.id)
+      onClose()
+    } catch (e) {
+      // 409 con el motivo exacto —cuántos servicios lo usan—; se muestra tal cual.
+      setError(e instanceof Error ? e.message : "No se pudo eliminar")
+      setConfirmando(false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={() => !loading && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar perfil</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={guardar} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="gp-nombre">Nombre</Label>
+            <Input id="gp-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+            {nombreVacio && <p className="text-[11px] text-bloqueo-ink">El perfil necesita un nombre.</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="gp-desc">Descripción (opcional)</Label>
+            <Input id="gp-desc" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+          </div>
+
+          {error && <p className="text-body text-bloqueo-ink bg-bloqueo-soft px-3 py-2 rounded-md">{error}</p>}
+
+          <DialogFooter className="sm:justify-between">
+            <Button type="submit" disabled={loading || nombreVacio || !hayCambios}>
+              {loading ? "Guardando..." : "Guardar cambios"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </form>
+
+        {/* Zona destructiva, separada del formulario para que borrar no se
+            confunda con guardar. Confirmación en dos pasos: eliminar un perfil
+            es raro y conviene que cueste un clic de más. */}
+        <div className="border-t border-line-subtle pt-4 mt-2">
+          {!confirmando ? (
+            <button
+              type="button"
+              onClick={() => { setError(null); setConfirmando(true) }}
+              className="inline-flex items-center gap-1.5 text-meta font-medium text-bloqueo-ink hover:opacity-80 transition-opacity"
+            >
+              <Trash2 size={13} /> Eliminar este perfil
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-meta text-ink-secondary">
+                Se elimina «{perfil.nombre}» y su configuración. Solo es posible si ningún
+                servicio lo usa; si alguno lo usa, no se borra y te decimos cuántos.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={eliminar}
+                  disabled={loading}
+                  className="px-3 py-2 rounded-lg text-strong font-medium bg-bloqueo-soft text-bloqueo-ink border border-bloqueo-line hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {loading ? "Eliminando..." : "Sí, eliminar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmando(false)}
+                  disabled={loading}
+                  className="px-3 py-2 rounded-lg text-strong font-medium border border-line text-ink-muted hover:bg-surface-app transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Fila de requisito ─────────────────────────────────────────────────────────
 
-function RequisitoRow({ req, color, dirty, onChange, onQuitar }: {
+function RequisitoRow({ req, color, dirty, soloLectura, onChange, onQuitar }: {
   req: Requisito
   color: string
   dirty: boolean
+  soloLectura: boolean
   onChange: (id: string, cambios: Partial<Requisito>) => void
   /** Lo saca de ESTE perfil. El borrado del catalogo vive en el buscador. */
   onQuitar: (req: Requisito) => void
@@ -242,8 +376,9 @@ function RequisitoRow({ req, color, dirty, onChange, onQuitar }: {
                   id={`mom-${req.id}`}
                   value={req.momento ?? "ARRANQUE"}
                   onChange={(e) => onChange(req.id, { momento: e.target.value as Requisito["momento"] })}
+                  disabled={soloLectura}
                   title={MOMENTO_OPCIONES.find(o => o.v === (req.momento ?? "ARRANQUE"))?.ayuda}
-                  className="text-meta border border-line rounded px-2 py-1 bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  className="text-meta border border-line rounded px-2 py-1 bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {MOMENTO_OPCIONES.map(o => (
                     <option key={o.v} value={o.v}>{o.label}</option>
@@ -259,7 +394,8 @@ function RequisitoRow({ req, color, dirty, onChange, onQuitar }: {
                   min={1}
                   value={req.vigencia_max_dias}
                   onChange={(e) => onChange(req.id, { vigencia_max_dias: Number(e.target.value) })}
-                  className="w-20 text-meta border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  disabled={soloLectura}
+                  className="w-20 text-meta border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
               {req.codigo.startsWith("F30") && (
@@ -270,25 +406,28 @@ function RequisitoRow({ req, color, dirty, onChange, onQuitar }: {
                     min={0}
                     value={req.umbral_deuda_max ?? 0}
                     onChange={(e) => onChange(req.id, { umbral_deuda_max: Number(e.target.value) })}
-                    className="w-28 text-meta border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    disabled={soloLectura}
+                    className="w-28 text-meta border border-line rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               )}
           </div>
         </div>
 
-        <div className="flex items-start gap-1.5 mt-0.5 shrink-0">
-          {/* Sin opacity-0/group-hover: eso lo deja inalcanzable por teclado y
-              por touch, y quitar pasa a ser el gesto cotidiano de la pantalla. */}
-          <button
-            onClick={() => onQuitar(req)}
-            aria-label={`Quitar ${req.nombre} de este perfil`}
-            title="Quitar de este perfil — no lo borra del catálogo"
-            className="p-2 -m-1 rounded-md text-ink-subtle hover:bg-bloqueo-soft hover:text-bloqueo-ink focus-visible:ring-2 focus-visible:ring-brand/30 transition-colors"
-          >
-            <X size={14} />
-          </button>
-        </div>
+        {!soloLectura && (
+          <div className="flex items-start gap-1.5 mt-0.5 shrink-0">
+            {/* Sin opacity-0/group-hover: eso lo deja inalcanzable por teclado y
+                por touch, y quitar pasa a ser el gesto cotidiano de la pantalla. */}
+            <button
+              onClick={() => onQuitar(req)}
+              aria-label={`Quitar ${req.nombre} de este perfil`}
+              title="Quitar de este perfil — no lo borra del catálogo"
+              className="p-2 -m-1 rounded-md text-ink-subtle hover:bg-bloqueo-soft hover:text-bloqueo-ink focus-visible:ring-2 focus-visible:ring-brand/30 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -310,16 +449,33 @@ function RequisitoRow({ req, color, dirty, onChange, onQuitar }: {
  * del modelo. Marcarla borra las marcas especificas.
  */
 /** Alta y baja del catálogo de cargos del mandante: son las columnas de la matriz. */
-function CargosDialog({ cargos, onClose, onCambio }: {
-  cargos: Cargo[]
+function CargosDialog({ onClose, onCambio }: {
   onClose: () => void
   onCambio: () => void
 }) {
+  // Lista propia y CON los inactivos. La del padre alimenta las columnas de la
+  // matriz y por eso trae solo activos; este diálogo es el único lugar desde
+  // donde se puede volver a activar uno, así que necesita verlos.
+  const [lista, setLista] = useState<Cargo[]>([])
   const [codigo, setCodigo] = useState("")
   const [nombre, setNombre] = useState("")
   const [area, setArea] = useState("")
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [editNombre, setEditNombre] = useState("")
+  const [editArea, setEditArea] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
+
+  const cargar = useCallback(() => {
+    api.get<Cargo[]>("/api/v1/cargos/?incluir_inactivos=true")
+      .then(setLista)
+      .catch(() => setLista([]))
+  }, [])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  /** Toda mutación refresca las dos listas: ésta y las columnas de la matriz. */
+  function refrescar() { cargar(); onCambio() }
 
   async function crear(e: React.FormEvent) {
     e.preventDefault()
@@ -327,20 +483,53 @@ function CargosDialog({ cargos, onClose, onCambio }: {
     try {
       await api.post("/api/v1/cargos/", { codigo, nombre, area: area || null })
       setCodigo(""); setNombre(""); setArea("")
-      onCambio()
+      refrescar()
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo crear el cargo")
     } finally { setCargando(false) }
+  }
+
+  function empezarEdicion(c: Cargo) {
+    setError(null)
+    setEditandoId(c.id)
+    setEditNombre(c.nombre)
+    setEditArea(c.area ?? "")
+  }
+
+  async function guardarEdicion(c: Cargo) {
+    if (!editNombre.trim()) return
+    setCargando(true); setError(null)
+    try {
+      // El área viaja aunque esté vacía: es la forma de limpiarla.
+      await api.patch(`/api/v1/cargos/${c.id}`, {
+        nombre: editNombre.trim(), area: editArea.trim(),
+      })
+      setEditandoId(null)
+      refrescar()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo renombrar el cargo")
+    } finally { setCargando(false) }
+  }
+
+  async function alternarActivo(c: Cargo) {
+    setError(null)
+    try {
+      await api.patch(`/api/v1/cargos/${c.id}`, { activo: !c.activo })
+      refrescar()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cambiar el estado")
+    }
   }
 
   async function eliminar(c: Cargo) {
     setError(null)
     try {
       await api.delete(`/api/v1/cargos/${c.id}`)
-      onCambio()
+      refrescar()
     } catch (err) {
       // Si el cargo está en uso el backend responde 400 con el detalle y sugiere
-      // desactivarlo. Se muestra tal cual porque es accionable.
+      // desactivarlo. Se muestra tal cual porque es accionable — y ahora la
+      // salida que sugiere existe de verdad en esta misma fila.
       setError(err instanceof Error ? err.message : "No se pudo eliminar")
     }
   }
@@ -354,21 +543,101 @@ function CargosDialog({ cargos, onClose, onCambio }: {
           Son las columnas de la matriz. Cada cargo debería implicar documentos distintos:
           si a dos les pides exactamente lo mismo, sobra uno.
         </p>
+        <p className="text-[11px] text-ink-subtle -mt-2">
+          Un cargo que ya está en uso no se puede eliminar —hay asignaciones y requisitos
+          apuntando a él—. <strong>Desactivarlo</strong> lo saca de la matriz y conserva ese historial.
+        </p>
 
         <div className="space-y-1.5 max-h-64 overflow-y-auto">
-          {cargos.map(c => (
-            <div key={c.id} className="flex items-center justify-between px-3 py-2 rounded-lg border border-line-subtle bg-surface-app">
-              <div className="min-w-0">
-                <p className="text-body text-ink truncate">{c.nombre}</p>
-                <p className="text-[10px] font-mono text-ink-subtle">{c.codigo}{c.area ? ` · ${c.area}` : ""}</p>
+          {lista.map(c => {
+            const editando = editandoId === c.id
+            return (
+              <div key={c.id} className={cn(
+                "px-3 py-2 rounded-lg border border-line-subtle bg-surface-app",
+                !c.activo && "opacity-60",
+              )}>
+                {editando ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editNombre}
+                      onChange={e => setEditNombre(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); guardarEdicion(c) } }}
+                      placeholder="Nombre"
+                      aria-label={`Nombre de ${c.codigo}`}
+                      autoFocus
+                    />
+                    <Input
+                      value={editArea}
+                      onChange={e => setEditArea(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); guardarEdicion(c) } }}
+                      placeholder="Área"
+                      aria-label={`Área de ${c.codigo}`}
+                    />
+                    <button
+                      type="button" onClick={() => guardarEdicion(c)}
+                      disabled={cargando || !editNombre.trim()}
+                      title="Guardar" aria-label="Guardar"
+                      className="p-1.5 rounded-md text-ink-muted hover:text-ink hover:bg-surface disabled:opacity-40 transition-colors shrink-0"
+                    >
+                      <Save size={13} />
+                    </button>
+                    <button
+                      type="button" onClick={() => setEditandoId(null)}
+                      title="Cancelar" aria-label="Cancelar"
+                      className="p-1.5 rounded-md text-ink-subtle hover:text-ink transition-colors shrink-0"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-body text-ink truncate">
+                        {c.nombre}
+                        {!c.activo && <span className="ml-2 text-[10px] text-ink-subtle">inactivo</span>}
+                      </p>
+                      <p className="text-[10px] font-mono text-ink-subtle">{c.codigo}{c.area ? ` · ${c.area}` : ""}</p>
+                    </div>
+                    {/* Un cargo del catálogo global no es de esta organización:
+                        el backend rechaza tocarlo, así que tampoco se ofrece. */}
+                    {c.es_propio ? (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button" onClick={() => empezarEdicion(c)}
+                          title="Renombrar" aria-label={`Renombrar ${c.nombre}`}
+                          className="p-1.5 rounded-md text-ink-subtle hover:text-ink hover:bg-surface transition-colors"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          type="button" onClick={() => alternarActivo(c)}
+                          title={c.activo
+                            ? "Desactivar: sale de la matriz y conserva las asignaciones"
+                            : "Reactivar: vuelve a ser columna de la matriz"}
+                          className="px-2 py-1 rounded-md text-[10px] font-medium border border-line text-ink-muted hover:text-ink hover:border-line-strong transition-colors"
+                        >
+                          {c.activo ? "Desactivar" : "Reactivar"}
+                        </button>
+                        <button
+                          type="button" onClick={() => eliminar(c)}
+                          title="Eliminar" aria-label={`Eliminar ${c.nombre}`}
+                          className="p-1.5 rounded-md text-ink-subtle hover:text-bloqueo-ink transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span title="Del catálogo global de BERISA — no se edita desde acá"
+                            className="shrink-0 text-ink-subtle">
+                        <Lock size={11} />
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
-              <button onClick={() => eliminar(c)} title="Eliminar"
-                      className="text-ink-subtle hover:text-bloqueo-ink transition-colors shrink-0">
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-          {cargos.length === 0 && <p className="text-meta text-ink-subtle">Todavía no hay cargos.</p>}
+            )
+          })}
+          {lista.length === 0 && <p className="text-meta text-ink-subtle">Todavía no hay cargos.</p>}
         </div>
 
         <form onSubmit={crear} className="space-y-2 border-t border-line-subtle pt-3">
@@ -389,15 +658,20 @@ function CargosDialog({ cargos, onClose, onCambio }: {
 }
 
 
-function MatrizCargos({ requisitos, cargos, guardando, onCambiar, onGestionar, onSetSugerido }: {
+function MatrizCargos({ requisitos, cargos, guardando, soloLectura, onCambiar, onGestionar, onSetSugerido }: {
   requisitos: Requisito[]
   cargos: Cargo[]
   guardando: string | null
+  soloLectura: boolean
   onCambiar: (req: Requisito, cargoIds: string[]) => void
   onGestionar: () => void
   onSetSugerido: () => void
 }) {
   if (requisitos.length === 0) return null
+
+  // Un lector sin cargos definidos no tiene nada que mirar ni acción que ofrecer:
+  // la invitación a crear cargos es solo para quien administra.
+  if (soloLectura && cargos.length === 0) return null
 
   if (cargos.length === 0) {
     return (
@@ -445,12 +719,14 @@ function MatrizCargos({ requisitos, cargos, guardando, onCambiar, onGestionar, o
             Sin ninguna marca, el documento se exige a toda la dotación. Se guarda al marcar.
           </p>
         </div>
-        <button
-          onClick={onGestionar}
-          className="text-meta px-2.5 py-1 rounded-md border border-line text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors shrink-0"
-        >
-          Editar cargos
-        </button>
+        {!soloLectura && (
+          <button
+            onClick={onGestionar}
+            className="text-meta px-2.5 py-1 rounded-md border border-line text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors shrink-0"
+          >
+            Editar cargos
+          </button>
+        )}
       </div>
 
       <div className="overflow-x-auto">
@@ -484,7 +760,7 @@ function MatrizCargos({ requisitos, cargos, guardando, onCambiar, onGestionar, o
                     <input
                       type="checkbox"
                       checked={todos}
-                      disabled={guardando !== null}
+                      disabled={guardando !== null || soloLectura}
                       onChange={() => onCambiar(req, [])}
                       title="Se exige a toda la dotación"
                     />
@@ -494,7 +770,7 @@ function MatrizCargos({ requisitos, cargos, guardando, onCambiar, onGestionar, o
                       <input
                         type="checkbox"
                         checked={req.cargo_ids.includes(c.id)}
-                        disabled={guardando !== null}
+                        disabled={guardando !== null || soloLectura}
                         onChange={() => alternar(req, c.id)}
                       />
                     </td>
@@ -527,9 +803,10 @@ function agruparPorSubpilar(reqs: Requisito[]) {
   return Array.from(mapa.values()).sort((a, b) => a.orden - b.orden)
 }
 
-function PilarSection({ pilar, dirties, onChange, onQuitar }: {
+function PilarSection({ pilar, dirties, soloLectura, onChange, onQuitar }: {
   pilar: Pilar
   dirties: Set<string>
+  soloLectura: boolean
   onChange: (reqId: string, cambios: Partial<Requisito>) => void
   onQuitar: (req: Requisito) => void
 }) {
@@ -572,6 +849,7 @@ function PilarSection({ pilar, dirties, onChange, onQuitar }: {
                 req={req}
                 color={pilar.color}
                 dirty={dirties.has(req.id)}
+                soloLectura={soloLectura}
                 onChange={onChange}
                 onQuitar={onQuitar}
               />
@@ -792,6 +1070,15 @@ export default function PerfilesPage() {
   const [error, setError] = useState<string | null>(null)
   const [dialogPerfil, setDialogPerfil] = useState(false)
   const [dialogAgregar, setDialogAgregar] = useState(false)
+  const [dialogGestion, setDialogGestion] = useState(false)
+  // Quién puede TOCAR los perfiles. El prevencionista los ve —revisa contra
+  // ellos— pero no los edita, y el backend lo hace cumplir. Sin esto, la pantalla
+  // le mostraba el editor completo y el rechazo llegaba recién al guardar, con
+  // los cambios ya perdidos: la observación #4 del feedback.
+  const [puedeEditar] = useState(() => {
+    const rol = getSession()?.rol
+    return rol === "mandante_admin" || rol === "berisa_admin"
+  })
   // Quitados pero aun sin guardar. Se separan de `dirties` porque se resuelven
   // con DELETE y no con POST, y sobre todo porque QUITAR ES DESTRUCTIVO: borra
   // la fila de config con su vigencia, su umbral y su matriz de cargos, que
@@ -1039,6 +1326,7 @@ export default function PerfilesPage() {
               <Lock size={12} className="text-ink-subtle" />
               Catálogo global de BERISA + tus requisitos propios
             </div>
+            {puedeEditar && (
             <button
               onClick={handleGuardar}
               disabled={pendientes === 0 || guardando}
@@ -1054,6 +1342,7 @@ export default function PerfilesPage() {
               <Save size={14} />
               {guardando ? "Guardando..." : guardado ? "¡Guardado!" : `Guardar${pendientes > 0 ? ` (${pendientes})` : ""}`}
             </button>
+            )}
           </div>
         </div>
 
@@ -1076,13 +1365,35 @@ export default function PerfilesPage() {
               {p.nombre}
             </button>
           ))}
-          <button
-            onClick={() => setDialogPerfil(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-micro font-medium border border-dashed border-line-strong text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors"
-          >
-            <Plus size={12} /> Nuevo perfil
-          </button>
+          {puedeEditar && perfilActivo && (
+            <button
+              onClick={() => setDialogGestion(true)}
+              title="Renombrar o eliminar este perfil"
+              aria-label="Editar perfil"
+              className="p-1.5 rounded-lg text-ink-subtle hover:text-ink hover:bg-surface-app transition-colors"
+            >
+              <Edit2 size={13} />
+            </button>
+          )}
+          {puedeEditar && (
+            <button
+              onClick={() => setDialogPerfil(true)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-micro font-medium border border-dashed border-line-strong text-ink-muted hover:border-line-strong hover:text-ink-secondary transition-colors"
+            >
+              <Plus size={12} /> Nuevo perfil
+            </button>
+          )}
         </div>
+
+        {!puedeEditar && (
+          <div className="mt-3 flex items-start gap-2 bg-surface-app border border-line rounded-lg px-4 py-2.5">
+            <Lock size={13} className="text-ink-subtle mt-0.5 shrink-0" />
+            <p className="text-meta text-ink-muted">
+              Estás viendo los perfiles en <strong>modo lectura</strong>. Para modificarlos,
+              pídele a un administrador de tu organización que te asigne ese permiso.
+            </p>
+          </div>
+        )}
 
         {/* 3. Solo filtros de VISTA sobre el mismo perfil. No son dos perfiles. */}
         <div className="mt-4 flex items-center justify-between gap-4 flex-wrap border-b border-line">
@@ -1174,6 +1485,7 @@ export default function PerfilesPage() {
             requisitos={requisitosMatriz}
             cargos={cargos}
             guardando={guardandoCargo}
+            soloLectura={!puedeEditar}
             onCambiar={guardarCargos}
             onGestionar={() => setDialogCargos(true)}
             onSetSugerido={handleSetSugerido}
@@ -1183,7 +1495,6 @@ export default function PerfilesPage() {
 
       {dialogCargos && (
         <CargosDialog
-          cargos={cargos}
           onClose={() => setDialogCargos(false)}
           onCambio={cargarCargos}
         />
@@ -1196,6 +1507,7 @@ export default function PerfilesPage() {
             key={pilar.id}
             pilar={pilar}
             dirties={dirties}
+            soloLectura={!puedeEditar}
             onChange={handleChange}
             onQuitar={handleQuitar}
           />
@@ -1203,7 +1515,7 @@ export default function PerfilesPage() {
 
         {/* Agregar es la accion principal de esta pantalla ahora, asi que vive
             en el flujo de la lista y no escondida en una barra. */}
-        {perfilId && totalExigidos > 0 && (
+        {puedeEditar && perfilId && totalExigidos > 0 && (
           <button
             onClick={() => setDialogAgregar(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-line-strong text-body font-medium text-ink-muted hover:text-ink hover:bg-surface transition-colors"
@@ -1220,12 +1532,18 @@ export default function PerfilesPage() {
                 Un perfil define qué documentos exiges por tipo de servicio. Necesitas al
                 menos uno para poder crear servicios y contratar empresas.
               </p>
-              <button
-                onClick={() => setDialogPerfil(true)}
-                className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-micro font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
-              >
-                <Plus size={13} /> Crear mi primer perfil
-              </button>
+              {puedeEditar ? (
+                <button
+                  onClick={() => setDialogPerfil(true)}
+                  className="inline-flex items-center gap-1.5 bg-surface-inverse text-white text-micro font-medium px-3 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+                >
+                  <Plus size={13} /> Crear mi primer perfil
+                </button>
+              ) : (
+                <p className="text-meta text-ink-subtle">
+                  Un administrador de tu organización tiene que crear el primero.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -1239,12 +1557,14 @@ export default function PerfilesPage() {
               Cualquier contratista con un servicio que use este perfil va a figurar en
               regla sin haber entregado nada.
             </p>
-            <button
-              onClick={() => setDialogAgregar(true)}
-              className="mt-4 inline-flex items-center gap-2 bg-surface-inverse text-white text-body font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
-            >
-              <Plus size={14} /> Agregar requisitos
-            </button>
+            {puedeEditar && (
+              <button
+                onClick={() => setDialogAgregar(true)}
+                className="mt-4 inline-flex items-center gap-2 bg-surface-inverse text-white text-body font-medium px-4 py-2 rounded-lg hover:bg-surface-inverse-hover transition-colors"
+              >
+                <Plus size={14} /> Agregar requisitos
+              </button>
+            )}
           </div>
         )}
 
@@ -1283,6 +1603,22 @@ export default function PerfilesPage() {
           onCreado={(p) => {
             setPerfiles((prev) => [...prev, p])
             setPerfilId(p.id)
+          }}
+        />
+      )}
+
+      {dialogGestion && perfilActivo && mandanteId && (
+        <GestionarPerfilDialog
+          mandanteId={mandanteId}
+          perfil={perfilActivo}
+          onClose={() => setDialogGestion(false)}
+          onRenombrado={() => cargarPerfiles(mandanteId)}
+          onEliminado={(id) => {
+            // Saca el borrado y, si era el activo, salta a otro para no quedar
+            // apuntando a un perfil que ya no existe.
+            const restantes = perfiles.filter((p) => p.id !== id)
+            setPerfiles(restantes)
+            setPerfilId((prev) => (prev === id ? (restantes[0]?.id ?? null) : prev))
           }}
         />
       )}

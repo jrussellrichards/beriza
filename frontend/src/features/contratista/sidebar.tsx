@@ -7,14 +7,17 @@ import { cn } from "@/shared/lib/utils"
 import { ModoFaena } from "@/shared/ui/modo-faena"
 import { LogoAcredita, MarcaAcredita } from "@/shared/ui/logo"
 import { api } from "@/shared/lib/api"
-import { Briefcase, FileText, Users, LayoutDashboard, LogOut, UserCog } from "lucide-react"
+import { Briefcase, Building2, FileText, Users, LayoutDashboard, LogOut, UserCog } from "lucide-react"
 
+// `corta`: etiqueta para la barra inferior del teléfono, donde "Trabajadores" no
+// cabe en una columna. Mismo recurso que el sidebar del mandante.
 const nav = [
-  { href: "/contratista", label: "Inicio", icon: LayoutDashboard },
-  { href: "/contratista/servicios", label: "Servicios", icon: Briefcase },
-  { href: "/contratista/trabajadores", label: "Trabajadores", icon: Users },
-  { href: "/contratista/documentos", label: "Documentos", icon: FileText },
-  { href: "/contratista/equipo", label: "Equipo", icon: UserCog },
+  { href: "/contratista", label: "Inicio", corta: "Inicio", icon: LayoutDashboard },
+  { href: "/contratista/servicios", label: "Servicios", corta: "Servicios", icon: Briefcase },
+  { href: "/contratista/trabajadores", label: "Trabajadores", corta: "Personal", icon: Users },
+  { href: "/contratista/documentos", label: "Documentos", corta: "Docs", icon: FileText },
+  { href: "/contratista/empresa", label: "Mi empresa", corta: "Empresa", icon: Building2 },
+  { href: "/contratista/equipo", label: "Equipo", corta: "Equipo", icon: UserCog },
 ]
 
 function esActivo(path: string, href: string) {
@@ -114,11 +117,11 @@ export function SidebarContratista() {
         </div>
       </header>
 
-      {/* Cinco destinos en cuatro columnas: "Equipo" caía solo a una segunda
-          fila y la barra crecía al doble, tapando contenido. Se declara el
-          número real. */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-surface-inverse border-t border-white/10 grid grid-cols-5">
-        {nav.map(({ href, label, icon: Icon }) => {
+      {/* Seis destinos, seis columnas: se declara el número real para que ninguno
+          caiga a una segunda fila y la barra crezca al doble, tapando contenido.
+          Las etiquetas cortas (`corta`) son las que hacen que quepan. */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-surface-inverse border-t border-white/10 grid grid-cols-6">
+        {nav.map(({ href, corta, label, icon: Icon }) => {
           const active = esActivo(path, href)
           return (
             <Link
@@ -130,7 +133,7 @@ export function SidebarContratista() {
               )}
             >
               <Icon size={18} strokeWidth={active ? 2.5 : 2} />
-              {label}
+              {corta ?? label}
               {href === "/contratista" && pendientes > 0 && (
                 <span className="absolute top-1.5 right-1/2 translate-x-4 min-w-[16px] h-[16px] px-1 rounded-full bg-accion-line text-accion-ink text-[9px] font-semibold flex items-center justify-center">
                   {pendientes}
