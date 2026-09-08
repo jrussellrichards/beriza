@@ -310,16 +310,33 @@ function RequisitoRow({ req, color, dirty, onChange, onQuitar }: {
  * del modelo. Marcarla borra las marcas especificas.
  */
 /** Alta y baja del catálogo de cargos del mandante: son las columnas de la matriz. */
-function CargosDialog({ cargos, onClose, onCambio }: {
-  cargos: Cargo[]
+function CargosDialog({ onClose, onCambio }: {
   onClose: () => void
   onCambio: () => void
 }) {
+  // Lista propia y CON los inactivos. La del padre alimenta las columnas de la
+  // matriz y por eso trae solo activos; este diálogo es el único lugar desde
+  // donde se puede volver a activar uno, así que necesita verlos.
+  const [lista, setLista] = useState<Cargo[]>([])
   const [codigo, setCodigo] = useState("")
   const [nombre, setNombre] = useState("")
   const [area, setArea] = useState("")
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [editNombre, setEditNombre] = useState("")
+  const [editArea, setEditArea] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
+
+  const cargar = useCallback(() => {
+    api.get<Cargo[]>("/api/v1/cargos/?incluir_inactivos=true")
+      .then(setLista)
+      .catch(() => setLista([]))
+  }, [])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  /** Toda mutación refresca las dos listas: ésta y las columnas de la matriz. */
+  function refrescar() { cargar(); onCambio() }
 
   async function crear(e: React.FormEvent) {
     e.preventDefault()
@@ -327,20 +344,53 @@ function CargosDialog({ cargos, onClose, onCambio }: {
     try {
       await api.post("/api/v1/cargos/", { codigo, nombre, area: area || null })
       setCodigo(""); setNombre(""); setArea("")
-      onCambio()
+      refrescar()
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo crear el cargo")
     } finally { setCargando(false) }
+  }
+
+  function empezarEdicion(c: Cargo) {
+    setError(null)
+    setEditandoId(c.id)
+    setEditNombre(c.nombre)
+    setEditArea(c.area ?? "")
+  }
+
+  async function guardarEdicion(c: Cargo) {
+    if (!editNombre.trim()) return
+    setCargando(true); setError(null)
+    try {
+      // El área viaja aunque esté vacía: es la forma de limpiarla.
+      await api.patch(`/api/v1/cargos/${c.id}`, {
+        nombre: editNombre.trim(), area: editArea.trim(),
+      })
+      setEditandoId(null)
+      refrescar()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo renombrar el cargo")
+    } finally { setCargando(false) }
+  }
+
+  async function alternarActivo(c: Cargo) {
+    setError(null)
+    try {
+      await api.patch(`/api/v1/cargos/${c.id}`, { activo: !c.activo })
+      refrescar()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cambiar el estado")
+    }
   }
 
   async function eliminar(c: Cargo) {
     setError(null)
     try {
       await api.delete(`/api/v1/cargos/${c.id}`)
-      onCambio()
+      refrescar()
     } catch (err) {
       // Si el cargo está en uso el backend responde 400 con el detalle y sugiere
-      // desactivarlo. Se muestra tal cual porque es accionable.
+      // desactivarlo. Se muestra tal cual porque es accionable — y ahora la
+      // salida que sugiere existe de verdad en esta misma fila.
       setError(err instanceof Error ? err.message : "No se pudo eliminar")
     }
   }
@@ -354,21 +404,101 @@ function CargosDialog({ cargos, onClose, onCambio }: {
           Son las columnas de la matriz. Cada cargo debería implicar documentos distintos:
           si a dos les pides exactamente lo mismo, sobra uno.
         </p>
+        <p className="text-[11px] text-ink-subtle -mt-2">
+          Un cargo que ya está en uso no se puede eliminar —hay asignaciones y requisitos
+          apuntando a él—. <strong>Desactivarlo</strong> lo saca de la matriz y conserva ese historial.
+        </p>
 
         <div className="space-y-1.5 max-h-64 overflow-y-auto">
-          {cargos.map(c => (
-            <div key={c.id} className="flex items-center justify-between px-3 py-2 rounded-lg border border-line-subtle bg-surface-app">
-              <div className="min-w-0">
-                <p className="text-body text-ink truncate">{c.nombre}</p>
-                <p className="text-[10px] font-mono text-ink-subtle">{c.codigo}{c.area ? ` · ${c.area}` : ""}</p>
+          {lista.map(c => {
+            const editando = editandoId === c.id
+            return (
+              <div key={c.id} className={cn(
+                "px-3 py-2 rounded-lg border border-line-subtle bg-surface-app",
+                !c.activo && "opacity-60",
+              )}>
+                {editando ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editNombre}
+                      onChange={e => setEditNombre(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); guardarEdicion(c) } }}
+                      placeholder="Nombre"
+                      aria-label={`Nombre de ${c.codigo}`}
+                      autoFocus
+                    />
+                    <Input
+                      value={editArea}
+                      onChange={e => setEditArea(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); guardarEdicion(c) } }}
+                      placeholder="Área"
+                      aria-label={`Área de ${c.codigo}`}
+                    />
+                    <button
+                      type="button" onClick={() => guardarEdicion(c)}
+                      disabled={cargando || !editNombre.trim()}
+                      title="Guardar" aria-label="Guardar"
+                      className="p-1.5 rounded-md text-ink-muted hover:text-ink hover:bg-surface disabled:opacity-40 transition-colors shrink-0"
+                    >
+                      <Save size={13} />
+                    </button>
+                    <button
+                      type="button" onClick={() => setEditandoId(null)}
+                      title="Cancelar" aria-label="Cancelar"
+                      className="p-1.5 rounded-md text-ink-subtle hover:text-ink transition-colors shrink-0"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-body text-ink truncate">
+                        {c.nombre}
+                        {!c.activo && <span className="ml-2 text-[10px] text-ink-subtle">inactivo</span>}
+                      </p>
+                      <p className="text-[10px] font-mono text-ink-subtle">{c.codigo}{c.area ? ` · ${c.area}` : ""}</p>
+                    </div>
+                    {/* Un cargo del catálogo global no es de esta organización:
+                        el backend rechaza tocarlo, así que tampoco se ofrece. */}
+                    {c.es_propio ? (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button" onClick={() => empezarEdicion(c)}
+                          title="Renombrar" aria-label={`Renombrar ${c.nombre}`}
+                          className="p-1.5 rounded-md text-ink-subtle hover:text-ink hover:bg-surface transition-colors"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          type="button" onClick={() => alternarActivo(c)}
+                          title={c.activo
+                            ? "Desactivar: sale de la matriz y conserva las asignaciones"
+                            : "Reactivar: vuelve a ser columna de la matriz"}
+                          className="px-2 py-1 rounded-md text-[10px] font-medium border border-line text-ink-muted hover:text-ink hover:border-line-strong transition-colors"
+                        >
+                          {c.activo ? "Desactivar" : "Reactivar"}
+                        </button>
+                        <button
+                          type="button" onClick={() => eliminar(c)}
+                          title="Eliminar" aria-label={`Eliminar ${c.nombre}`}
+                          className="p-1.5 rounded-md text-ink-subtle hover:text-bloqueo-ink transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span title="Del catálogo global de BERISA — no se edita desde acá"
+                            className="shrink-0 text-ink-subtle">
+                        <Lock size={11} />
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
-              <button onClick={() => eliminar(c)} title="Eliminar"
-                      className="text-ink-subtle hover:text-bloqueo-ink transition-colors shrink-0">
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-          {cargos.length === 0 && <p className="text-meta text-ink-subtle">Todavía no hay cargos.</p>}
+            )
+          })}
+          {lista.length === 0 && <p className="text-meta text-ink-subtle">Todavía no hay cargos.</p>}
         </div>
 
         <form onSubmit={crear} className="space-y-2 border-t border-line-subtle pt-3">
@@ -1183,7 +1313,6 @@ export default function PerfilesPage() {
 
       {dialogCargos && (
         <CargosDialog
-          cargos={cargos}
           onClose={() => setDialogCargos(false)}
           onCambio={cargarCargos}
         />

@@ -129,8 +129,11 @@ export function AgregarTrabajadorDialog({ open, onClose, onSuccess }: Props) {
               className="flex items-center gap-1.5 text-micro font-medium text-ink-muted hover:text-ink transition-colors"
             >
               <ChevronRight size={13} className={verFicha ? "rotate-90 transition-transform" : "transition-transform"} />
+              {/* Igual que en la invitación de contratista: la etiqueta nombra
+                  los campos, porque "Ficha de la persona" no le dice a nadie que
+                  ahí adentro está el contacto de emergencia. */}
               Ficha de la persona
-              <span className="text-ink-subtle font-normal">— opcional, se puede completar después</span>
+              <span className="text-ink-subtle font-normal">— fecha de nacimiento, contacto de emergencia, correo. Opcional, se completa después.</span>
             </button>
 
             {verFicha && (
