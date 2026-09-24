@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Acredita para Contratistas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Sistema de Acredita (frontend/src/app/globals.css) llevado a un documento:
+   IBM Plex, azul de marca, cobre solo en la A, y la paleta de estados con su
+   glifo — nunca solo color. */
+:root {
+  --bg: #f8fafd;
+  --surface: #ffffff;
+  --sunken: #f1f3f7;
+  --ink: #171f2d;
+  --ink-2: #414856;
+  --muted: #5d636e;
+  --subtle: #6c717b;
+  --line: #dbdee3;
+  --line-subtle: #ebedf0;
+  --brand: #1f5a96;
+  --brand-hover: #064883;
+  --brand-soft: #e8f2ff;
+  --brand-line: #5598e2;
+  --mark: #a24d21;
+  --focus: #1a71c4;
+
+  --inv: #19202d;
+  --inv-2: #272e3d;
+  --inv-ink: #f0f2f4;
+  --inv-muted: #adb1b9;
+  --inv-brand: #8bbcf3;
+
+  --ok-soft: #defcf3; --ok-line: #28a78c; --ok-ink: #007e67;
+  --accion-soft: #ffefde; --accion-line: #d28300; --accion-ink: #995e00;
+  --bloqueo-soft: #ffe3df; --bloqueo-line: #f26a5f; --bloqueo-ink: #90000b;
+  --proceso-soft: #e2f5ff; --proceso-line: #379ecd; --proceso-ink: #0b759d;
+  --excepcion-soft: #f4efff; --excepcion-line: #a97fed; --excepcion-ink: #6f47a7;
+  --neutro-soft: #f1f3f7; --neutro-line: #8f95a2; --neutro-ink: #5d636e;
+
+  --shadow: 0 1px 2px rgba(23, 31, 45, .06), 0 8px 24px -12px rgba(23, 31, 45, .18);
+  --radius: 10px;
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #10151e;
+    --surface: #171e2a;
+    --sunken: #131923;
+    --ink: #eef0f3;
+    --ink-2: #cdd1d8;
+    --muted: #a9aeb7;
+    --subtle: #9197a2;
+    --line: #2b3342;
+    --line-subtle: #212836;
+    --brand: #8bbcf3;
+    --brand-hover: #a9cdf6;
+    --brand-soft: #172840;
+    --brand-line: #3f78b8;
+    --mark: #8bbcf3;
+    --focus: #8bbcf3;
+    --inv: #0b0f16;
+    --inv-2: #1a2130;
+    --ok-soft: #0f2a25; --ok-line: #28a78c; --ok-ink: #62d4b8;
+    --accion-soft: #2c2111; --accion-line: #d28300; --accion-ink: #ffba61;
+    --bloqueo-soft: #361718; --bloqueo-line: #f26a5f; --bloqueo-ink: #ff948b;
+    --proceso-soft: #0f2533; --proceso-line: #379ecd; --proceso-ink: #72c7ee;
+    --excepcion-soft: #241d38; --excepcion-line: #a97fed; --excepcion-ink: #c7a9f8;
+    --neutro-soft: #1d2330; --neutro-line: #8f95a2; --neutro-ink: #b3b8c1;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px -14px rgba(0, 0, 0, .7);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #10151e;
+  --surface: #171e2a;
+  --sunken: #131923;
+  --ink: #eef0f3;
+  --ink-2: #cdd1d8;
+  --muted: #a9aeb7;
+  --subtle: #9197a2;
+  --line: #2b3342;
+  --line-subtle: #212836;
+  --brand: #8bbcf3;
+  --brand-hover: #a9cdf6;
+  --brand-soft: #172840;
+  --brand-line: #3f78b8;
+  --mark: #8bbcf3;
+  --focus: #8bbcf3;
+  --inv: #0b0f16;
+  --inv-2: #1a2130;
+  --ok-soft: #0f2a25; --ok-line: #28a78c; --ok-ink: #62d4b8;
+  --accion-soft: #2c2111; --accion-line: #d28300; --accion-ink: #ffba61;
+  --bloqueo-soft: #361718; --bloqueo-line: #f26a5f; --bloqueo-ink: #ff948b;
+  --proceso-soft: #0f2533; --proceso-line: #379ecd; --proceso-ink: #72c7ee;
+  --excepcion-soft: #241d38; --excepcion-line: #a97fed; --excepcion-ink: #c7a9f8;
+  --neutro-soft: #1d2330; --neutro-line: #8f95a2; --neutro-ink: #b3b8c1;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px -14px rgba(0, 0, 0, .7);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg);
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  padding-inline: 20px;
+}
+h1, h2, h3, h4 { color: var(--ink); text-wrap: balance; margin: 0; font-weight: 600; letter-spacing: -0.015em; }
+p { margin: 0; }
+a { color: var(--brand); text-underline-offset: 3px; }
+a:hover { color: var(--brand-hover); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+svg.i { width: 1em; height: 1em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── Barra superior ─────────────────────────────────────────── */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  margin-inline: -20px; padding: 12px 20px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line-subtle);
+}
+.topbar-in { max-width: 1160px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+.marca { display: flex; flex-direction: column; text-decoration: none; }
+.marca-fila { display: flex; align-items: baseline; }
+.marca-fila svg { width: 24px; height: 24px; color: var(--mark); margin-bottom: -2.8px; margin-right: 1px; fill: none; stroke: currentColor; stroke-linecap: round; }
+.marca-fila span { font-size: 19px; font-weight: 500; letter-spacing: -0.025em; color: var(--ink); line-height: 1; }
+.marca small { font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--subtle); margin-top: 5px; margin-left: 2px; line-height: 1; }
+.topbar .sep { width: 1px; height: 26px; background: var(--line); }
+.topbar .doc { font-size: 13px; color: var(--muted); line-height: 1.3; }
+.topbar .doc strong { color: var(--ink); font-weight: 600; display: block; font-size: 14px; }
+.topbar .ver { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--subtle); white-space: nowrap; }
+
+/* ── Portada ────────────────────────────────────────────────── */
+.portada { max-width: 1160px; margin: 0 auto; padding-block: 56px 40px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+.eyebrow::before { content: ""; width: 18px; height: 1.5px; background: currentColor; }
+.portada h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.05; letter-spacing: -0.035em; font-weight: 600; }
+.portada h1 em { font-style: normal; color: var(--brand); }
+.portada .lead { font-size: 18px; line-height: 1.6; color: var(--muted); margin-top: 20px; max-width: 34em; }
+.portada .quien { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+.chip b { color: var(--ink); font-weight: 600; }
+
+/* ── Estructura con índice ──────────────────────────────────── */
+.cuerpo { max-width: 1160px; margin: 0 auto; display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 56px; padding-block: 8px 96px; }
+.indice { position: sticky; top: 84px; align-self: start; max-height: calc(100vh - 100px); overflow: auto; padding-bottom: 12px; }
+.indice p { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); margin-bottom: 10px; }
+.indice ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); counter-reset: ix; }
+.indice li { counter-increment: ix; }
+.indice a { display: flex; gap: 10px; padding: 6px 0 6px 14px; margin-left: -1px; border-left: 2px solid transparent; font-size: 14px; color: var(--muted); text-decoration: none; line-height: 1.35; }
+.indice a::before { content: counter(ix, decimal-leading-zero); font-family: var(--mono); font-size: 11px; color: var(--subtle); padding-top: 2px; }
+.indice a:hover { color: var(--ink); }
+.indice a.activo { color: var(--ink); border-left-color: var(--brand); font-weight: 500; }
+.indice-movil { display: none; }
+
+main { min-width: 0; }
+.sec { padding-top: 56px; margin-top: 56px; border-top: 1px solid var(--line-subtle); }
+main > .sec:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+.sec-num { font-family: var(--mono); font-size: 12px; color: var(--brand); letter-spacing: .06em; margin-bottom: 8px; }
+.sec h2 { font-size: clamp(26px, 3.2vw, 32px); line-height: 1.15; letter-spacing: -0.025em; }
+.sec > .intro { font-size: 17.5px; color: var(--muted); margin-top: 12px; max-width: 40em; }
+.sec h3 { font-size: 19px; margin-top: 40px; margin-bottom: 4px; }
+.sec h3 + p, .sec p + p { margin-top: 12px; }
+.sec p, .sec li { max-width: 42em; }
+.prosa > * + * { margin-top: 14px; }
+strong { color: var(--ink); font-weight: 600; }
+.ui { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.ui::before { content: "«"; color: var(--subtle); font-weight: 400; }
+.ui::after { content: "»"; color: var(--subtle); font-weight: 400; }
+kbd, .menu { font-family: var(--mono); font-size: .86em; padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--surface); color: var(--ink); white-space: nowrap; }
+
+/* ── Pasos (solo para secuencias reales) ────────────────────── */
+.pasos { list-style: none; margin: 22px 0 0; padding: 0; counter-reset: paso; display: grid; gap: 0; }
+.pasos > li { counter-increment: paso; position: relative; padding: 0 0 22px 50px; max-width: 44em; }
+.pasos > li::before { content: counter(paso); position: absolute; left: 0; top: -1px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1.5px solid var(--brand); color: var(--brand); font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.pasos > li::after { content: ""; position: absolute; left: 15px; top: 32px; bottom: 2px; width: 1.5px; background: var(--line); }
+.pasos > li:last-child { padding-bottom: 0; }
+.pasos > li:last-child::after { display: none; }
+.pasos > li > b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
+.pasos ul { margin: 8px 0 0; padding-left: 18px; }
+.pasos ul li { margin-top: 4px; }
+
+/* ── Notas ──────────────────────────────────────────────────── */
+.nota { display: grid; grid-template-columns: auto 1fr; gap: 12px; margin-top: 22px; padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); max-width: 44em; font-size: 15px; }
+.nota svg.i { width: 18px; height: 18px; margin-top: 3px; }
+.nota b { color: var(--ink); }
+.nota.tip svg.i { color: var(--brand); }
+.nota.ojo { background: var(--accion-soft); border-color: color-mix(in srgb, var(--accion-line) 45%, transparent); }
+.nota.ojo svg.i { color: var(--accion-ink); }
+.nota.limite { background: var(--sunken); border-style: dashed; border-color: var(--neutro-line); }
+.nota.limite svg.i { color: var(--neutro-ink); }
+
+/* ── Badges de estado (espejo de shared/ui/estado-badge.tsx) ── */
+.b { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 6px; border: 1px solid; font-size: 12.5px; font-weight: 500; line-height: 1.5; white-space: nowrap; vertical-align: baseline; }
+.b svg.i { width: 12px; height: 12px; stroke-width: 2.8; }
+.b .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.b.pulse .dot { animation: pulso 1.6s ease-in-out infinite; }
+@keyframes pulso { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .b.pulse .dot { animation: none; } }
+.b.falta { background: transparent; border-style: dashed; border-color: var(--neutro-line); color: var(--neutro-ink); }
+.b.espera { background: var(--neutro-soft); border-color: var(--neutro-line); color: var(--neutro-ink); }
+.b.proceso { background: var(--proceso-soft); border-color: var(--proceso-line); color: var(--proceso-ink); }
+.b.accion { background: var(--accion-soft); border-color: var(--accion-line); color: var(--accion-ink); }
+.b.ok { background: var(--ok-soft); border-color: var(--ok-line); color: var(--ok-ink); }
+.b.bloqueo { background: var(--bloqueo-soft); border-color: var(--bloqueo-line); color: var(--bloqueo-ink); }
+.b.excepcion { background: var(--excepcion-soft); border-color: var(--excepcion-line); color: var(--excepcion-ink); }
+
+/* Tabla de estados */
+.estados { margin-top: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.estados .fila { display: grid; grid-template-columns: 210px 1fr; gap: 20px; padding: 14px 18px; border-top: 1px solid var(--line-subtle); align-items: start; }
+.estados .fila:first-child { border-top: 0; }
+.estados .fila p { font-size: 15px; max-width: none; }
+.estados .fila p + p { margin-top: 4px; }
+.estados .quien-actua { font-family: var(--mono); font-size: 11.5px; color: var(--subtle); letter-spacing: .02em; }
+
+/* ── Ciclo del documento ────────────────────────────────────── */
+.ciclo { margin-top: 24px; padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow-x: auto; }
+.ciclo svg { display: block; min-width: 640px; width: 100%; height: auto; }
+.ciclo text { font-family: var(--sans); }
+
+/* ── Pantallas de ejemplo ───────────────────────────────────── */
+figure { margin: 26px 0 0; }
+figcaption { font-size: 13px; color: var(--subtle); margin-top: 10px; display: flex; gap: 8px; }
+figcaption::before { content: "Ejemplo"; font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; height: fit-content; margin-top: 1px; }
+.pantalla { border: 1px solid var(--line); border-radius: 12px; background: var(--bg); box-shadow: var(--shadow); overflow: hidden; font-size: 13px; line-height: 1.45; }
+.pantalla .barra { height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: var(--sunken); border-bottom: 1px solid var(--line); }
+.pantalla .barra i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.pantalla .barra span { margin-left: 10px; font-family: var(--mono); font-size: 11px; color: var(--subtle); }
+.app { display: grid; grid-template-columns: 168px minmax(0, 1fr); min-height: 300px; }
+.app-side { background: var(--inv); color: var(--inv-muted); padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+.app-side .logo { display: flex; align-items: baseline; padding: 2px 8px 14px; color: var(--inv-ink); font-size: 15px; font-weight: 500; letter-spacing: -0.02em; }
+.app-side .logo svg { width: 18px; height: 18px; color: var(--inv-brand); margin-bottom: -2px; fill: none; stroke: currentColor; stroke-linecap: round; }
+.app-side .it { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 6px; }
+.app-side .it.on { background: var(--inv-2); color: var(--inv-ink); }
+.app-side .it em { font-style: normal; font-size: 10.5px; font-weight: 600; background: #ffaf50; color: #2c1a04; padding: 0 6px; border-radius: 999px; }
+.app-main { padding: 16px 18px; min-width: 0; display: grid; gap: 12px; align-content: start; color: var(--ink-2); }
+.app-main h5 { margin: 0; font-size: 15px; color: var(--ink); font-weight: 600; }
+.app-main .sub { color: var(--subtle); font-size: 12px; margin-top: 1px; }
+.cab { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 6px; background: var(--brand); color: #fff; white-space: nowrap; }
+:root[data-theme="dark"] .btn { color: #0b1422; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn { color: #0b1422; } }
+.btn.sec2 { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.kpi span { font-size: 11px; color: var(--subtle); display: block; }
+.kpi b { font-size: 20px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.tabla { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.tabla .tr { display: grid; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line-subtle); align-items: center; }
+.tabla .tr:first-child { border-top: 0; background: var(--sunken); font-size: 11px; color: var(--subtle); text-transform: uppercase; letter-spacing: .04em; padding-block: 6px; }
+.tabla .tr > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabla .nom { color: var(--ink); font-weight: 500; }
+.tabla .t2 { color: var(--subtle); font-size: 11.5px; }
+.mini-bar { height: 5px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
+.mini-bar i { display: block; height: 100%; background: var(--ok-line); border-radius: 3px; }
+.dialogo { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; max-width: 380px; box-shadow: var(--shadow); }
+.dialogo h5 { font-size: 14px; }
+.campo { display: grid; gap: 4px; font-size: 11.5px; color: var(--muted); }
+.campo div { border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; background: var(--bg); color: var(--ink); font-size: 12.5px; min-height: 30px; }
+.campo div.vacio { color: var(--subtle); }
+.zona { border: 1.5px dashed var(--line); border-radius: 8px; padding: 14px; text-align: center; color: var(--subtle); font-size: 12px; background: var(--bg); }
+.escena { padding: 22px; background: var(--sunken); display: grid; place-items: center; }
+
+/* ── Tarjetas de roles / conceptos ──────────────────────────── */
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.concepto { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.concepto h4 { font-size: 15.5px; display: flex; align-items: center; gap: 8px; }
+.concepto h4 svg.i { color: var(--brand); width: 17px; height: 17px; }
+.concepto p { font-size: 14.5px; margin-top: 6px; color: var(--muted); }
+.concepto .ej { font-family: var(--mono); font-size: 12px; color: var(--subtle); margin-top: 10px; display: block; }
+
+/* ── Preguntas frecuentes ───────────────────────────────────── */
+.faq { margin-top: 22px; border-top: 1px solid var(--line); }
+.faq details { border-bottom: 1px solid var(--line); }
+.faq summary { cursor: pointer; list-style: none; padding: 16px 36px 16px 0; font-weight: 500; color: var(--ink); position: relative; font-size: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: ""; position: absolute; right: 6px; top: 22px; width: 8px; height: 8px; border-right: 2px solid var(--subtle); border-bottom: 2px solid var(--subtle); transform: rotate(45deg); transition: transform .2s; }
+.faq details[open] summary::after { transform: rotate(-135deg); top: 26px; }
+.faq details > div { padding: 0 0 18px; font-size: 15.5px; }
+.faq details > div > * + * { margin-top: 10px; }
+
+.pie { max-width: 1160px; margin: 0 auto; padding-block: 28px 48px; border-top: 1px solid var(--line-subtle); font-size: 13px; color: var(--subtle); display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .cuerpo { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .indice { display: none; }
+  .indice-movil { display: block; margin-bottom: 36px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .indice-movil summary { padding: 12px 16px; cursor: pointer; font-weight: 500; color: var(--ink); font-size: 15px; }
+  .indice-movil ol { margin: 0; padding: 0 16px 14px 36px; display: grid; gap: 6px; font-size: 15px; }
+  .portada { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-block: 40px 28px; }
+}
+@media (max-width: 640px) {
+  body { padding-inline: 16px; }
+  .topbar { margin-inline: -16px; padding-inline: 16px; }
+  .topbar .ver, .topbar .sep { display: none; }
+  .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); }
+  .estados .fila { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .app-side { display: none; }
+  .pasos > li { padding-left: 44px; }
+  .sec { padding-top: 44px; margin-top: 44px; }
+}
+
+/* ── Piezas de la app reproducidas ──────────────────────────── */
+.tarjeta-app { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.tarjeta-app .cab-t { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 14px; border-bottom: 1px solid var(--line-subtle); }
+.tarjeta-app .cab-t b { font-size: 13.5px; color: var(--ink); }
+.tarjeta-app .cab-t span { font-family: var(--mono); font-size: 11px; color: var(--subtle); }
+.pend { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 11px; padding: 12px 14px; border-top: 1px solid var(--line-subtle); align-items: start; }
+.pend:first-of-type { border-top: 0; }
+.pend .ic { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; grid-row: span 2; }
+.pend .ic svg.i { width: 14px; height: 14px; }
+.pend .ic.excepcion { background: var(--excepcion-soft); color: var(--excepcion-ink); }
+.pend .ic.accion { background: var(--accion-soft); color: var(--accion-ink); }
+.pend .ic.espera { background: var(--neutro-soft); color: var(--neutro-ink); }
+.pend .ic.bloqueo { background: var(--bloqueo-soft); color: var(--bloqueo-ink); }
+.pend .t { font-size: 13px; color: var(--ink); font-weight: 500; line-height: 1.4; }
+.pend .d { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.pend .d.obs { color: var(--accion-ink); }
+.pend .acc { grid-column: 2; display: flex; gap: 6px; margin-top: 6px; }
+.docrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 10px 12px; border-top: 1px solid var(--line-subtle); align-items: center; }
+.docrow .n { color: var(--ink); font-weight: 500; font-size: 12.5px; }
+.docrow .n code { font-family: var(--mono); font-size: 10.5px; color: var(--subtle); margin-left: 6px; font-weight: 400; }
+.docrow .bs { grid-column: 1; display: flex; flex-wrap: wrap; gap: 5px; }
+.docrow .bs .b { font-size: 11px; padding: 1px 7px; }
+.docrow .btn { grid-column: 2; grid-row: 1 / span 2; }
+.grupo { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--sunken); font-size: 12px; font-weight: 600; color: var(--ink); border-top: 1px solid var(--line-subtle); }
+.grupo span { font-family: var(--mono); font-weight: 500; font-size: 11px; color: var(--ok-ink); }
+.tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.tabs span { padding: 6px 0; color: var(--subtle); }
+.tabs span.on { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px 0 var(--brand); }
+.tabs span i { font-style: normal; font-family: var(--mono); font-size: 10.5px; color: var(--subtle); margin-left: 4px; }
+.filtros { display: flex; gap: 8px; flex-wrap: wrap; }
+.filtros div { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 9px; font-size: 12px; color: var(--subtle); display: flex; align-items: center; gap: 6px; }
+.filtros div svg.i { width: 12px; height: 12px; }
+.filtros .busca { flex: 1; min-width: 150px; }
+.opcion { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.opcion b { font-size: 12.5px; color: var(--ink); }
+.opcion.on { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); background: var(--brand-soft); }
+.acciones { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.contador { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.contador div { border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font-size: 10.5px; color: var(--subtle); background: var(--surface); }
+.contador b { display: block; font-size: 16px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.barra-av { height: 7px; border-radius: 4px; background: var(--sunken); overflow: hidden; }
+.barra-av i { display: block; height: 100%; width: 72%; background: var(--ok-line); }
+.permisos { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 460px; }
+.permisos th, .permisos td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line-subtle); vertical-align: top; }
+.permisos th { font-size: 12px; font-weight: 600; color: var(--subtle); text-transform: uppercase; letter-spacing: .04em; background: var(--sunken); }
+.permisos td:not(:first-child), .permisos th:not(:first-child) { text-align: center; width: 128px; }
+.permisos .si { color: var(--ok-ink); } .permisos .no { color: var(--subtle); }
+.permisos svg.i { width: 16px; height: 16px; vertical-align: -3px; }
+.marco-tabla { margin-top: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow-x: auto; }
+.marco-tabla tr:last-child td { border-bottom: 0; }
+.menu-tabla { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 480px; }
+.menu-tabla td { padding: 11px 14px; border-bottom: 1px solid var(--line-subtle); vertical-align: top; }
+.menu-tabla td:first-child { width: 150px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.menu-tabla td:first-child small { display: block; font-family: var(--mono); font-weight: 400; font-size: 11px; color: var(--subtle); margin-top: 2px; }
+.ciclo .n rect { stroke-width: 1.2; }
+.ciclo .n text { font-size: 13px; font-weight: 500; }
+.ciclo .n use { fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.ciclo .n.falta rect { fill: var(--surface); stroke: var(--neutro-line); stroke-dasharray: 4 3; }
+.ciclo .n.falta text { fill: var(--neutro-ink); } .ciclo .n.falta use { stroke: var(--neutro-ink); }
+.ciclo .n.espera rect { fill: var(--neutro-soft); stroke: var(--neutro-line); }
+.ciclo .n.ok rect { fill: var(--ok-soft); stroke: var(--ok-line); }
+.ciclo .n.accion rect { fill: var(--accion-soft); stroke: var(--accion-line); }
+.ciclo .n.bloqueo rect { fill: var(--bloqueo-soft); stroke: var(--bloqueo-line); }
+.ciclo .n.espera use { stroke: var(--neutro-ink); } .ciclo .n.espera text { fill: var(--neutro-ink); }
+.ciclo .n.ok use { stroke: var(--ok-ink); } .ciclo .n.ok text { fill: var(--ok-ink); }
+.ciclo .n.accion use { stroke: var(--accion-ink); } .ciclo .n.accion text { fill: var(--accion-ink); }
+.ciclo .n.bloqueo use { stroke: var(--bloqueo-ink); } .ciclo .n.bloqueo text { fill: var(--bloqueo-ink); }
+.ciclo .n text { stroke: none !important; }
+.ciclo .e { fill: none; stroke: var(--neutro-line); stroke-width: 1.4; }
+.ciclo .e.tu { stroke: var(--brand); stroke-width: 1.6; }
+.ciclo .et { font-size: 12px; fill: var(--muted); }
+.ciclo .et.tu { fill: var(--brand); font-weight: 600; }
+.ciclo marker path { fill: var(--neutro-line); }
+.ciclo marker.tu path { fill: var(--brand); }
+.ciclo-ley { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+.ciclo-ley span { display: inline-flex; align-items: center; gap: 8px; }
+.ciclo-ley i { width: 18px; height: 0; border-top: 2px solid var(--brand); }
+.ciclo-ley i.c { border-top: 1.5px solid var(--neutro-line); }
+@media (max-width: 640px) {
+  .contador { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .docrow { grid-template-columns: minmax(0, 1fr); }
+  .docrow .btn { grid-column: 1; grid-row: auto; justify-self: start; }
+}
+
+/* ── Cómo se arma una faena (manual mandante) ───────────────── */
+.arma { margin-top: 24px; display: grid; grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr) 36px minmax(0, 1fr); align-items: center; }
+.arma .pila { display: grid; gap: 8px; }
+.arma .pieza { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; font-size: 13.5px; line-height: 1.4; }
+.arma .pieza b { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 14px; }
+.arma .pieza b svg.i { color: var(--brand); width: 15px; height: 15px; }
+.arma .pieza span { color: var(--muted); font-size: 12.5px; }
+.arma .centro { border: 1.5px solid var(--brand); background: var(--brand-soft); padding: 16px; }
+.arma .centro b { font-size: 16px; }
+.arma .fin { display: grid; gap: 8px; }
+.arma .flecha { display: grid; place-items: center; color: var(--subtle); }
+.arma .flecha svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 760px) {
+  .arma { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .arma .flecha svg { transform: rotate(90deg); }
+}
+/* Entrega en la cola de Revisión */
+.entrega { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; font-size: 12.5px; }
+.entrega .n { color: var(--ink); font-weight: 600; font-size: 13px; line-height: 1.35; }
+.entrega .n code { font-family: var(--mono); font-weight: 400; font-size: 10.5px; color: var(--subtle); margin-left: 4px; }
+.entrega .n .v { font-family: var(--mono); font-size: 10.5px; color: var(--brand); border: 1px solid var(--brand-line); border-radius: 4px; padding: 0 4px; margin-left: 4px; font-weight: 500; }
+.entrega .m { color: var(--subtle); font-size: 11.5px; line-height: 1.45; }
+.entrega .pie-e { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.archivo { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; background: var(--bg); }
+.archivo svg.i { width: 12px; height: 12px; color: var(--bloqueo-ink); }
+.pilares { display: flex; gap: 6px; flex-wrap: wrap; }
+.pilares span { font-size: 11.5px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--muted); background: var(--surface); }
+.pilares span.on { background: var(--inv); color: var(--inv-ink); border-color: var(--inv); }
+.pilares span i { font-style: normal; font-family: var(--mono); font-size: 10.5px; opacity: .75; margin-left: 4px; }
+.compara { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.compara > div { border-radius: var(--radius); padding: 14px 16px; font-size: 14.5px; border: 1px solid var(--line); background: var(--surface); }
+.compara .mal { border-style: dashed; }
+.compara h4 { font-size: 12px; font-family: var(--mono); font-weight: 500; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 6px; }
+.compara .bien h4 { color: var(--ok-ink); }
+.compara .mal h4 { color: var(--subtle); }
+.compara q { quotes: "“" "”"; color: var(--ink); }
+@media (max-width: 640px) { .compara { grid-template-columns: minmax(0, 1fr); } }
+
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="a" viewBox="0 0 48 48"><path d="M11 39 L19.5 12" stroke-width="7"/><path d="M37 39 L28.5 12" stroke-width="7"/><path d="M19.5 12 H28.5" stroke-width="7"/><path d="M14.56 27.7 L31.74 22.3" stroke-width="6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-luz" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-pausa" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-gente" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></symbol>
+    <symbol id="i-maletin" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+    <symbol id="i-edificio" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M2 21h20M8 7h4M8 11h4M8 15h4"/></symbol>
+    <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-mapa" viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-lista" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="i-sobre" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+    <symbol id="i-flecha" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-ojo" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  </defs>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="marca" aria-label="Acredita de BERISA">
+      <div class="marca-fila"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#a"/></svg><span>credita</span></div>
+      <small>de BERISA</small>
+    </div>
+    <div class="sep"></div>
+    <div class="doc"><strong>Manual del contratista</strong>Guía de uso del portal</div>
+    <div class="ver">Versión septiembre 2026</div>
+  </div>
+</header>
+
+<section class="portada">
+  <div>
+    <p class="eyebrow">Manual del contratista</p>
+    <h1>Tu empresa y tu gente, <em>listas para entrar a faena.</em></h1>
+    <p class="lead">Acredita reúne en un solo lugar los documentos que te piden tus clientes. Subes cada documento una sola vez y cada cliente lo revisa. Siempre ves qué falta y quién de tu gente ya puede ingresar.</p>
+    <div class="quien">
+      <span class="chip"><b>Para</b> administradores y colaboradores de empresas contratistas</span>
+      <span class="chip"><b>Lectura</b> 15 minutos</span>
+    </div>
+  </div>
+  <figure style="margin:0">
+    <div class="tarjeta-app" role="img" aria-label="Ejemplo de la lista de pendientes en Inicio">
+      <div class="cab-t"><b>Pendientes · 3</b><span>Inicio</span></div>
+      <div class="pend">
+        <div class="ic excepcion"><svg class="i"><use href="#i-lock"/></svg></div>
+        <div class="t">Minera Andina Norte quiere revisar tu Certificado de aptitud ocupacional de Pedro Soto</div>
+        <div class="d">Lo marcaste como sensible</div>
+        <div class="acc"><span class="btn sec2">Rechazar</span><span class="btn">Autorizar</span></div>
+      </div>
+      <div class="pend">
+        <div class="ic accion"><svg class="i"><use href="#i-alerta"/></svg></div>
+        <div class="t">Certificado F30-1 observado por Minera Andina Norte</div>
+        <div class="d obs">El certificado es de julio. Se requiere el del mes de agosto.</div>
+        <div class="acc"><span class="btn">Subir corrección</span></div>
+      </div>
+      <div class="pend">
+        <div class="ic espera"><svg class="i"><use href="#i-clock"/></svg></div>
+        <div class="t">Póliza de responsabilidad civil vence en 7 días · Portuaria del Pacífico</div>
+        <div class="d">Vigente hasta 2026-10-01</div>
+        <div class="acc"><span class="btn sec2">Renovar</span></div>
+      </div>
+    </div>
+    <figcaption>Lo primero que ves al entrar: todo lo que espera una acción tuya, lo más urgente arriba.</figcaption>
+  </figure>
+</section>
+
+<div class="cuerpo">
+  <nav class="indice" aria-label="Contenido">
+    <p>Contenido</p>
+    <ol>
+      <li><a href="#como-funciona">Cómo funciona</a></li>
+      <li><a href="#cuenta">Activar tu cuenta</a></li>
+      <li><a href="#pantalla">Conoce la pantalla</a></li>
+      <li><a href="#inicio">Inicio y pendientes</a></li>
+      <li><a href="#estados">Estados de un documento</a></li>
+      <li><a href="#subir">Subir documentos</a></li>
+      <li><a href="#observado">Corregir un observado</a></li>
+      <li><a href="#vencimientos">Renovar a tiempo</a></li>
+      <li><a href="#trabajadores">Trabajadores</a></li>
+      <li><a href="#servicios">Servicios y dotación</a></li>
+      <li><a href="#sensibles">Documentos sensibles</a></li>
+      <li><a href="#empresa">Mi empresa</a></li>
+      <li><a href="#equipo">Tu equipo</a></li>
+      <li><a href="#correos">Correos que recibes</a></li>
+      <li><a href="#faq">Preguntas frecuentes</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <details class="indice-movil">
+      <summary>Contenido del manual</summary>
+      <ol>
+        <li><a href="#como-funciona">Cómo funciona</a></li>
+        <li><a href="#cuenta">Activar tu cuenta</a></li>
+        <li><a href="#pantalla">Conoce la pantalla</a></li>
+        <li><a href="#inicio">Inicio y pendientes</a></li>
+        <li><a href="#estados">Estados de un documento</a></li>
+        <li><a href="#subir">Subir documentos</a></li>
+        <li><a href="#observado">Corregir un observado</a></li>
+        <li><a href="#vencimientos">Renovar a tiempo</a></li>
+        <li><a href="#trabajadores">Trabajadores</a></li>
+        <li><a href="#servicios">Servicios y dotación</a></li>
+        <li><a href="#sensibles">Documentos sensibles</a></li>
+        <li><a href="#empresa">Mi empresa</a></li>
+        <li><a href="#equipo">Tu equipo</a></li>
+        <li><a href="#correos">Correos que recibes</a></li>
+        <li><a href="#faq">Preguntas frecuentes</a></li>
+      </ol>
+    </details>
+
+    <!-- 01 -->
+    <section class="sec" id="como-funciona">
+      <p class="sec-num">01</p>
+      <h2>Cómo funciona</h2>
+      <p class="intro">Antes de trabajar en una faena, tu cliente necesita comprobar que tu empresa y cada trabajador cumplen sus requisitos. Acredita ordena ese trámite.</p>
+
+      <div class="grid2">
+        <div class="concepto">
+          <h4><svg class="i"><use href="#i-edificio"/></svg>Cliente (mandante)</h4>
+          <p>Es la empresa que te contrata y que define qué documentos exige. Puedes tener varios clientes en Acredita a la vez.</p>
+        </div>
+        <div class="concepto">
+          <h4><svg class="i"><use href="#i-maletin"/></svg>Servicio</h4>
+          <p>Es un trabajo que un cliente te contrató en un lugar concreto. Lo crea el cliente, y sus exigencias aparecen solas en tu portal.</p>
+        </div>
+        <div class="concepto">
+          <h4><svg class="i"><use href="#i-doc"/></svg>Documentos de empresa</h4>
+          <p>Son los que acreditan a tu empresa, como el F30, el F30-1, el Reglamento Interno o la afiliación a la mutualidad.</p>
+        </div>
+        <div class="concepto">
+          <h4><svg class="i"><use href="#i-gente"/></svg>Documentos por trabajador</h4>
+          <p>Son los de cada persona asignada a un servicio, como el contrato, la cédula, el examen ocupacional o la IRL firmada.</p>
+        </div>
+      </div>
+
+      <h3>El recorrido completo</h3>
+      <ol class="pasos">
+        <li><b>Un cliente te invita.</b>Te llega un correo para activar tu cuenta. Si ya usas Acredita con otro cliente, simplemente aparece el nuevo cliente en tu portal.</li>
+        <li><b>El cliente crea un servicio.</b>En ese momento aparecen en tu portal los documentos que ese servicio exige.</li>
+        <li><b>Registras a tus trabajadores y los asignas al servicio.</b>Recién entonces se les piden sus documentos personales.</li>
+        <li><b>Subes los documentos.</b>Cada uno queda <span class="b espera"><svg class="i"><use href="#i-clock"/></svg>En revisión</span> hasta que el cliente lo revisa.</li>
+        <li><b>El cliente aprueba u observa.</b>Si observa un documento, te explica qué corregir. Lo corriges y lo vuelves a subir.</li>
+        <li><b>Todo aprobado: tu gente puede ingresar.</b>Inicio muestra <strong>“Lista para empezar”</strong> para cada servicio en regla.</li>
+      </ol>
+
+      <div class="nota tip">
+        <svg class="i"><use href="#i-luz"/></svg>
+        <p><b>Un documento sirve para varios clientes.</b> Por ejemplo, subes tu F30-1 una sola vez y les llega a todos los clientes que lo exigen. Cada cliente lo revisa por su cuenta. Si los clientes piden cosas distintas, Acredita te muestra el estado de cada uno por separado.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="sec" id="cuenta">
+      <p class="sec-num">02</p>
+      <h2>Activar tu cuenta</h2>
+      <p class="intro">Tu cuenta de Acredita se crea con la invitación de un cliente. Tú no necesitas registrarte.</p>
+
+      <h3>La primera vez</h3>
+      <ol class="pasos">
+        <li><b>Abre el correo “Invitación a acreditarse ante…”</b>Viene con el nombre de tu cliente. Presiona <span class="ui">Activar cuenta</span>. El enlace no vence hasta que lo uses.</li>
+        <li><b>Revisa los datos de tu empresa.</b>Acredita te muestra la razón social y el RUT que ingresó tu cliente. Corrígelos si hace falta. También puedes agregar el giro, pero es opcional.</li>
+        <li><b>Escribe tu nombre y elige una contraseña.</b>Debe tener al menos 8 caracteres. Tienes que escribirla dos veces.</li>
+        <li><b>Presiona <span class="ui">Activar cuenta y comenzar</span>.</b>Entras directo a tu portal.</li>
+      </ol>
+
+      <div class="nota ojo">
+        <svg class="i"><use href="#i-alerta"/></svg>
+        <p><b>Revisa bien el RUT antes de activar.</b> Después no se puede cambiar desde el portal, y todos tus clientes ven ese mismo RUT.</p>
+      </div>
+
+      <h3>Entrar los días siguientes</h3>
+      <p>Entra con tu <strong>correo electrónico</strong> y tu <strong>contraseña</strong> y presiona <span class="ui">Ingresar</span>. Por seguridad, la sesión dura una hora. Después Acredita te pide ingresar de nuevo, así que termina lo que estés subiendo antes de dejar el computador.</p>
+
+      <h3>Si olvidaste la contraseña</h3>
+      <ol class="pasos">
+        <li><b>En la pantalla de ingreso, presiona <span class="ui">¿La olvidaste?</span></b></li>
+        <li><b>Escribe tu correo y presiona <span class="ui">Enviar enlace</span>.</b>El enlace dura una hora y sirve una sola vez.</li>
+        <li><b>Abre el enlace y elige tu contraseña nueva.</b>Presiona <span class="ui">Guardar y entrar</span> y quedas dentro.</li>
+      </ol>
+      <p style="margin-top:14px">Un administrador de tu empresa también puede enviarte un enlace para cambiar la contraseña desde <a href="#equipo">Equipo</a>.</p>
+    </section>
+
+    <!-- 03 -->
+    <section class="sec" id="pantalla">
+      <p class="sec-num">03</p>
+      <h2>Conoce la pantalla</h2>
+      <p class="intro">En el computador, el menú está a la izquierda. En el teléfono está abajo, con nombres más cortos.</p>
+
+      <figure>
+        <div class="pantalla" role="img" aria-label="Ejemplo de la pantalla de Inicio del portal contratista">
+          <div class="barra"><i></i><i></i><i></i><span>Portal Contratista · Inicio</span></div>
+          <div class="app">
+            <div class="app-side">
+              <div class="logo"><svg viewBox="0 0 48 48"><use href="#a"/></svg>credita</div>
+              <div class="it on">Inicio <em>3</em></div>
+              <div class="it">Servicios</div>
+              <div class="it">Trabajadores</div>
+              <div class="it">Documentos</div>
+              <div class="it">Mi empresa</div>
+              <div class="it">Equipo</div>
+            </div>
+            <div class="app-main">
+              <div><h5>Mi acreditación</h5><p class="sub">Puedes trabajar en 1 de tus 2 servicios</p></div>
+              <div class="tabla">
+                <div class="tr" style="grid-template-columns:1fr auto"><span>Mis servicios</span><span>Ver detalle →</span></div>
+                <div class="tr" style="grid-template-columns:minmax(0,1fr) auto"><div><div class="nom">Mantención correas CV-12</div><div class="t2">Minera Andina Norte</div></div><span class="b ok"><svg class="i"><use href="#i-check"/></svg>Lista para empezar</span></div>
+                <div class="tr" style="grid-template-columns:minmax(0,1fr) auto"><div><div class="nom">Obras civiles muelle 3</div><div class="t2">Portuaria del Pacífico</div></div><span class="b bloqueo"><svg class="i"><use href="#i-ban"/></svg>Falta MIPER</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>El número junto a Inicio cuenta tus pendientes. Se actualiza cada vez que cambias de pantalla.</figcaption>
+      </figure>
+
+      <div class="marco-tabla">
+        <table class="menu-tabla">
+          <tbody>
+            <tr><td>Inicio</td><td>Tus pendientes y el estado de cada servicio. Empieza aquí cada día.</td></tr>
+            <tr><td>Servicios</td><td>Los trabajos que te contrató cada cliente, su avance y la gente asignada a cada uno.</td></tr>
+            <tr><td>Trabajadores<small>“Personal” en el teléfono</small></td><td>Tu nómina: agregar personas, cargar la nómina completa y ver quién puede ingresar.</td></tr>
+            <tr><td>Documentos<small>“Docs” en el teléfono</small></td><td>Tu biblioteca de documentos, separados en empresa y trabajadores. Desde aquí subes todo.</td></tr>
+            <tr><td>Mi empresa<small>“Empresa” en el teléfono</small></td><td>Los datos de tu empresa que ven tus clientes y que se usan en una fiscalización.</td></tr>
+            <tr><td>Equipo</td><td>Las personas de tu empresa que tienen acceso a Acredita.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="nota tip">
+        <svg class="i"><use href="#i-luz"/></svg>
+        <p><b>Modo faena.</b> En el teléfono, el ícono del sol en la parte de arriba sube el contraste para leer a pleno sol. Acredita lo recuerda en ese teléfono.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="sec" id="inicio">
+      <p class="sec-num">04</p>
+      <h2>Inicio: tu lista de pendientes</h2>
+      <p class="intro">Inicio junta en una sola lista todo lo que espera algo de ti, con lo más urgente arriba. Cada fila tiene su propio botón para resolverla.</p>
+
+      <div class="estados">
+        <div class="fila">
+          <div><span class="b excepcion"><svg class="i"><use href="#i-lock"/></svg>Te piden autorización</span></div>
+          <div><p>Un cliente quiere ver un documento que marcaste como sensible. Respondes ahí mismo con <span class="ui">Autorizar</span> o <span class="ui">Rechazar</span>. <a href="#sensibles">Más detalles</a>.</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b accion"><svg class="i"><use href="#i-alerta"/></svg>Observado</span></div>
+          <div><p>El cliente revisó el documento y encontró un problema. La fila muestra <strong>su mensaje exacto</strong>. Presiona <span class="ui">Subir corrección</span>.</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b espera"><svg class="i"><use href="#i-clock"/></svg>Vence pronto</span></div>
+          <div><p>Un documento aprobado vence en 30 días o menos. Presiona <span class="ui">Renovar</span> para subir la versión nueva.</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b bloqueo"><svg class="i"><use href="#i-ban"/></svg>Falta de la empresa</span></div>
+          <div><p>A un servicio le faltan documentos de tu empresa y el trabajo no queda habilitado. Presiona <span class="ui">Ver ficha</span> para ir a tus documentos.</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b bloqueo"><svg class="i"><use href="#i-gente"/></svg>Trabajador incompleto</span></div>
+          <div><p>A una persona le faltan documentos para un servicio y no podrá ingresar. Presiona <span class="ui">Ver ficha</span> para ir a Trabajadores.</p></div>
+        </div>
+      </div>
+
+      <div class="nota tip">
+        <svg class="i"><use href="#i-info"/></svg>
+        <p><b>“Falta” quiere decir “todavía no está aprobado”.</b> Un documento que ya subiste y está en revisión sigue contando como pendiente hasta que el cliente lo apruebe. No tienes que volver a subirlo.</p>
+      </div>
+
+      <p style="margin-top:22px">Cuando no queda nada por hacer, Inicio muestra <strong>“Estás al día”</strong>. Más abajo, <strong>Mis servicios</strong> lista tus servicios activos por cliente. Cada uno muestra <span class="b ok"><svg class="i"><use href="#i-check"/></svg>Lista para empezar</span> o lo primero que le falta.</p>
+    </section>
+
+    <!-- 05 -->
+    <section class="sec" id="estados">
+      <p class="sec-num">05</p>
+      <h2>Los estados de un documento</h2>
+      <p class="intro">Cada estado tiene su propio color y su propio ícono. Así lo reconoces aunque no alcances a leer la palabra. El ámbar y el rojo son tu trabajo pendiente. El gris significa que ya hiciste tu parte.</p>
+
+      <div class="ciclo" role="img" aria-label="Diagrama: el documento pasa de Falta subir a En revisión cuando lo subes. El cliente lo aprueba o lo observa. Si lo observa, lo corriges y vuelve a En revisión. Si está aprobado y pasa su fecha de vigencia, queda Vencido y subes la versión nueva.">
+        <svg viewBox="0 0 780 250">
+          <defs>
+            <marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z"/></marker>
+            <marker id="ft" class="tu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z"/></marker>
+          </defs>
+          <path class="e tu" d="M140 125 H204" marker-end="url(#ft)"/>
+          <text class="et tu" x="172" y="115" text-anchor="middle">subes</text>
+          <path class="e" d="M340 118 C 392 118, 392 58, 434 58" marker-end="url(#f)"/>
+          <text class="et" x="428" y="46" text-anchor="end">el cliente aprueba</text>
+          <path class="e" d="M340 132 C 392 132, 392 192, 434 192" marker-end="url(#f)"/>
+          <text class="et" x="428" y="212" text-anchor="end">el cliente observa</text>
+          <path class="e tu" d="M505 210 V238 H275 V151" marker-end="url(#ft)"/>
+          <text class="et tu" x="390" y="233" text-anchor="middle">corriges y vuelves a subir</text>
+          <path class="e" d="M570 58 H634" marker-end="url(#f)"/>
+          <text class="et" x="602" y="49" text-anchor="middle">vence</text>
+          <path class="e tu" d="M705 40 V14 H300 V101" marker-end="url(#ft)"/>
+          <text class="et tu" x="505" y="30" text-anchor="middle">subes la versión nueva</text>
+          <g class="n falta"><rect x="10" y="107" width="130" height="36" rx="7"/><use href="#i-lock" x="22" y="118" width="14" height="14"/><text x="42" y="130">Falta subir</text></g>
+          <g class="n espera"><rect x="210" y="107" width="130" height="36" rx="7"/><use href="#i-clock" x="222" y="118" width="14" height="14"/><text x="242" y="130">En revisión</text></g>
+          <g class="n ok"><rect x="440" y="40" width="130" height="36" rx="7"/><use href="#i-check" x="452" y="51" width="14" height="14"/><text x="472" y="63">Aprobado</text></g>
+          <g class="n accion"><rect x="440" y="174" width="130" height="36" rx="7"/><use href="#i-alerta" x="452" y="185" width="14" height="14"/><text x="472" y="197">Observado</text></g>
+          <g class="n bloqueo"><rect x="640" y="40" width="130" height="36" rx="7"/><use href="#i-ban" x="652" y="51" width="14" height="14"/><text x="672" y="63">Vencido</text></g>
+        </svg>
+        <div class="ciclo-ley"><span><i></i>lo haces tú</span><span><i class="c"></i>lo hace el cliente o el calendario</span></div>
+      </div>
+
+      <div class="estados">
+        <div class="fila">
+          <div><span class="b falta"><svg class="i"><use href="#i-lock"/></svg>Falta subir</span></div>
+          <div><p>El cliente lo exige y todavía no lo subes.</p><p class="quien-actua">TE TOCA A TI</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b espera"><svg class="i"><use href="#i-clock"/></svg>En revisión</span></div>
+          <div><p>Ya lo subiste. Una persona del cliente lo está revisando. No tienes que hacer nada más.</p><p class="quien-actua">LE TOCA AL CLIENTE</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b accion"><svg class="i"><use href="#i-alerta"/></svg>Observado</span></div>
+          <div><p>El cliente encontró un problema y te dejó un mensaje con lo que debes corregir. Es parte normal del proceso y todavía no bloquea el ingreso.</p><p class="quien-actua">TE TOCA A TI</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b ok"><svg class="i"><use href="#i-check"/></svg>Aprobado</span></div>
+          <div><p>El cliente lo aceptó. Si le puso fecha de vigencia, 30 días antes verás <span class="b accion"><svg class="i"><use href="#i-alerta"/></svg>Aprobado · vence en 12 días</span> (el número cambia según los días que falten).</p><p class="quien-actua">NADA PENDIENTE</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b bloqueo"><svg class="i"><use href="#i-ban"/></svg>Vencido</span></div>
+          <div><p>Pasó su fecha de vigencia. Es el único estado de un documento que <strong>impide ingresar hoy</strong>. Sube la versión nueva cuanto antes.</p><p class="quien-actua">TE TOCA A TI · URGENTE</p></div>
+        </div>
+        <div class="fila">
+          <div><span class="b excepcion"><span class="dot"></span>Requiere autorización</span></div>
+          <div><p>Un cliente nuevo necesita un documento que marcaste como sensible, y espera tu permiso para verlo.</p><p class="quien-actua">TE TOCA A TI (ADMINISTRADOR)</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="sec" id="subir">
+      <p class="sec-num">06</p>
+      <h2>Subir documentos</h2>
+      <p class="intro">Todo se sube desde <span class="menu">Documentos</span>. Es tu biblioteca: cada documento se sube una vez y vale para todos los clientes que lo exigen.</p>
+
+      <figure>
+        <div class="pantalla" role="img" aria-label="Ejemplo de la pantalla Documentos">
+          <div class="barra"><i></i><i></i><i></i><span>Portal Contratista · Documentos</span></div>
+          <div class="app">
+            <div class="app-side">
+              <div class="logo"><svg viewBox="0 0 48 48"><use href="#a"/></svg>credita</div>
+              <div class="it">Inicio <em>3</em></div>
+              <div class="it">Servicios</div>
+              <div class="it">Trabajadores</div>
+              <div class="it on">Documentos</div>
+              <div class="it">Mi empresa</div>
+              <div class="it">Equipo</div>
+            </div>
+            <div class="app-main">
+              <div><h5>Mis documentos</h5><p class="sub">Tu biblioteca. Cada documento se sube una vez y vale para todos los clientes que lo exijan.</p></div>
+              <div class="tabs"><span class="on">Empresa<i>14</i></span><span>Trabajadores<i>22</i></span></div>
+              <div class="filtros"><div class="busca"><svg class="i"><use href="#i-lupa"/></svg>Buscar documento...</div><div>Cualquier estado</div><div>Todos los clientes</div></div>
+              <div class="tabla">
+                <div class="grupo">Legal / Laboral <span>3/5 al día</span></div>
+                <div class="docrow">
+                  <div class="n">Certificado F30-1 — Cumplimiento de obligaciones laborales y previsionales</div>
+                  <div class="bs"><span class="b accion"><svg class="i"><use href="#i-alerta"/></svg>Minera Andina Norte · observado</span><span class="b ok"><svg class="i"><use href="#i-check"/></svg>Portuaria del Pacífico · aprobado</span></div>
+                  <span class="btn">Subir</span>
+                </div>
+                <div class="docrow">
+                  <div class="n">Certificado F30 — Antecedentes laborales y previsionales <code>F30</code></div>
+                  <div class="bs"><span class="b espera"><svg class="i"><use href="#i-clock"/></svg>Minera Andina Norte · en revisión</span></div>
+                  <span class="btn sec2">Reemplazar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Cada documento muestra una etiqueta por cliente. Toca una etiqueta para ver el historial con ese cliente.</figcaption>
+      </figure>
+
+      <h3>Paso a paso</h3>
+      <ol class="pasos">
+        <li><b>Entra a <span class="menu">Documentos</span> y elige la pestaña.</b><strong>Empresa</strong> tiene los documentos de tu empresa, ordenados por categoría. <strong>Trabajadores</strong> tiene los de cada persona, agrupados por nombre.</li>
+        <li><b>Encuentra el documento.</b>Usa el buscador o el filtro de estado. Por ejemplo, elige <em>Falta subir</em> para ver solo lo pendiente. Si trabajas para más de un cliente, también puedes filtrar por cliente.</li>
+        <li><b>Presiona <span class="ui">Subir</span>.</b>Se abre una ventana con el recuadro <strong>“Qué debe contener este documento”</strong>. Léelo antes de subir: ahí está lo que el cliente va a revisar.</li>
+        <li><b>Elige el archivo.</b>Se aceptan PDF, JPG o PNG, según el documento, de hasta 20 MB cada uno. Algunos documentos admiten varios archivos. En ese caso la ventana dice cuántos.</li>
+        <li><b>Presiona <span class="ui">Subir</span> otra vez.</b>La ventana se cierra y la etiqueta cambia a <span class="b espera"><svg class="i"><use href="#i-clock"/></svg>en revisión</span>. Esa es la confirmación: Acredita no muestra otro mensaje.</li>
+      </ol>
+
+      <h3>Leer el indicador X/Y</h3>
+      <p>Cada grupo muestra, por ejemplo, <strong>“3/5 al día”</strong>. Quiere decir que 3 de los 5 documentos del grupo están aprobados y vigentes para <strong>todos</strong> los clientes que los exigen. Basta con que un cliente no lo tenga aprobado para que ese documento no cuente como “al día”.</p>
+
+      <h3>¿Te equivocaste de archivo?</h3>
+      <p>Mientras el documento está en revisión, el botón dice <span class="ui">Reemplazar</span>. Úsalo para subir la versión correcta. Acredita guarda un registro de las dos versiones. Los documentos no se pueden borrar, así que siempre queda el historial completo.</p>
+
+      <h3>Ver el historial</h3>
+      <p>Toca la etiqueta de un cliente para abrir el <strong>Historial del expediente</strong>. En <strong>Versiones</strong> ves cada archivo que subiste, con su estado, su fecha, su vigencia y el mensaje de observación si lo hubo. Desde ahí puedes descargar cada archivo. En <strong>Bitácora</strong> ves cada movimiento: cuándo se subió, cuándo lo revisó el cliente y cuándo venció.</p>
+
+      <div class="nota tip">
+        <svg class="i"><use href="#i-info"/></svg>
+        <p><b>¿No encuentras un documento de un trabajador?</b> Solo aparecen los de personas activas que estén <a href="#servicios">asignadas a un servicio activo</a>. Asigna primero a la persona y después sube sus documentos.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="sec" id="observado">
+      <p class="sec-num">07</p>
+      <h2>Corregir un documento observado</h2>
+      <p class="intro">Que un documento quede observado es normal y no es una sanción. El cliente te dice exactamente qué está mal, y tú lo corriges.</p>
+
+      <ol class="pasos">
+        <li><b>Encuentra el pendiente en Inicio.</b>Aparece como <strong>“[documento] observado por [cliente]”</strong>, con el mensaje del cliente debajo.</li>
+        <li><b>Lee el mensaje con calma.</b>Por ejemplo: <em>“El certificado es de julio. Se requiere el del mes de agosto.”</em></li>
+        <li><b>Presiona <span class="ui">Subir corrección</span>.</b>Acredita te lleva a Documentos, directo a ese documento. Si es de un trabajador, abre la pestaña Trabajadores.</li>
+        <li><b>Sube el archivo corregido.</b>Vuelve a quedar <span class="b espera"><svg class="i"><use href="#i-clock"/></svg>En revisión</span> para ese cliente.</li>
+      </ol>
+
+      <div class="nota tip">
+        <svg class="i"><use href="#i-info"/></svg>
+        <p><b>Dónde ver el mensaje de observación:</b> en Inicio, en el historial del documento (toca la etiqueta del cliente) y en <span class="menu">Servicios</span> → <strong>Avance</strong>. En el teléfono, usa Inicio o el historial.</p>
+      </div>
+      <div class="nota limite">
+        <svg class="i"><use href="#i-sobre"/></svg>
+        <p><b>Por ahora las observaciones no llegan por correo.</b> Entra a Acredita con frecuencia, o revisa el número junto a Inicio, para enterarte a tiempo.</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="sec" id="vencimientos">
+      <p class="sec-num">08</p>
+      <h2>Renovar a tiempo</h2>
+      <p class="intro">Muchos documentos duran un tiempo limitado. Un F30, por ejemplo, se renueva todos los meses. Si uno vence, la persona o la empresa no puede ingresar.</p>
+
+      <ol class="pasos">
+        <li><b>El cliente fija la fecha al aprobar.</b>Al aprobar tu documento, el cliente puede anotar hasta cuándo es válido. Esa fecha aparece como <strong>“Vigente hasta”</strong>.</li>
+        <li><b>30 días antes, Acredita te avisa.</b>El documento aparece en Inicio como <strong>“vence en N días”</strong>. Además, el administrador de tu empresa recibe un correo resumen 30, 15, 7 y 1 día antes.</li>
+        <li><b>Presiona <span class="ui">Renovar</span> y sube la versión nueva.</b>El cliente la revisa igual que cualquier documento.</li>
+      </ol>
+
+      <div class="nota ojo">
+        <svg class="i"><use href="#i-alerta"/></svg>
+        <p><b>No esperes al último día.</b> La versión nueva tiene que pasar por la revisión del cliente, y eso toma tiempo. Si el documento vence antes de que la aprueben, tu gente puede quedar sin poder ingresar.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="sec" id="trabajadores">
+      <p class="sec-num">09</p>
+      <h2>Trabajadores</h2>
+      <p class="intro">Aquí registras a tu gente y ves, persona por persona, quién puede ingresar y qué le falta.</p>
+
+      <h3>Agregar a una persona</h3>
+      <ol class="pasos">
+        <li><b>En <span class="menu">Trabajadores</span>, presiona <span class="ui">Agregar uno</span>.</b></li>
+        <li><b>Completa el RUT y el nombre completo.</b>Ambos son obligatorios. Acredita revisa el dígito verificador del RUT. El cargo es opcional.</li>
+        <li><b>Si quieres, completa la ficha.</b>Incluye fecha de nacimiento, correo, teléfono, dirección y contacto de emergencia. Es opcional y la puedes completar después. La fecha de nacimiento sirve para comprobar restricciones de edad en faena.</li>
+        <li><b>Presiona <span class="ui">Agregar</span>.</b></li>
+      </ol>
+
+      <h3>Cargar toda la nómina de una vez</h3>
+      <ol class="pasos">
+        <li><b>Presiona <span class="ui">Cargar nómina</span> y luego <span class="ui">Descargar plantilla</span>.</b>La plantilla trae ejemplos del formato.</li>
+        <li><b>Completa la planilla.</b>Las columnas obligatorias son <strong>RUT</strong> y <strong>Nombre completo</strong>. El <strong>Cargo</strong> es opcional. Admite hasta 5.000 personas y un tamaño de 5 MB.</li>
+        <li><b>Presiona <span class="ui">Elegir archivo .csv o .xlsx</span> y luego <span class="ui">Cargar nómina</span>.</b>Por ahora no se puede arrastrar el archivo a la ventana: hay que elegirlo con el botón.</li>
+        <li><b>Revisa el resultado.</b>Acredita te dice cuántas personas se <strong>cargaron</strong>, cuántas <strong>ya estaban</strong> y cuántas <strong>tienen error</strong>, con la fila y el motivo de cada error.</li>
+      </ol>
+      <div class="nota tip">
+        <svg class="i"><use href="#i-luz"/></svg>
+        <p><b>Puedes volver a subir la misma planilla sin miedo.</b> Corrige las filas con error y súbela completa otra vez. Las personas que ya entraron no se duplican.</p>
+      </div>
+
+      <h3>Ver quién puede ingresar</h3>
+      <p>Cada persona aparece con una de estas frases: <strong>“Habilitado en sus servicios”</strong>, <strong>“No puede ingresar a…”</strong> o <strong>“Sin asignar a ningún servicio”</strong>. Tócala para ver el detalle de cada servicio y la lista <strong>“Le falta: …”</strong>. Si quieres ver solo a quienes tienen problemas, activa <span class="ui">Solo los bloqueados</span>.</p>
+      <p>Desde la ficha abierta puedes presionar <span class="ui">Editar ficha</span> para corregir sus datos. El RUT no se puede cambiar. También puedes presionar <span class="ui">Desactivar</span> cuando alguien deja la empresa. Una persona desactivada deja de contar en las evaluaciones y en Documentos, y la puedes reactivar cuando quieras.</p>
+      <div class="nota tip">
+        <svg class="i"><use href="#i-info"/></svg>
+        <p>El botón <span class="ui">Subir sus documentos</span> abre Documentos en la pestaña <strong>Empresa</strong>. Cambia a la pestaña <strong>Trabajadores</strong> para encontrar a esa persona.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="sec" id="servicios">
+      <p class="sec-num">10</p>
+      <h2>Servicios y dotación</h2>
+      <p class="intro">Tu cliente crea los servicios. Tú no los creas ni los editas, pero sí decides quiénes de tu gente trabajan en cada uno.</p>
+
+      <p>En <span class="menu">Servicios</span> ves cada trabajo con su cliente, el lugar, la cantidad de personas asignadas, la fecha de inicio y el estado: <span class="b ok"><svg class="i"><use href="#i-check"/></svg>Activo</span> <span class="b accion"><span class="dot"></span>Suspendido</span> <span class="b espera"><svg class="i"><use href="#i-clock"/></svg>Terminado</span>. Solo los servicios <strong>activos</strong> exigen documentos.</p>
+
+      <figure>
+        <div class="escena">
+          <div class="dialogo" style="max-width:420px;width:100%" role="img" aria-label="Ejemplo del panel de avance de un servicio">
+            <div class="cab"><h5>Mantención correas CV-12</h5><span class="b ok"><svg class="i"><use href="#i-check"/></svg>Activo</span></div>
+            <div class="tabs"><span class="on">Avance</span><span>Dotación</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px"><span>Avance de acreditación</span><b style="color:var(--ink)">72%</b></div>
+            <div class="barra-av"><i></i></div>
+            <p style="font-size:11.5px;color:var(--subtle)">18 de 25 documentos aprobados</p>
+            <div class="contador"><div>Aprobados<b>18</b></div><div>Observados<b>2</b></div><div>En curso<b>3</b></div><div>Faltan<b>2</b></div></div>
+          </div>
+        </div>
+        <figcaption>Toca un servicio para abrir su panel. La pestaña Avance muestra el progreso y lo que falta, agrupado por categoría.</figcaption>
+      </figure>
+
+      <h3>Asignar gente a un servicio</h3>
+      <ol class="pasos">
+        <li><b>Abre el servicio y entra a la pestaña <strong>Dotación</strong>.</b></li>
+        <li><b>Elige a la persona en <span class="ui">Agregar trabajador a la faena...</span> y presiona <span class="ui">Asignar</span>.</b></li>
+        <li><b>Elige su cargo, si el cliente usa cargos.</b>El cliente puede pedir documentos distintos según el cargo. Si dejas <strong>Sin cargo</strong>, a esa persona se le piden todos los documentos.</li>
+      </ol>
+      <p style="margin-top:14px">Desde ese momento, los documentos de la persona aparecen en <a href="#subir">Documentos</a> y en Inicio. Para sacar a alguien del servicio, usa el ícono <strong>Desasignar de la faena</strong>. La dotación solo se puede modificar mientras el servicio está activo.</p>
+    </section>
+
+    <!-- 11 -->
+    <section class="sec" id="sensibles">
+      <p class="sec-num">11</p>
+      <h2>Documentos sensibles y autorizaciones</h2>
+      <p class="intro">Algunos documentos contienen información delicada, como contratos, exámenes médicos o liquidaciones de sueldo. Esos no se comparten solos con un cliente nuevo: primero te piden permiso.</p>
+
+      <figure>
+        <div class="escena">
+          <div class="dialogo" role="img" aria-label="Ejemplo de la ventana Solicitud de acceso">
+            <h5>Solicitud de acceso</h5>
+            <p style="font-size:12.5px">Minera Andina Norte quiere revisar tu <b>Certificado de aptitud ocupacional</b>.</p>
+            <p style="font-size:11.5px;color:var(--muted)"><b>Si autorizas:</b> solo este cliente lo verá. El próximo cliente que lo exija volverá a pedirte permiso.</p>
+            <p style="font-size:11.5px;color:var(--muted)"><b>Si rechazas:</b> el requisito queda pendiente con este cliente hasta que le subas el documento aparte.</p>
+            <div class="acciones"><span class="btn sec2">Decidir después</span><span class="btn sec2">Rechazar</span><span class="btn">Autorizar</span></div>
+          </div>
+        </div>
+        <figcaption>La misma solicitud aparece en Inicio y en Documentos, en el botón «Resolver».</figcaption>
+      </figure>
+
+      <h3>Responder una solicitud</h3>
+      <ol class="pasos">
+        <li><b>Encuéntrala en Inicio o en Documentos.</b>En Inicio aparece como <strong>“[cliente] quiere revisar tu…”</strong>. En Documentos, la etiqueta dice <strong>“pide autorización”</strong> y tiene el botón <span class="ui">Resolver</span>.</li>
+        <li><b>Decide.</b><span class="ui">Autorizar</span> se lo muestra solo a ese cliente. <span class="ui">Rechazar</span> es definitivo para ese cliente: tendrás que subirle el documento aparte. <span class="ui">Decidir después</span> lo deja pendiente.</li>
+      </ol>
+
+      <h3>Cambiar si un documento pide permiso o no</h3>
+      <p>En Documentos, el ícono del candado junto a un documento abre <strong>“Compartir este documento”</strong>, con dos opciones:</p>
+      <div class="grid2">
+        <div class="opcion on"><b>Pedirme autorización</b>Ningún cliente nuevo lo verá hasta que tú lo apruebes.</div>
+        <div class="opcion"><b>Compartir sin preguntar</b>Cualquier cliente que lo exija lo recibe de inmediato.</div>
+      </div>
+      <p style="margin-top:14px">Si eliges compartir sin preguntar, se aprueban de inmediato las solicitudes que estaban esperando. Los documentos <strong>de trabajadores</strong> siempre piden autorización, porque contienen datos personales de esa persona.</p>
+      <div class="nota ojo">
+        <svg class="i"><use href="#i-lock"/></svg>
+        <p>Solo un <b>Administrador</b> de tu empresa puede responder solicitudes o cambiar esta opción.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="sec" id="empresa">
+      <p class="sec-num">12</p>
+      <h2>Mi empresa</h2>
+      <p class="intro">Son los datos que tus clientes necesitan en una fiscalización o una emergencia. Todos tus clientes ven la misma ficha.</p>
+      <p>La pantalla te avisa cuántos datos faltan, por ejemplo <strong>“Faltan 3 de estos datos para una fiscalización”</strong>. Presiona <span class="ui">Completar datos</span> para llenar:</p>
+      <div class="grid3">
+        <div class="concepto"><h4>Mutualidad</h4><p>ACHS, Mutual de Seguridad CChC, IST o ISL. Es donde se denuncia un accidente según la Ley 16.744.</p></div>
+        <div class="concepto"><h4>Giro y dirección</h4><p>La actividad de la empresa y la dirección de su casa matriz.</p></div>
+        <div class="concepto"><h4>Teléfono de emergencia</h4><p>A quién llamar si pasa algo en faena fuera del horario de oficina.</p></div>
+        <div class="concepto"><h4>Representante legal</h4><p>Nombre, RUT y teléfono. El RUT permite compararlo con el certificado de vigencia de poderes.</p></div>
+        <div class="concepto"><h4>Razón social</h4><p>Puedes corregirla aquí. El RUT de la empresa no se puede cambiar.</p></div>
+        <div class="concepto"><h4>Quién edita</h4><p>Solo los Administradores. Los Colaboradores ven la ficha pero no la modifican.</p></div>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="sec" id="equipo">
+      <p class="sec-num">13</p>
+      <h2>Tu equipo</h2>
+      <p class="intro">Suma a las personas de tu empresa que ayudan con la acreditación, como el prevencionista o alguien de recursos humanos. Cada una entra con su propia cuenta.</p>
+
+      <ol class="pasos">
+        <li><b>En <span class="menu">Equipo</span>, presiona <span class="ui">Sumar a alguien</span>.</b></li>
+        <li><b>Escribe su correo y su nombre.</b>El cargo es opcional.</li>
+        <li><b>Elige qué podrá hacer:</b> <strong>Colaborador</strong> o <strong>Administrador</strong>.</li>
+        <li><b>Presiona <span class="ui">Enviar invitación</span>.</b>Le llega un correo para elegir su propia contraseña. Hasta que la active, aparece como <strong>“invitación pendiente”</strong>.</li>
+      </ol>
+
+      <h3>Qué puede hacer cada uno</h3>
+      <div class="marco-tabla">
+        <table class="permisos">
+          <thead><tr><th>Acción</th><th>Colaborador</th><th>Administrador</th></tr></thead>
+          <tbody>
+            <tr><td>Ver Inicio, Servicios, Documentos e historial</td><td class="si"><svg class="i"><use href="#i-check"/></svg></td><td class="si"><svg class="i"><use href="#i-check"/></svg></td></tr>
+            <tr><td>Subir y reemplazar documentos</td><td class="si"><svg class="i"><use href="#i-check"/></svg></td><td class="si"><svg class="i"><use href="#i-check"/></svg></td></tr>
+            <tr><td>Agregar trabajadores, editar fichas y cargar la nómina</td><td class="si"><svg class="i"><use href="#i-check"/></svg></td><td class="si"><svg class="i"><use href="#i-check"/></svg></td></tr>
+            <tr><td>Asignar gente a un servicio y definir su cargo</td><td class="no">—</td><td class="si"><svg class="i"><use href="#i-check"/></svg></td></tr>
+            <tr><td>Desactivar o reactivar trabajadores</td><td class="no">—</td><td class="si"><svg class="i"><use href="#i-check"/></svg></td></tr>
+            <tr><td>Responder solicitudes de documentos sensibles</td><td class="no">—</td><td class="si"><svg class="i"><use href="#i-check"/></svg></td></tr>
+            <tr><td>Editar Mi empresa</td><td class="no">—</td><td class="si"><svg class="i"><use href="#i-check"/></svg></td></tr>
+            <tr><td>Gestionar el equipo</td><td class="no">—</td><td class="si"><svg class="i"><use href="#i-check"/></svg></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Administrar las cuentas</h3>
+      <p>En cada persona, el menú <strong>“…”</strong> permite cambiar su nombre, cargo y rol, <strong>reenviar la invitación</strong> o <strong>enviarle un enlace para cambiar la contraseña</strong> si no puede entrar. Ese enlace se puede copiar y mandar por otro medio. Ahí también está <span class="ui">Quitar acceso</span>: la persona deja de entrar, pero su historial se conserva. Siempre debe quedar al menos un Administrador, y nadie puede cambiar su propia cuenta desde aquí.</p>
+    </section>
+
+    <!-- 14 -->
+    <section class="sec" id="correos">
+      <p class="sec-num">14</p>
+      <h2>Correos que recibes</h2>
+      <p class="intro">Los avisos por correo le llegan al <strong>Administrador</strong> principal de la cuenta. Para no perderte nada, revisa también Inicio.</p>
+      <div class="grid2">
+        <div class="concepto"><h4><svg class="i"><use href="#i-sobre"/></svg>Invitación de un cliente</h4><p>“Invitación a acreditarse ante…”. Trae el botón para activar tu cuenta.</p></div>
+        <div class="concepto"><h4><svg class="i"><use href="#i-sobre"/></svg>Documentos aplicados a un cliente</h4><p>Llega cuando un cliente nuevo ya puede revisar documentos que subiste antes, o cuando necesita tu autorización para ver alguno.</p></div>
+        <div class="concepto"><h4><svg class="i"><use href="#i-sobre"/></svg>Documentos por vencer</h4><p>Es un resumen diario, 30, 15, 7 y 1 día antes del vencimiento. Solo incluye documentos a los que el cliente les puso fecha de vigencia.</p></div>
+        <div class="concepto"><h4><svg class="i"><use href="#i-sobre"/></svg>Cuenta y contraseña</h4><p>Invitaciones de tu equipo y enlaces para restablecer la contraseña.</p></div>
+      </div>
+    </section>
+
+    <!-- 15 -->
+    <section class="sec" id="faq">
+      <p class="sec-num">15</p>
+      <h2>Preguntas frecuentes</h2>
+      <div class="faq">
+        <details>
+          <summary>Ya subí el documento. ¿Por qué Inicio dice que “falta”?</summary>
+          <div><p>“Falta” quiere decir que todavía no está aprobado. Si su etiqueta dice <span class="b espera"><svg class="i"><use href="#i-clock"/></svg>En revisión</span>, ya hiciste tu parte y solo queda esperar la revisión del cliente.</p></div>
+        </details>
+        <details>
+          <summary>¿Cuánto demora la revisión?</summary>
+          <div><p>Depende de cada cliente, porque la revisión la hace una persona de su equipo. Sube tus documentos con anticipación, sobre todo antes del inicio de un servicio o de una renovación.</p></div>
+        </details>
+        <details>
+          <summary>¿Tengo que subir el mismo documento para cada cliente?</summary>
+          <div><p>No. Los documentos de tu empresa y los personales de cada trabajador se suben una vez y les llegan a todos los clientes que los exigen. Solo los documentos específicos de un servicio, como la MIPER de una obra, se suben para ese servicio.</p></div>
+        </details>
+        <details>
+          <summary>¿Puedo borrar un documento que subí por error?</summary>
+          <div><p>No se puede borrar, pero mientras está en revisión puedes reemplazarlo con el botón <span class="ui">Reemplazar</span>. Las dos versiones quedan en el historial.</p></div>
+        </details>
+        <details>
+          <summary>No veo los documentos de un trabajador. ¿Qué pasa?</summary>
+          <div><p>Una persona solo tiene documentos exigidos cuando está activa y asignada a un servicio activo. Asígnala en <span class="menu">Servicios</span> → <strong>Dotación</strong>.</p></div>
+        </details>
+        <details>
+          <summary>¿Por qué un documento tiene etiquetas distintas para cada cliente?</summary>
+          <div><p>Porque cada cliente revisa por su cuenta. El mismo F30-1 puede estar aprobado por un cliente y observado por otro. Si uno lo observa, corrígelo pensando en lo que te pidió ese cliente.</p></div>
+        </details>
+        <details>
+          <summary>¿Qué pasa si rechazo una solicitud de un documento sensible?</summary>
+          <div><p>Ese cliente no ve el documento. El requisito queda pendiente con él hasta que le subas otro documento por separado, y Acredita no te vuelve a preguntar por esa solicitud.</p></div>
+        </details>
+        <details>
+          <summary>¿Cómo cambio mi contraseña?</summary>
+          <div><p>Cierra sesión y usa <span class="ui">¿La olvidaste?</span> en la pantalla de ingreso. Te llegará un enlace para elegir una nueva.</p></div>
+        </details>
+        <details>
+          <summary>El RUT de mi empresa quedó mal. ¿Qué hago?</summary>
+          <div><p>El RUT no se puede cambiar desde el portal. Escríbele al cliente que te invitó o al soporte de BERISA para que lo corrijan.</p></div>
+        </details>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="pie">
+  <span>Acredita de BERISA · Manual del contratista</span>
+  <span>Refleja la plataforma a septiembre de 2026</span>
+</footer>
+
+<script>
+(function () {
+  var enlaces = Array.prototype.slice.call(document.querySelectorAll(".indice a"));
+  var secciones = enlaces.map(function (a) { return document.getElementById(a.getAttribute("href").slice(1)); }).filter(Boolean);
+  if (!("IntersectionObserver" in window) || !secciones.length) return;
+  var visibles = {};
+  var obs = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (e) { visibles[e.target.id] = e.isIntersecting; });
+    var actual = secciones.find(function (s) { return visibles[s.id]; });
+    if (!actual) return;
+    enlaces.forEach(function (a) { a.classList.toggle("activo", a.getAttribute("href") === "#" + actual.id); });
+  }, { rootMargin: "-80px 0px -60% 0px" });
+  secciones.forEach(function (s) { obs.observe(s); });
+  document.querySelectorAll(".indice-movil a").forEach(function (a) {
+    a.addEventListener("click", function () { var d = a.closest("details"); if (d) d.open = false; });
+  });
+})();
+
+</script>
+</body>
+</html>
